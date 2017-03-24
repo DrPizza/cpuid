@@ -3,24 +3,24 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26228.9
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scheduler-analysis", "scheduler-analysis\scheduler-analysis.vcxproj", "{39A20863-62B1-4426-87C7-E732DACCD4DB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cache-analysis", "cache-analysis\cache-analysis.vcxproj", "{39A20863-62B1-4426-87C7-E732DACCD4DB}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scheduler-analysis", "scheduler-analysis\scheduler-analysis.vcxproj", "{8F88A66F-8164-45E5-AE87-37117DC14AE4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
-		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{39A20863-62B1-4426-87C7-E732DACCD4DB}.Debug|x64.ActiveCfg = Debug|x64
 		{39A20863-62B1-4426-87C7-E732DACCD4DB}.Debug|x64.Build.0 = Debug|x64
-		{39A20863-62B1-4426-87C7-E732DACCD4DB}.Debug|x86.ActiveCfg = Debug|Win32
-		{39A20863-62B1-4426-87C7-E732DACCD4DB}.Debug|x86.Build.0 = Debug|Win32
 		{39A20863-62B1-4426-87C7-E732DACCD4DB}.Release|x64.ActiveCfg = Release|x64
 		{39A20863-62B1-4426-87C7-E732DACCD4DB}.Release|x64.Build.0 = Release|x64
-		{39A20863-62B1-4426-87C7-E732DACCD4DB}.Release|x86.ActiveCfg = Release|Win32
-		{39A20863-62B1-4426-87C7-E732DACCD4DB}.Release|x86.Build.0 = Release|Win32
+		{8F88A66F-8164-45E5-AE87-37117DC14AE4}.Debug|x64.ActiveCfg = Debug|x64
+		{8F88A66F-8164-45E5-AE87-37117DC14AE4}.Debug|x64.Build.0 = Debug|x64
+		{8F88A66F-8164-45E5-AE87-37117DC14AE4}.Release|x64.ActiveCfg = Release|x64
+		{8F88A66F-8164-45E5-AE87-37117DC14AE4}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
