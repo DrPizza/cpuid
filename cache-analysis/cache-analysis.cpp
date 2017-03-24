@@ -37,7 +37,7 @@ void cache_ping() {
 
 		std::vector<std::thread> threads;
 		for(size_t i = 0; i < thread_count; ++i) {
-			threads.push_back(std::thread([&, ping_ptr](const size_t num) {
+			threads.push_back(std::thread([&](const size_t num) {
 				DWORD_PTR mask = 1ULL << ((core_base + num) % si.dwNumberOfProcessors);
 				::SetThreadAffinityMask(::GetCurrentThread(), mask);
 				::SetThreadPriority(::GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
@@ -62,7 +62,7 @@ void cache_ping() {
 				// test        rcx, rcx
 				// jne loopstart
 				// and it does this even though qword ptr[rdi + 30h] is invariant (and immutable!)
-				// if I capture the address by-val and then form a reference
+				// if I capture the address and then form a reference
 				// on the stack (rather than as a lambda member)
 				// then the loop is tighter:
 				// mov         rax, qword ptr[rdi + 30h] // rax = &ping;
@@ -154,7 +154,7 @@ void cache_ping_pong() {
 		std::atomic<unsigned __int64> total_time = { 0ui64 };
 		std::vector<std::thread> threads;
 		for(size_t i = 0; i < thread_count; ++i) {
-			threads.push_back(std::thread([&, shared_value_ptr](const size_t num) {
+			threads.push_back(std::thread([&](const size_t num) {
 				DWORD_PTR mask = 1ULL << ((core_base + num) % si.dwNumberOfProcessors);
 				::SetThreadAffinityMask(::GetCurrentThread(), mask);
 				::SetThreadPriority(::GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
