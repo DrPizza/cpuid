@@ -234,5 +234,4 @@ int main() {
 
 	cache_ping();
 	cache_ping_pong();
-	//scheduler_bounce();
 }
