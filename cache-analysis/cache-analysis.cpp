@@ -32,8 +32,8 @@ void cache_ping() {
 		std::cout << ". ";
 
 		alignas(64) std::atomic<unsigned __int64> total_time = { 0ui64 };
-		alignas(64) std::atomic<unsigned __int64> ping = { 0ULL };
-		std::atomic<size_t>* ping_ptr = &ping;
+		alignas(64) std::atomic<unsigned __int64> ping = { 0ui64 };
+		std::atomic<unsigned __int64>* ping_ptr = &ping;
 
 		std::vector<std::thread> threads;
 		for(size_t i = 0; i < thread_count; ++i) {
@@ -52,7 +52,7 @@ void cache_ping() {
 					std::unique_lock<std::mutex> lck(mtx);
 					cv.wait(lck, [&] { return threads_started == 0; });
 				}
-				std::atomic<size_t>& ping_ref = *ping_ptr;
+				std::atomic<unsigned __int64>& ping_ref = *ping_ptr;
 				// if I capture ping directly by-ref, VC++ generates lousy code for the while loop.
 				// specifically, it generates a loop that looks like this:
 				// 
@@ -70,6 +70,7 @@ void cache_ping() {
 				// mov         rcx, qword ptr[rax]       // rcx = *rax;
 				// test        rcx, rcx
 				// jne loopstart
+				__int32 unused[4];
 				switch(num % 2) {
 				case 0:
 					{
@@ -78,10 +79,7 @@ void cache_ping() {
 								;
 							}
 							// Intel's preferred mechanism: serialize then rdtsc before, the thing you're timing, rdtscp then serialize after
-							// Intel says that lfence is semi-serializing (no instructions can pass across it), but mfence is not.
-							// AMD says that mfence is fully serializing, but lfence is not.
-							_mm_mfence();
-							_mm_lfence();
+							__cpuidex(unused, 0, 0);
 							unsigned __int64 ping_sent = __rdtsc();
 							ping_ref.store(ping_sent, std::memory_order_release);
 						}
@@ -96,8 +94,7 @@ void cache_ping() {
 							}
 							unsigned __int32 aux = 0ui32;
 							unsigned __int64 ping_received = __rdtscp(&aux);
-							_mm_mfence();
-							_mm_lfence();
+							__cpuidex(unused, 0, 0);
 
 							ping_ref.store(0, std::memory_order_release);
 
@@ -172,8 +169,8 @@ void cache_ping_pong() {
 				// see long comment above about VC++ codegen
 				std::atomic<size_t>& shared_value_ref = *shared_value_ptr;
 
-				_mm_mfence();
-				_mm_lfence();
+				__int32 unused[4];
+				__cpuidex(unused, 0, 0);
 				unsigned __int64 start = __rdtsc();
 				for(size_t i = 0; i < iteration_count; ++i) {
 					while(shared_value_ref.load(std::memory_order_acquire) % thread_count != num) {
@@ -183,8 +180,7 @@ void cache_ping_pong() {
 				}
 				unsigned __int32 aux = 0ui32;
 				unsigned __int64 end = __rdtscp(&aux);
-				_mm_mfence();
-				_mm_lfence();
+				__cpuidex(unused, 0, 0);
 				total_time += (end - start);
 			}, i));
 		}
@@ -210,20 +206,128 @@ void cache_ping_pong() {
 	}
 }
 
+void store_buffers() {
+	static constexpr size_t items = 1ULL << 24;
+	static constexpr size_t mask = items - 1;
+	static constexpr size_t iterations = 100'000'000;
+	std::vector<std::vector<unsigned char> > arrays{ 12, std::vector<unsigned char>(items, '\0') };
+	::SetThreadPriority(::GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+
+	__int32 unused[4];
+	unsigned __int32 also_unused;
+	{
+		__cpuidex(unused, 0, 0);
+		unsigned __int64 start = __rdtsc();
+
+		size_t i = iterations;
+		while(--i) {
+			size_t slot = i & mask;
+			unsigned char value = static_cast<unsigned char>(i & 0xff);
+			arrays[0][slot] = value;
+			arrays[1][slot] = value;
+			arrays[2][slot] = value;
+			arrays[3][slot] = value;
+			arrays[4][slot] = value;
+			arrays[5][slot] = value;
+			arrays[6][slot] = value;
+			arrays[7][slot] = value;
+			arrays[8][slot] = value;
+			arrays[9][slot] = value;
+			arrays[10][slot] = value;
+			arrays[11][slot] = value;
+		}
+
+		unsigned __int64 end = __rdtscp(&also_unused);
+		__cpuidex(unused, 0, 0);
+
+		std::cout << "combined: " << end - start << std::endl;
+	}
+
+	{
+		__cpuidex(unused, 0, 0);
+		unsigned __int64 start = __rdtsc();
+
+		size_t i = iterations;
+		while(--i) {
+			size_t slot = i & mask;
+			unsigned char value = static_cast<unsigned char>(i & 0xff);
+			arrays[0][slot] = value;
+			arrays[1][slot] = value;
+			arrays[2][slot] = value;
+			arrays[3][slot] = value;
+			arrays[4][slot] = value;
+			arrays[5][slot] = value;
+		}
+
+		i = iterations;
+		while(--i) {
+			size_t slot = i & mask;
+			unsigned char value = static_cast<unsigned char>(i & 0xff);
+			arrays[6][slot] = value;
+			arrays[7][slot] = value;
+			arrays[8][slot] = value;
+			arrays[9][slot] = value;
+			arrays[10][slot] = value;
+			arrays[11][slot] = value;
+		}
+
+		unsigned __int64 end = __rdtscp(&also_unused);
+		__cpuidex(unused, 0, 0);
+
+		std::cout << "split:    " << end - start << std::endl;
+	}
+	::SetThreadPriority(::GetCurrentThread(), THREAD_PRIORITY_NORMAL);
+}
+
+void pointer_chasing() {
+	static const size_t page_size = 4096ULL;
+	static const size_t cache_line_size = 64ULL;
+	const size_t length = (1024ULL * 1024ULL * 1024ULL) / sizeof(void*);
+	
+	std::unique_ptr<void*[]> storage{ new void*[length] };
+
+	// pattern 1: each pointer simply points to the next pointer.
+	// maximal cache hits, maximal TLB hits.
+	for(size_t i = 0ULL; i < length; ++i) {
+		storage[i] = &storage[i + 1];
+	}
+	storage[length - 1] = &storage[0];
+
+	// pattern 2: stride one cache line at a time
+	size_t stride = cache_line_size;
+	for(size_t i = stride; i < length; i += stride) {
+		storage[i - stride] = &storage[i];
+	}
+	storage[length - stride] = &storage[0];
+
+
+}
+
 int main() {
 	std::array<int, 4> cpu = { 0 };
-	__cpuid(cpu.data(), 0x8000'0000);
+	__cpuidex(cpu.data(), 0x8000'0000, 0x0);
 	if(cpu[0] >= 0x8000'0004) {
 		union {
 			std::array<char, 48> brand;
-			std::array<std::array<int, 4>, 3> registers;
+			std::array<std::array<__int32, 4>, 3> registers;
 		} data;
-		__cpuid(data.registers[0].data(), 0x8000'0002);
-		__cpuid(data.registers[1].data(), 0x8000'0003);
-		__cpuid(data.registers[2].data(), 0x8000'0004);
+		__cpuidex(data.registers[0].data(), 0x8000'0002, 0x0);
+		__cpuidex(data.registers[1].data(), 0x8000'0003, 0x0);
+		__cpuidex(data.registers[2].data(), 0x8000'0004, 0x0);
 		std::cout << data.brand.data() << std::endl;
 	}
+	if(cpu[0] < 0x8000'0007) {
+		std::cout << "I can't perform timing on this chip yet" << std::endl;
+		return -1;
+	}
 
+	std::array<__int32, 4> registers = { 0 };
+	__cpuidex(registers.data(), 0x8000'0007, 0x0);
+	if(0ui32 == (registers[3] & (1ui32 << 8ui32))) {
+		std::cout << "I can't perform timing on this chip yet" << std::endl;
+		return -1;
+	}
+	
 	SYSTEM_INFO si = { 0 };
 	::GetSystemInfo(&si);
 
@@ -232,6 +336,8 @@ int main() {
 	::CallNtPowerInformation(ProcessorInformation, nullptr, 0, ppi.get(), sizeof(PROCESSOR_POWER_INFORMATION) * si.dwNumberOfProcessors);
 	std::cout << "Maximum frequency: " << ppi[0].MaxMhz << " MHz" << std::endl;
 
-	cache_ping();
-	cache_ping_pong();
+	//cache_ping();
+	//cache_ping_pong();
+	store_buffers();
+	//pointer_chasing();
 }
