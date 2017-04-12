@@ -28,5 +28,6 @@
 #include <numeric>
 #include <condition_variable>
 #include <mutex>
+#include <numeric>
 
 #include <intrin.h>
