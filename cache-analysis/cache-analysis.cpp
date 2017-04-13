@@ -170,10 +170,6 @@ void cache_ping_pong() {
 	SYSTEM_INFO si = { 0 };
 	::GetSystemInfo(&si);
 
-	std::unique_ptr<PROCESSOR_POWER_INFORMATION[]> ppi{ new PROCESSOR_POWER_INFORMATION[si.dwNumberOfProcessors] };
-
-	::CallNtPowerInformation(ProcessorInformation, nullptr, 0, ppi.get(), sizeof(PROCESSOR_POWER_INFORMATION) * si.dwNumberOfProcessors);
-
 	alignas(64) std::atomic<size_t> shared_value = { 0ULL };
 	std::atomic<size_t>* shared_value_ptr = &shared_value;
 	for(DWORD_PTR core_base = 0ULL; core_base < si.dwNumberOfProcessors; ++core_base) {
@@ -233,8 +229,8 @@ void cache_ping_pong() {
 		// for a single ping-pong
 		total_time = total_time / thread_count;
 		const double cycles_per_ping_pong = static_cast<double>(total_time) / static_cast<double>(iteration_count);
-		const __int64 cycles_per_second = ppi[0].CurrentMhz * 1'000'000;
-		const __int64 nanoseconds_per_second = 1'000'000'000;
+		const unsigned __int64 cycles_per_second = tick_rate;
+		const unsigned __int64 nanoseconds_per_second = 1'000'000'000ui64;
 		const double nanoseconds_per_cycle = static_cast<double>(nanoseconds_per_second) / static_cast<double>(cycles_per_second);
 		const double nanoseconds_per_ping_pong = cycles_per_ping_pong * nanoseconds_per_cycle;
 		std::cout << cycles_per_ping_pong << " cycles per ping pong = " << nanoseconds_per_ping_pong << " nanoseconds per ping pong" << std::endl;
@@ -368,15 +364,15 @@ unsigned __int64 get_measurement_overhead() {
 	unsigned __int32 aux = 0ui32;
 	__cpuidex(unused.data(), 0, 0);
 	unsigned __int64 timestamp_start = __rdtsc();
+
 	volatile unsigned __int64 garbage = 0ui64;
-	__cpuidex(unused.data(), 0, 0);
 	for(size_t i = 0; i < iteration_count; ++i) {
 		unsigned __int64 discard_start = __rdtsc();
 		garbage += discard_start;
 		unsigned __int64 discard_end = __rdtscp(&aux);
 		garbage += discard_end;
 	}
-	__cpuidex(unused.data(), 0, 0);
+
 	unsigned __int64 timestamp_end = __rdtscp(&aux);
 	__cpuidex(unused.data(), 0, 0);
 
@@ -386,7 +382,7 @@ unsigned __int64 get_measurement_overhead() {
 	return (timestamp_end - timestamp_start) / iteration_count;
 }
 
-int main() {
+int main(int argc, char*[]) {
 	std::array<int, 4> cpu = { 0 };
 	__cpuidex(cpu.data(), 0x8000'0000, 0x0);
 	if(cpu[0] >= 0x8000'0004) {
