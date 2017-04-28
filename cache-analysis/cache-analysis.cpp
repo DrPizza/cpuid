@@ -81,6 +81,8 @@ void cache_ping() {
 								;
 							}
 							// Intel's preferred mechanism: serialize then rdtsc before, the thing you're timing, rdtscp then serialize after
+							// http://www.intel.com/content/www/us/en/embedded/training/ia-32-ia-64-benchmark-code-execution-paper.html
+							// cpuid remains the only good cross-platform serializing instrunction, regrettably.
 							__cpuidex(unused, 0, 0);
 							unsigned __int64 ping_sent = __rdtsc();
 							ping_ref.store(ping_sent, std::memory_order_release);
@@ -382,7 +384,7 @@ unsigned __int64 get_measurement_overhead() {
 	return (timestamp_end - timestamp_start) / iteration_count;
 }
 
-int main(int argc, char*[]) {
+int main(int, char* argv[]) {
 	std::array<int, 4> cpu = { 0 };
 	__cpuidex(cpu.data(), 0x8000'0000, 0x0);
 	if(cpu[0] >= 0x8000'0004) {
