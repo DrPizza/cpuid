@@ -23,7 +23,6 @@ void cache_ping() {
 	::GetSystemInfo(&si);
 
 	std::vector<std::vector<double> > scores(si.dwNumberOfProcessors, std::vector<double>(si.dwNumberOfProcessors));
-
 	for(DWORD_PTR source_core = 0ULL; source_core < si.dwNumberOfProcessors; ++source_core) {
 		for(DWORD_PTR destination_core = 0ULL; destination_core < si.dwNumberOfProcessors; ++destination_core) {
 			if(source_core == destination_core) {
@@ -83,7 +82,7 @@ void cache_ping() {
 							// Intel's preferred mechanism: serialize then rdtsc before, the thing you're timing, rdtscp then serialize after
 							// http://www.intel.com/content/www/us/en/embedded/training/ia-32-ia-64-benchmark-code-execution-paper.html
 							// cpuid remains the only good cross-platform serializing instrunction, regrettably.
-							__cpuidex(unused, 0, 0);
+							__cpuidex(unused, 0, 0); // no instructions from above this line can execute after the rdtsc
 							unsigned __int64 ping_sent = __rdtsc();
 							ping_ref.store(ping_sent, std::memory_order_release);
 						}
@@ -95,11 +94,11 @@ void cache_ping() {
 							}
 							unsigned __int32 aux = 0ui32;
 							unsigned __int64 ping_received = __rdtscp(&aux);
-							__cpuidex(unused, 0, 0);
+							__cpuidex(unused, 0, 0); // no instructions from above this line can execute before the rdtscp
 
 							ping_ref.store(0, std::memory_order_release);
-
-							unsigned __int64 duration = (ping_received - ping_sent) - measurement_overhead;
+							unsigned __int64 raw_duration = ping_received - ping_sent;
+							unsigned __int64 duration = raw_duration - measurement_overhead;
 							running_sum += duration;
 							running_sum_squares += duration * duration;
 						}
@@ -361,30 +360,44 @@ unsigned __int64 get_actual_frequency() {
 unsigned __int64 get_measurement_overhead() {
 	::SetPriorityClass(::GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
 	::SetThreadPriority(::GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+	::SetThreadAffinityMask(::GetCurrentThread(), 1ULL);
 
+	alignas(64) volatile unsigned __int64 dummy = 0ui64;
 	std::array<__int32, 4> unused = { 0 };
 	unsigned __int32 aux = 0ui32;
 	__cpuidex(unused.data(), 0, 0);
-	unsigned __int64 timestamp_start = __rdtsc();
+	unsigned __int64 empty_loop_start = __rdtsc();
 
-	volatile unsigned __int64 garbage = 0ui64;
 	for(size_t i = 0; i < iteration_count; ++i) {
-		unsigned __int64 discard_start = __rdtsc();
-		garbage += discard_start;
-		unsigned __int64 discard_end = __rdtscp(&aux);
-		garbage += discard_end;
+		dummy = i;
 	}
 
-	unsigned __int64 timestamp_end = __rdtscp(&aux);
+	unsigned __int64 empty_loop_end = __rdtscp(&aux);
+	__cpuidex(unused.data(), 0, 0);
+	/////////
+	dummy = 0ui64;
+	__cpuidex(unused.data(), 0, 0);
+	unsigned __int64 rdtscp_loop_start = __rdtsc();
+
+	for (size_t i = 0; i < iteration_count; ++i) {
+		dummy = __rdtscp(&aux);
+	}
+
+	unsigned __int64 rdtscp_loop_end = __rdtscp(&aux);
 	__cpuidex(unused.data(), 0, 0);
 
+	::SetThreadAffinityMask(::GetCurrentThread(), ~0ULL);
 	::SetThreadPriority(::GetCurrentThread(), THREAD_PRIORITY_NORMAL);
 	::SetPriorityClass(::GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
 
-	return (timestamp_end - timestamp_start) / iteration_count;
+	unsigned __int64 empty_loop_duration = empty_loop_end - empty_loop_start;
+	unsigned __int64 rdtscp_duration = rdtscp_loop_end - rdtscp_loop_start;
+
+	unsigned __int64 iteration_overhead = (rdtscp_duration - empty_loop_duration) / iteration_count;
+	return iteration_overhead;
 }
 
-int main(int, char* argv[]) {
+int main(int, char*[]) {
 	std::array<int, 4> cpu = { 0 };
 	__cpuidex(cpu.data(), 0x8000'0000, 0x0);
 	if(cpu[0] >= 0x8000'0004) {

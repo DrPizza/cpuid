@@ -29,5 +29,6 @@
 #include <condition_variable>
 #include <mutex>
 #include <numeric>
+#include <cstddef>
 
 #include <intrin.h>
