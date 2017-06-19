@@ -30,5 +30,6 @@
 #include <mutex>
 #include <numeric>
 #include <cstddef>
+#include <cstdint>
 
 #include <intrin.h>
