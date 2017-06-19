@@ -94,7 +94,7 @@ void cache_ping() {
 							}
 							unsigned __int32 aux = 0ui32;
 							unsigned __int64 ping_received = __rdtscp(&aux);
-							__cpuidex(unused, 0, 0); // no instructions from above this line can execute before the rdtscp
+							__cpuidex(unused, 0, 0); // no instructions from below this line can execute before the rdtscp
 
 							ping_ref.store(0, std::memory_order_release);
 							unsigned __int64 raw_duration = ping_received - ping_sent;
@@ -397,27 +397,43 @@ unsigned __int64 get_measurement_overhead() {
 	return iteration_overhead;
 }
 
+enum cpuid : __int32 {
+	basic_info                = 0x0000'0000i32,
+	extended_limit            = 0x8000'0000i32,
+	brand_string_0            = 0x8000'0002i32,
+	brand_string_1            = 0x8000'0003i32,
+	brand_string_2            = 0x8000'0004i32,
+	advanced_power_management = 0x8000'0007i32
+};
+
+enum regs : __int8 {
+	eax,
+	ebx,
+	ecx,
+	edx
+};
+
 int main(int, char*[]) {
 	std::array<int, 4> cpu = { 0 };
-	__cpuidex(cpu.data(), 0x8000'0000, 0x0);
-	if(cpu[0] >= 0x8000'0004) {
+	__cpuidex(cpu.data(), cpuid::extended_limit, 0x0);
+	if(cpu[regs::eax] >= cpuid::brand_string_2) {
 		union {
 			std::array<char, 48> brand;
 			std::array<std::array<__int32, 4>, 3> registers;
 		} data;
-		__cpuidex(data.registers[0].data(), 0x8000'0002, 0x0);
-		__cpuidex(data.registers[1].data(), 0x8000'0003, 0x0);
-		__cpuidex(data.registers[2].data(), 0x8000'0004, 0x0);
+		__cpuidex(data.registers[0].data(), cpuid::brand_string_0, 0x0);
+		__cpuidex(data.registers[1].data(), cpuid::brand_string_1, 0x0);
+		__cpuidex(data.registers[2].data(), cpuid::brand_string_2, 0x0);
 		std::cout << data.brand.data() << std::endl;
 	}
-	if(cpu[0] < 0x8000'0007) {
+	if(cpu[regs::eax] < cpuid::advanced_power_management) {
 		std::cout << "I can't perform timing on this chip yet" << std::endl;
 		return -1;
 	}
 
 	std::array<__int32, 4> registers = { 0 };
-	__cpuidex(registers.data(), 0x8000'0007, 0x0);
-	if(0ui32 == (registers[3] & (1ui32 << 8ui32))) {
+	__cpuidex(registers.data(), cpuid::advanced_power_management, 0x0);
+	if(0ui32 == (registers[regs::edx] & (1ui32 << 8ui32))) {
 		std::cout << "I can't perform timing on this chip yet" << std::endl;
 		return -1;
 	}
