@@ -29,7 +29,6 @@ void cache_ping() {
 				continue;
 			}
 			alignas(64)             uint64_t  running_sum = { 0ui64 };
-			alignas(64)             uint64_t  running_sum_squares = { 0ui64 };
 			alignas(64) std::atomic<uint64_t> ping = { 0ui64 };
 			std::atomic<uint64_t>* ping_ptr = &ping;
 			
@@ -100,7 +99,6 @@ void cache_ping() {
 							uint64_t raw_duration = ping_received - ping_sent;
 							uint64_t duration = raw_duration - measurement_overhead;
 							running_sum += duration;
-							running_sum_squares += duration * duration;
 						}
 					}
 				}, i));
@@ -122,15 +120,11 @@ void cache_ping() {
 			::SetPriorityClass(::GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
 
 			const double mean_cycles_per_ping = static_cast<double>(running_sum) / static_cast<double>(iteration_count);
-			const double sum_squared = static_cast<double>(running_sum) * static_cast<double>(running_sum);
-			const double variance = (running_sum_squares - (sum_squared / static_cast<double>(iteration_count))) / static_cast<double>(iteration_count);
-			const double stddev = std::sqrt(variance);
 
 			const uint64_t cycles_per_second = tick_rate;
 			const uint64_t nanoseconds_per_second = 1'000'000'000ui64;
 			const double nanoseconds_per_cycle = static_cast<double>(nanoseconds_per_second) / static_cast<double>(cycles_per_second);
 			const double nanoseconds_per_ping = mean_cycles_per_ping * nanoseconds_per_cycle;
-			//std::cout << mean_cycles_per_ping << " (" << stddev << ") cycles per ping = " << nanoseconds_per_ping << " nanoseconds per ping" << std::endl;
 			scores[source_core][destination_core] = nanoseconds_per_ping;
 		}
 	}
