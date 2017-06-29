@@ -356,7 +356,7 @@ uint64_t get_measurement_overhead() {
 	::SetThreadPriority(::GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 	::SetThreadAffinityMask(::GetCurrentThread(), 1ULL);
 
-	alignas(64) volatile uint64_t dummy = 0ui64;
+	alignas(64) volatile std::atomic<uint64_t> dummy = 0ui64;
 	std::array<int32_t, 4> unused = { 0 };
 	uint32_t aux = 0ui32;
 	__cpuidex(unused.data(), 0, 0);
@@ -374,7 +374,10 @@ uint64_t get_measurement_overhead() {
 	uint64_t rdtscp_loop_start = __rdtsc();
 
 	for(size_t i = 0; i < iteration_count; ++i) {
-		dummy = __rdtscp(&aux);
+		dummy.store(0ui64, std::memory_order_release);
+		if(0 == dummy.load(std::memory_order_acquire)) {
+			__rdtscp(&aux);
+		}
 	}
 
 	uint64_t rdtscp_loop_end = __rdtscp(&aux);
@@ -392,12 +395,13 @@ uint64_t get_measurement_overhead() {
 }
 
 enum cpuid : int32_t {
-	basic_info                = 0x0000'0000i32,
-	extended_limit            = 0x8000'0000i32,
-	brand_string_0            = 0x8000'0002i32,
-	brand_string_1            = 0x8000'0003i32,
-	brand_string_2            = 0x8000'0004i32,
-	advanced_power_management = 0x8000'0007i32
+	basic_info                   = 0x0000'0000i32,
+	extended_limit               = 0x8000'0000i32,
+	brand_string_0               = 0x8000'0002i32,
+	brand_string_1               = 0x8000'0003i32,
+	brand_string_2               = 0x8000'0004i32,
+	advanced_power_management    = 0x8000'0007i32,
+	amd_secure_memory_encryption = 0x8000'001fi32,
 };
 
 enum regs : int8_t {
@@ -441,6 +445,8 @@ int main(int, char*[]) {
 	std::cout << "Maximum frequency: " << ppi[0].MaxMhz << " MHz (as reported to/by Windows, which seems in fact to be the base frequency at P0)" << std::endl;
 	tick_rate = get_actual_frequency();
 	measurement_overhead = get_measurement_overhead();
+
+	std::cout << "measurement overhead in ticks: " << measurement_overhead << std::endl;
 
 	cache_ping();
 	//cache_ping_pong();

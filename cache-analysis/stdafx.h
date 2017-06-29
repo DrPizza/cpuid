@@ -2,6 +2,9 @@
 
 #include "targetver.h"
 
+#define _CRT_SECURE_NO_WARNINGS 1
+#define _HAS_AUTO_PTR_ETC 1
+
 #pragma warning(disable: 4710) // warning C4710: '%s': function not inlined
 #pragma warning(disable: 4668) // warning C4668: '%s' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 #pragma warning(disable: 4820) // warning C4820: '%s': '%d' bytes padding added after data member '%s'

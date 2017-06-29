@@ -22,7 +22,7 @@
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalOptions>/volatile:iso /Zc:strictStrings /vd2 /Zo %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/volatile:iso /Zc:strictStrings /vd2 /Zo /permissive- /bigobj %(AdditionalOptions)</AdditionalOptions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <AssemblerOutput>All</AssemblerOutput>
       <SDLCheck>true</SDLCheck>
