@@ -9,10 +9,12 @@ typedef struct _PROCESSOR_POWER_INFORMATION {
 	ULONG CurrentIdleState;
 } PROCESSOR_POWER_INFORMATION, *PPROCESSOR_POWER_INFORMATION;
 
-//static constexpr size_t iteration_count = 1'000'000ULL;
-static constexpr size_t iteration_count = 100'000ULL;
+//constexpr size_t iteration_count = 1'000'000ULL;
+constexpr size_t iteration_count = 100'000ULL;
 static uint64_t tick_rate = 0ui64;
 static uint64_t measurement_overhead = 0ui64;
+
+constexpr uint64_t nanoseconds_per_second = 1'000'000'000ui64;
 
 void cache_ping() {
 	std::condition_variable cv;
@@ -122,7 +124,6 @@ void cache_ping() {
 			const double mean_cycles_per_ping = static_cast<double>(running_sum) / static_cast<double>(iteration_count);
 
 			const uint64_t cycles_per_second = tick_rate;
-			const uint64_t nanoseconds_per_second = 1'000'000'000ui64;
 			const double nanoseconds_per_cycle = static_cast<double>(nanoseconds_per_second) / static_cast<double>(cycles_per_second);
 			const double nanoseconds_per_ping = mean_cycles_per_ping * nanoseconds_per_cycle;
 			scores[source_core][destination_core] = nanoseconds_per_ping;
@@ -225,7 +226,6 @@ void cache_ping_pong() {
 		total_time = total_time / thread_count;
 		const double cycles_per_ping_pong = static_cast<double>(total_time) / static_cast<double>(iteration_count);
 		const uint64_t cycles_per_second = tick_rate;
-		const uint64_t nanoseconds_per_second = 1'000'000'000ui64;
 		const double nanoseconds_per_cycle = static_cast<double>(nanoseconds_per_second) / static_cast<double>(cycles_per_second);
 		const double nanoseconds_per_ping_pong = cycles_per_ping_pong * nanoseconds_per_cycle;
 		std::cout << cycles_per_ping_pong << " cycles per ping pong = " << nanoseconds_per_ping_pong << " nanoseconds per ping pong" << std::endl;
@@ -425,14 +425,14 @@ int main(int, char*[]) {
 		std::cout << data.brand.data() << std::endl;
 	}
 	if(cpu[regs::eax] < cpuid::advanced_power_management) {
-		std::cout << "I can't perform timing on this chip yet" << std::endl;
+		std::cout << "I can't perform timing on this chip" << std::endl;
 		return -1;
 	}
 
 	std::array<int32_t, 4> registers = { 0 };
 	__cpuidex(registers.data(), cpuid::advanced_power_management, 0x0);
 	if(0ui32 == (registers[regs::edx] & (1ui32 << 8ui32))) {
-		std::cout << "I can't perform timing on this chip yet" << std::endl;
+		std::cout << "I can't perform timing on this chip" << std::endl;
 		return -1;
 	}
 	
@@ -444,6 +444,7 @@ int main(int, char*[]) {
 	::CallNtPowerInformation(ProcessorInformation, nullptr, 0, ppi.get(), sizeof(PROCESSOR_POWER_INFORMATION) * si.dwNumberOfProcessors);
 	std::cout << "Maximum frequency: " << ppi[0].MaxMhz << " MHz (as reported to/by Windows, which seems in fact to be the base frequency at P0)" << std::endl;
 	tick_rate = get_actual_frequency();
+	std::cout << "rdtsc ticks at " << tick_rate << " ticks per second" << std::endl;
 	measurement_overhead = get_measurement_overhead();
 
 	std::cout << "measurement overhead in ticks: " << measurement_overhead << std::endl;
