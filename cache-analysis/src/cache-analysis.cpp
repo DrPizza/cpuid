@@ -37,9 +37,9 @@ void cache_ping() {
 			std::vector<std::thread> threads;
 			static constexpr size_t thread_count = 2;
 			for(size_t i = 0; i < thread_count; ++i) {
-				threads.push_back(std::thread([&](const size_t num) {
-					const bool is_source = num == 0;
-					DWORD_PTR mask = 1ULL << (is_source ? source_core : destination_core);
+				threads.emplace_back([&](size_t position) {
+					const bool is_source = position == 0;
+					const DWORD_PTR mask = 1ULL << (is_source ? source_core : destination_core);
 					::SetThreadAffinityMask(::GetCurrentThread(), mask);
 					::SetThreadPriority(::GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 
@@ -54,7 +54,7 @@ void cache_ping() {
 						cv.wait(lck, [&] { return threads_started == 0; });
 					}
 					std::atomic<uint64_t>& ping_ref = *ping_ptr;
-					// if I capture ping directly by-ref, VC++ generates lousy code for the while loop.
+					// If I capture ping directly by-ref, VC++ generates silly code for the while loop.
 					// specifically, it generates a loop that looks like this:
 					// 
 					// loopstart:
@@ -62,17 +62,17 @@ void cache_ping() {
 					// mov         rcx, qword ptr[rax]       // rcx = *rax;
 					// test        rcx, rcx
 					// jne loopstart
-					// and it does this even though qword ptr[rdi + 30h] is invariant (and immutable!)
-					// if I capture the address and then form a reference
-					// on the stack (rather than as a lambda member)
+					// And it does this even though qword ptr[rdi + 30h] is invariant (and immutable!)
+					// If I capture the address and then form a reference on the stack (rather than as a lambda member)
 					// then the loop is tighter:
 					// mov         rax, qword ptr[rdi + 30h] // rax = &ping;
 					// loopstart:
 					// mov         rcx, qword ptr[rax]       // rcx = *rax;
 					// test        rcx, rcx
 					// jne loopstart
-					int32_t unused[4];
+					// Since I want the loop to be as tight as possible, the second form is better.
 
+					int32_t unused[4];
 					if(is_source) {
 						for(size_t i = 0; i < iteration_count; ++i) {
 							while(ping_ref.load(std::memory_order_acquire) != 0) {
@@ -101,7 +101,7 @@ void cache_ping() {
 							running_sum += duration;
 						}
 					}
-				}, i));
+				}, i);
 			}
 
 			{
