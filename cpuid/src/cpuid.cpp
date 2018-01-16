@@ -798,24 +798,15 @@ std::string to_string(cache_descriptor_t desc) {
 }
 
 void print_cache_info(const cpu_t& cpu) {
-	const register_set_t& regs = cpu.features.at(cache_and_tlb).at(subleaf_t::zero);
+	using namespace fmt::literals;
 
-	bool has_tlb = true;
-	bool has_cache = true;
+	const register_set_t& regs = cpu.features.at(cache_and_tlb).at(subleaf_t::zero);
 
 	if((regs[eax] & 0xff) != 0x01) {
 		return;
 	}
 
 	auto bytes = gsl::as_bytes(gsl::make_span(regs));
-	for(const auto b : bytes) {
-		if(b == gsl::to_byte(0xfeui8)) {
-			has_tlb = false;
-		}
-		if(b == gsl::to_byte(0xffui8)) {
-			has_cache = false;
-		}
-	}
 
 	std::vector<std::string> cache_entries;
 
@@ -848,6 +839,9 @@ void print_cache_info(const cpu_t& cpu) {
 			case 0xf1ui8:
 				cache_entries.push_back("128-Byte prefetching");
 				break;
+			case 0xfeui8:
+			case 0xffui8:
+				break;
 			default:
 				{
 					auto dual = dual_cache_descriptors.find(value);
@@ -861,7 +855,7 @@ void print_cache_info(const cpu_t& cpu) {
 						cache_entries.push_back(to_string(it->second));
 						break;
 					}
-					cache_entries.push_back("Unknown cache type: " + std::to_string(value));
+					cache_entries.push_back("Unknown cache type: {:#2x}"_format(value));
 				}
 				break;
 			}
@@ -882,6 +876,7 @@ void print_serial_number(const cpu_t& cpu) {
 	std::cout << "Processor serial number: ";
 	if(0 == (cpu.features.at(version_info).at(zero)[edx] & (1ui32 << 18ui32))) {
 		std::cout << "N/A" << std::endl;
+		return;
 	}
 	const register_set_t& regs = cpu.features.at(serial_number).at(subleaf_t::zero);
 	switch(cpu.vendor) {
