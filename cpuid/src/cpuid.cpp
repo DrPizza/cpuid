@@ -908,6 +908,8 @@ void enumerate_cache_parameters(cpu_t& cpu) {
 }
 
 void print_cache_parameters(const cpu_t& cpu) {
+	using namespace fmt::literals;
+
 	struct cache_a_t
 	{
 		std::uint32_t type                           : 5;
@@ -964,6 +966,33 @@ void print_cache_parameters(const cpu_t& cpu) {
 		                             * (b.b.coherency_line_size      + 1ui32)
 		                             * (sets                         + 1ui32);
 		
+		fmt::MemoryWriter w;
+
+		switch(a.a.type) {
+		case 1:
+			w << "Data Cache       , ";
+			break;
+		case 2:
+			w << "Instruction Cache, ";
+			break;
+		case 3:
+			w << "Unified Cache    , ";
+			break;
+		}
+		double printable_cache_size = cache_size / 1'024.0;
+		char   cache_scale = 'K';
+		if(printable_cache_size > 1'024.0) {
+			printable_cache_size /= 1'024.0;
+			cache_scale = 'M';
+		}
+		w << "Level " << a.a.level << ", ";
+		w << "{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:f} {c}bytes"_format(b.b.coherency_line_size + 1i32,
+		                                                                                                           b.b.associativity_ways + 1ui32,
+		                                                                                                           b.b.physical_line_partitions + 1ui32,
+		                                                                                                           sets + 1ui32,
+		                                                                                                           printable_cache_size,
+		                                                                                                           cache_scale);
+		std::cout << w.str() << std::endl;
 	}
 }
 
