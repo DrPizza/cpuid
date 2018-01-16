@@ -451,6 +451,8 @@ void print_deterministic_cache(const cpu_t& cpu) {
 		std::uint32_t reserved_1            : 29;
 	};
 
+	std::cout << "Deterministic cache\n";
+
 	for(const auto& m : cpu.features.at(deterministic_cache)) {
 		const register_set_t& regs = m.second;
 
@@ -482,7 +484,6 @@ void print_deterministic_cache(const cpu_t& cpu) {
 		                             * (sets                         + 1ui32);
 		
 		fmt::MemoryWriter w;
-		w << "Deterministic cache\n";
 		switch(a.a.type) {
 		case 1:
 			w << "Data Cache       , ";

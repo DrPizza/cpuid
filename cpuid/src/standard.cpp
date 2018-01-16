@@ -9,6 +9,9 @@
 
 void print_basic_info(const cpu_t& cpu) {
 	const register_set_t& regs = cpu.features.at(basic_info).at(subleaf_t::zero);
+	std::cout << "Basic Information" << std::endl;
+	std::cout << "Maximum basic cpuid leaf: 0x" << std::setw(2) << std::setfill('0') << std::hex << regs[eax] << "\n";
+
 	union
 	{
 		std::array<char, 12> vndr;
@@ -21,10 +24,12 @@ void print_basic_info(const cpu_t& cpu) {
 	std::cout << "   vendor: ";
 	std::cout.write(data.vndr.data(), data.vndr.size());
 	std::cout << "\n";
+	std::cout << std::endl;
 }
 
 void print_version_info(const cpu_t& cpu) {
 	const register_set_t& regs = cpu.features.at(version_info).at(subleaf_t::zero);
+	std::cout << "Version Information" << std::endl;
 
 	union
 	{
@@ -116,6 +121,7 @@ void print_version_info(const cpu_t& cpu) {
 			std::cout << "\n";
 		}
 	}
+
 	std::cout << "cache line size/bytes: " << std::dec << b.b.cache_line_size * 8 << "\n"
 	          << "logical processors per package: " << gsl::narrow_cast<std::uint32_t>(b.b.maximum_addressable_ids) << "\n"
 	          << "local APIC ID: " << gsl::narrow_cast<std::uint32_t>(b.b.local_apic_id) << "\n";
@@ -153,6 +159,7 @@ void print_serial_number(const cpu_t& cpu) {
 		std::cout << "{:08x}-{:08x}-{:08x}-{:08x}"_format(regs[eax], regs[ebx], regs[ecx], regs[edx]) << std::endl;
 		break;
 	}
+	std::cout << std::endl;
 }
 
 void print_mwait_parameters(const cpu_t& cpu) {
@@ -272,5 +279,50 @@ void print_thermal_and_power(const cpu_t& cpu) {
 		std::cout << b.b.interrupt_thresholds << " interrupt thresholds in Digital Thermal Sensor\n";
 	}
 	print_features(leaf_t::thermal_and_power, subleaf_t::zero, ecx, cpu);
+	std::cout << std::endl;
+}
+
+void enumerate_extended_features(cpu_t& cpu) {
+	register_set_t regs = { 0 };
+	cpuid(regs, leaf_t::extended_features, subleaf_t::zero);
+	cpu.features[extended_features][zero] = regs;
+
+	const std::uint32_t limit = regs[eax];
+	for(std::uint32_t sub = 1; sub < limit; ++sub) {
+		cpuid(regs, leaf_t::extended_features, sub);
+		cpu.features[extended_features][subleaf_t{ sub }] = regs;
+	}
+
+}
+
+void print_extended_features(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.features.at(extended_features).at(subleaf_t::zero);
+	std::cout << "Extended features\n";
+	print_features(leaf_t::extended_features, subleaf_t::zero, ebx, cpu);
+	std::cout << "\n";
+	if(cpu.vendor & intel) {
+		print_features(leaf_t::extended_features, subleaf_t::zero, ecx, cpu);
+		std::cout << "\n";
+	}
+	print_features(leaf_t::extended_features, subleaf_t::zero, edx, cpu);
+
+	struct extended_c_t
+	{
+		std::uint32_t reserved_1  : 17;
+		std::uint32_t mawau_value : 5;
+		std::uint32_t reserve_2   : 10;
+	};
+	
+	union
+	{
+		extended_c_t c;
+		std::uint32_t raw;
+	} c;
+	c.raw = regs[ecx];
+
+	if(cpu.vendor & intel) {
+		std::cout << "MAWAU value: " << c.c.mawau_value << "\n";
+	}
+
 	std::cout << std::endl;
 }

@@ -8,5 +8,7 @@ void print_version_info(const cpu_t& cpu);
 void print_serial_number(const cpu_t& cpu);
 void print_mwait_parameters(const cpu_t& cpu);
 void print_thermal_and_power(const cpu_t& cpu);
+void enumerate_extended_features(cpu_t& cpu);
+void print_extended_features(const cpu_t& cpu);
 
 #endif

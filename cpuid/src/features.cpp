@@ -115,6 +115,58 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'0008ui32, "PERF_BIAS"   , "Performance-energy bias preference       : ENERGY_PERF_BIAS" }
 			}}
 		}}
+	}},
+	{ extended_features, {
+		{ zero, {
+			{ ebx, {
+				{ intel | amd            , 0x0000'0001ui32, "FSGSBASE"    , "FSGSBASE instructions" },
+				{ intel                  , 0x0000'0002ui32, "TSC_ADJUST"  , "TSC_ADJUST MSR" },
+				{ intel                  , 0x0000'0004ui32, "SGX"         , "Softward Guard Extensions" },
+				{ intel | amd            , 0x0000'0008ui32, "BMI1"        , "Bit Manipulation Instructions 1" },
+				{ intel                  , 0x0000'0010ui32, "HLE"         , "Hardware Lock Elision" },
+				{ intel | amd            , 0x0000'0020ui32, "AVX2"        , "Advanced Vector Extensions 2.0 instructions" },
+				{ intel                  , 0x0000'0040ui32, "FDP_EXCPT"   , "x87 FPU Data Pointerupdated only on x87 exceptions" },
+				{ intel | amd            , 0x0000'0080ui32, "SMEP"        , "Supervisor-Mode Execution Prevention" },
+				{ intel | amd            , 0x0000'0100ui32, "BMI2"        , "Bit Manipulation Instructions 2" },
+				{ intel                  , 0x0000'0200ui32, "EREPMOVSB"   , "Enhanced REP MOVSB/REP STOSB" },
+				{ intel                  , 0x0000'0400ui32, "INVPCID"     , "INVPCID instruction" },
+				{ intel                  , 0x0000'0800ui32, "RTM"         , "Restricted Transactional Memory" },
+				{ intel                  , 0x0000'1000ui32, "RDT-M"       , "Resource Director Technology Monitoring" },
+				{ intel                  , 0x0000'2000ui32, "FPU-CSDS"    , "x87 FPU CS and DS deprecated" },
+				{ intel                  , 0x0000'4000ui32, "MPX"         , "Memory Protection Extensions" },
+				{ intel                  , 0x0000'8000ui32, "RDT-A"       , "Resource Director Technology Allocation" },
+				{ intel                  , 0x0001'0000ui32, "AVX512F"     , "AVX512 Foundation" },
+				{ intel                  , 0x0002'0000ui32, "AVX512DQ"    , "AVX512 Double/Quadword Instructions" },
+				{ intel | amd            , 0x0004'0000ui32, "RDSEED"      , "RDSEED instruction" },
+				{ intel | amd            , 0x0008'0000ui32, "ADX"         , "Multi-Precision Add-Carry Instructions" },
+				{ intel | amd            , 0x0010'0000ui32, "SMAP"        , "Supervisor-Mode Access Prevention" },
+				{ intel                  , 0x0020'0000ui32, "AVX512_IFMA" , "AVX512 Integer FMA" },
+				{         amd            , 0x0040'0000ui32, "PCOMMIT"     , "Persistent Commit" },
+				{ intel | amd            , 0x0080'0000ui32, "CLFLUSHOPT"  , "CLFLUSHOPT instruction" },
+				{ intel                  , 0x0100'0000ui32, "CLWB"        , "CLWB instruction" },
+				{ intel                  , 0x0200'0000ui32, "IPT"         , "Intel Processor Trace" },
+				{ intel                  , 0x0400'0000ui32, "AVX512PF"    , "AVX512 Prefetch" },
+				{ intel                  , 0x0800'0000ui32, "AVX512ER"    , "AVX512 Exponential and Reciprocal Instructions" },
+				{ intel                  , 0x1000'0000ui32, "AVX512CD"    , "AVX512 Conflict Detection Instructions" },
+				{ intel | amd            , 0x2000'0000ui32, "SHA"         , "SHA Extensions" },
+				{ intel                  , 0x4000'0000ui32, "AVX512BW"    , "AVX512 Byte/Word Instructions" },
+				{ intel                  , 0x8000'0000ui32, "AVX512VL"    , "AVX512 Vector Length Instructions" },
+			}},
+			{ ecx, {
+				{ intel                  , 0x0000'0001ui32, "PREFETCHW1"  , "PREFETCHW1 instruction" },
+				{ intel                  , 0x0000'0002ui32, "AVX512_VBMI" , "AVX512 Vector Bit Manipulation Instructions" },
+				{ intel                  , 0x0000'0004ui32, "UMIP"        , "User Mode Instruction Prevention" },
+				{ intel                  , 0x0000'0008ui32, "PKU"         , "Protection Keys for User-mode pages" },
+				{ intel                  , 0x0000'0010ui32, "OSPKE"       , "OS has set CR4.PKE" },
+				{ intel                  , 0x0040'0000ui32, "RDPID"       , "Read Processor ID" },
+				{ intel                  , 0x4000'0000ui32, "SGX_LC"      , "SGX Launch Configuration" },
+			}},
+			{ edx, {
+				{ intel | amd            , 0x0400'0000ui32, "IBRS"        , "Indirect Branch Restricted Speculation and Indirect Branch Predictor Barrier" },
+				{ intel | amd            , 0x0800'0000ui32, "STIBP"       , "Single Thread Indirect Branch Predictors" },
+				{ intel                  , 0x2000'0000ui32, "ARCH_CAPS"   , "ARCH_CAPABILITIES MSR" },
+			}}
+		}}
 	}}
 };
 
