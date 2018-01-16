@@ -38,7 +38,7 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x0000'2000ui32, "CMPXCHG16B"  , "CMPXCHG16B instruction" },
 				{ intel                  , 0x0000'4000ui32, "xTPR"        , "xTPR update control" },
 				{ intel                  , 0x0000'8000ui32, "PDCM"        , "Perfmon and Debug Capability" },
-				{ intel | amd            , 0x0001'0000ui32, ""            , "Reserved"},
+				//{ intel | amd            , 0x0001'0000ui32, ""            , "Reserved"},
 				{ intel | amd            , 0x0002'0000ui32, "PCID"        , "Process-context identifiers" },
 				{ intel                  , 0x0004'0000ui32, "DCA"         , "Direct Cache Access" },
 				{ intel | amd            , 0x0008'0000ui32, "SSE4.1"      , "SSE4.1 Extensions" },
@@ -66,7 +66,7 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x0000'0080ui32, "MCE"         , "Machine Check Exception"},
 				{ intel | amd | transmeta, 0x0000'0100ui32, "CX8"         , "CMPXCHG8B Instruction"},
 				{ intel | amd            , 0x0000'0200ui32, "APIC"        , "APIC On-Chip"},
-				{ intel | amd            , 0x0000'0400ui32, ""            , "Reserved"},
+				//{ intel | amd            , 0x0000'0400ui32, ""            , "Reserved"},
 				{ intel | amd | transmeta, 0x0000'0800ui32, "SEP"         , "SYSENTER and SYSEXIT Instructions"},
 				{ intel | amd            , 0x0000'1000ui32, "MTRR"        , "Memory Type Range Registers"},
 				{ intel | amd            , 0x0000'2000ui32, "PGE"         , "Page Global Bit"},
@@ -76,7 +76,7 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x0002'0000ui32, "PSE-36"      , "36-bit Page Size Extension"},
 				{ intel       | transmeta, 0x0004'0000ui32, "PSN"         , "Processor Serial Number"},
 				{ intel | amd            , 0x0008'0000ui32, "CLFSH"       , "CLFLUSH Instruction"},
-				{ intel | amd            , 0x0010'0000ui32, ""            , "Reserved"},
+				//{ intel | amd            , 0x0010'0000ui32, ""            , "Reserved"},
 				{ intel                  , 0x0020'0000ui32, "DS"          , "Debug Store"},
 				{ intel                  , 0x0040'0000ui32, "ACPI"        , "Thermal Monitoring and Software Controlled Clock Facilities"},
 				{ intel | amd | transmeta, 0x0080'0000ui32, "MMX"         , "Intel MMX Technology"},
@@ -90,6 +90,31 @@ const feature_map_t all_features = {
 				{ intel                  , 0x8000'0000ui32, "PBE"         , "Pending Break Enable"}
 			}}
 		}}
+	}},
+	{ thermal_and_power, {
+		{ zero, {
+			{ eax, {
+				{ intel                  , 0x0000'0001ui32, "DTS"         , "Digital temperature sensor" },
+				{ intel                  , 0x0000'0002ui32, "TBT"         , "Intel Turbo Boost Technology" },
+				{ intel | amd            , 0x0000'0004ui32, "ARAT"        , "APIC-Timer-always-running" },
+				//{ intel                  , 0x0000'0008ui32, ""            , "Reserved" },
+				{ intel                  , 0x0000'0010ui32, "PLN"         , "Power limit notification controls" },
+				{ intel                  , 0x0000'0020ui32, "ECMD"        , "Clock modulation duty cycle extension" },
+				{ intel                  , 0x0000'0040ui32, "PTM"         , "Package thermal management" },
+				{ intel                  , 0x0000'0080ui32, "HWP"         , "Hardware Managed Performance States: HWP_CAPABILITIES, HWP_REQUEST, HWP_STATUS" },
+				{ intel                  , 0x0000'0100ui32, "HWP_N"       , "HWP_Notification                   : HWP_INTERRUPT" },
+				{ intel                  , 0x0000'0200ui32, "HWP_AW"      , "HWP_Activity_Window                : HWP_REQUEST[41:32]" },
+				{ intel                  , 0x0000'0400ui32, "HWP_EPP"     , "HWP_Energy_Performance_Preference  : HWP_REQUEST[31:24]" },
+				{ intel                  , 0x0000'0800ui32, "HWP_PLR"     , "HWP_Package_Level_Request          : HWP_REQUEST_PKG" },
+				//{ intel                  , 0x0000'1000ui32, ""            , "Reserved" },
+				{ intel                  , 0x0000'2000ui32, "HDC"         , "HDC_CTL, HDC_CTL1, THREAD_STALL" },
+				{ intel                  , 0x0000'4000ui32, "TBT3"        , "Intel Turbo Boost Max Technology 3.0" }
+			}},
+			{ ecx, {
+				{ intel                  , 0x0000'0001ui32, "HCF"         , "Hardware Coordination Feedback Capability: MPERF, APERF"},
+				{ intel                  , 0x0000'0008ui32, "PERF_BIAS"   , "Performance-energy bias preference       : ENERGY_PERF_BIAS" }
+			}}
+		}}
 	}}
 };
 
@@ -100,9 +125,9 @@ void print_features(leaf_t leaf, subleaf_t sub, register_t reg, const cpu_t& cpu
 	for(const feature_t& f : features) {
 		if(0 != (cpu.vendor & f.vendor)) {
 			if(0 != (value & f.mask)) {
-				std::cout << "\x1b[32;1m[+]\x1b[0m" << std::setw(16) << std::setfill(' ') << f.mnemonic << " " << f.description << "\n";
+				std::cout << std::setw(12) << std::setfill(' ') << f.mnemonic << " \x1b[32;1m[+]\x1b[0m " << f.description << "\n";
 			} else {
-				std::cout << "\x1b[31;1m[-]\x1b[0m" << std::setw(16) << std::setfill(' ') << f.mnemonic << " " << f.description << "\n";
+				std::cout << std::setw(12) << std::setfill(' ') << f.mnemonic << " \x1b[31;1m[-]\x1b[0m " << f.description << "\n";
 			}
 		}
 	}

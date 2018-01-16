@@ -226,3 +226,51 @@ void print_mwait_parameters(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 	std::cout << std::endl;
 }
+
+void print_thermal_and_power(const cpu_t& cpu) {
+	if(cpu.vendor != intel && cpu.vendor != amd) {
+		return;
+	}
+
+	std::cout << "Thermal and Power Management\n";
+	const register_set_t& regs = cpu.features.at(monitor_mwait).at(subleaf_t::zero);
+	print_features(leaf_t::thermal_and_power, subleaf_t::zero, eax, cpu);
+	std::cout << std::endl;
+
+	if(cpu.vendor != intel) {
+		return;
+	}
+
+	struct thermal_b_t
+	{
+		std::uint32_t interrupt_thresholds : 4;
+		std::uint32_t reserved_1           : 28;
+	};
+	struct thermal_c_t
+	{
+		std::uint32_t hcf : 1;
+		std::uint32_t reserved_1 : 2;
+		std::uint32_t bias_preference : 1;
+		std::uint32_t reserved_2 : 28;
+	};
+
+	union
+	{
+		thermal_b_t b;
+		std::uint32_t raw;
+	} b;
+	b.raw = regs[ebx];
+
+	union
+	{
+		thermal_c_t c;
+		std::uint32_t raw;
+	} c;
+	c.raw = regs[ecx];
+
+	if(b.b.interrupt_thresholds) {
+		std::cout << b.b.interrupt_thresholds << " interrupt thresholds in Digital Thermal Sensor\n";
+	}
+	print_features(leaf_t::thermal_and_power, subleaf_t::zero, ecx, cpu);
+	std::cout << std::endl;
+}

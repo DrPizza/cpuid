@@ -13,9 +13,6 @@
 
 #include <fmt/format.h>
 
-using leaf_print = void(*)(const cpu_t& cpu);
-using leaf_enumerate = void(*)(cpu_t& cpu);
-
 template<std::size_t N, std::size_t... Is>
 constexpr std::array<char, N - 1> to_array(const char(&str)[N], std::index_sequence<Is...>) {
 	return { str[Is]... };
@@ -98,6 +95,9 @@ model_t get_model(vendor_t vendor, const register_set_t& regs) noexcept {
 	return model;
 }
 
+using leaf_print = void(*)(const cpu_t& cpu);
+using leaf_enumerate = void(*)(cpu_t& cpu);
+
 struct leaf_descriptor_t
 {
 	bool has_subleaves;
@@ -112,7 +112,7 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ serial_number                     , { false, nullptr                      , print_serial_number       } },
 	{ deterministic_cache               , { true , enumerate_deterministic_cache, print_deterministic_cache } },
 	{ monitor_mwait                     , { false, nullptr                      , print_mwait_parameters    } },
-	{ thermal_and_power                 , { false, nullptr                      , nullptr } },
+	{ thermal_and_power                 , { false, nullptr                      , print_thermal_and_power } },
 	{ extended_features                 , { true , nullptr                      , nullptr } },
 	{ reserved_1                        , { false, nullptr                      , nullptr } },
 	{ direct_cache_access               , { false, nullptr                      , nullptr } },
