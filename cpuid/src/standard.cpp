@@ -292,7 +292,6 @@ void enumerate_extended_features(cpu_t& cpu) {
 		cpuid(regs, leaf_t::extended_features, sub);
 		cpu.features[extended_features][subleaf_t{ sub }] = regs;
 	}
-
 }
 
 void print_extended_features(const cpu_t& cpu) {

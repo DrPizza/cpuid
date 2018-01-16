@@ -4,6 +4,7 @@
 #include "cache.hpp"
 #include "features.hpp"
 #include "standard.hpp"
+#include "topology.hpp"
 
 #include <map>
 #include <iostream>
@@ -116,7 +117,7 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ extended_features                 , { true , enumerate_extended_features  , print_extended_features      } },
 	{ direct_cache_access               , { false, nullptr                      , print_direct_cache_access    } },
 	{ performance_monitoring            , { false, nullptr                      , print_performance_monitoring } },
-	{ extended_topology                 , { true , nullptr                      , nullptr } },
+	{ extended_topology                 , { true , enumerate_extended_topology  , print_extended_topology      } },
 	{ reserved_2                        , { false, nullptr                      , nullptr } },
 	{ extended_state                    , { true , nullptr                      , nullptr } },
 	{ reserved_3                        , { false, nullptr                      , nullptr } },
