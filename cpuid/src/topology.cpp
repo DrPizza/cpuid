@@ -10,10 +10,9 @@ void enumerate_extended_topology(cpu_t& cpu) {
 	register_set_t regs = { 0 };
 	cpuid(regs, leaf_t::extended_topology, subleaf_t::zero);
 	cpu.features[extended_topology][zero] = regs;
-
 	for(std::uint32_t sub = 1; ; ++sub) {
 		cpuid(regs, leaf_t::extended_topology, sub);
-		if(regs[eax] == 0ui32 && regs[ebx] == 0ui32 && regs[ecx] == 0ui32 && regs[edx] == 0ui32) {
+		if((regs[ebx] & 0x0000'ffffui32) == 0ui32) {
 			break;
 		}
 		cpu.features[extended_topology][subleaf_t{ sub }] = regs;
