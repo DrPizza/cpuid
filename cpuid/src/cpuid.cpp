@@ -1005,8 +1005,8 @@ void print_cache_parameters(const cpu_t& cpu) {
 		} else {
 			w << "WBINVD/INVD invalidate lower level caches for all threads. ";
 		}
-		w << "Cache is {:s}inclusive of lower cache levels. "_format(d.d.cache_inclusive != 0 ? "" : "not ");
-		w << "Cache is {:s}direct mapped. "_format(d.d.complex_indexing == 0 ? "" : "not ");
+		w << "Cache is {:s} of lower cache levels. "_format(d.d.cache_inclusive != 0 ? "inclusive" : "exclusive");
+		w << "Cache is {:s}direct mapped. "_format(d.d.complex_indexing == 1 ? "not " : " ");
 		w << "Cache is shared by up to {:d} threads, with up to {:d} cores in the package."_format(a.a.maximum_addressable_thread_ids + 1, a.a.maximum_addressable_core_ids + 1);
 		std::cout << w.str() << std::endl;
 		std::cout << std::endl;
