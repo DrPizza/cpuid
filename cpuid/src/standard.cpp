@@ -305,6 +305,7 @@ void print_extended_features(const cpu_t& cpu) {
 		std::cout << "\n";
 	}
 	print_features(leaf_t::extended_features, subleaf_t::zero, edx, cpu);
+	std::cout << "\n";
 
 	struct extended_c_t
 	{
@@ -324,5 +325,114 @@ void print_extended_features(const cpu_t& cpu) {
 		std::cout << "MAWAU value: " << c.c.mawau_value << "\n";
 	}
 
+	std::cout << std::endl;
+}
+
+void print_direct_cache_access(const cpu_t& cpu) {
+	if(cpu.vendor != intel) {
+		return;
+	}
+	if(0 == (cpu.features.at(version_info).at(zero).at(ecx) & 0x0004'0000ui32)) {
+		return;
+	}
+	const register_set_t& regs = cpu.features.at(direct_cache_access).at(subleaf_t::zero);
+	std::cout << "Direct Cache Access\n";
+	std::cout << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n";
+	std::cout << std::endl;
+}
+
+void print_performance_monitoring(const cpu_t& cpu) {
+	if(cpu.vendor != intel) {
+		return;
+	}
+	if(0 == (cpu.features.at(version_info).at(zero).at(ecx) & 0x0000'8000ui32)) {
+		return;
+	}
+
+	const register_set_t& regs = cpu.features.at(performance_monitoring).at(subleaf_t::zero);
+
+	struct perfmon_a_t
+	{
+		std::uint32_t version              : 8;
+		std::uint32_t counters_per_logical : 8;
+		std::uint32_t counter_bit_width    : 8;
+		std::uint32_t ebx_length           : 8;
+	};
+
+	struct perfmon_b_t
+	{
+		std::uint32_t core_cycle           : 1;
+		std::uint32_t instructions_retired : 1;
+		std::uint32_t reference_cycles     : 1;
+		std::uint32_t llc_reference        : 1;
+		std::uint32_t llc_misses           : 1;
+		std::uint32_t branch_retired       : 1;
+		std::uint32_t branch_mispredict    : 1;
+		std::uint32_t reserved_1           : 25;
+	};
+
+	struct perfmon_d_t
+	{
+		std::uint32_t fixed_function_counters      : 5;
+		std::uint32_t fixed_function_counter_width : 8;
+		std::uint32_t reserved_1                   : 2;
+		std::uint32_t any_thread                   : 1;
+		std::uint32_t reserved_2                   : 16;
+	};
+
+	union
+	{
+		perfmon_a_t a;
+		std::uint32_t raw;
+	} a;
+	a.raw = regs[eax];
+
+	union
+	{
+		perfmon_b_t b;
+		std::uint32_t raw;
+	} b;
+	b.raw = regs[ebx];
+
+	union
+	{
+		perfmon_d_t d;
+		std::uint32_t raw;
+	} d;
+	d.raw = regs[edx];
+
+	if(a.a.version == 0) {
+		return;
+	}
+
+	std::cout << "Architectural Performance Monitoring\n";
+	std::cout << "\tVersion: " << a.a.version << "\n";
+	std::cout << "\tCounters per logical processor: " << a.a.counters_per_logical << "\n";
+	std::cout << "\tCounter bit width: " << a.a.counter_bit_width << "\n";
+	std::cout << "\tFixed function counters: " << d.d.fixed_function_counters << "\n";
+	std::cout << "\tFixed function counter bit width: " << d.d.fixed_function_counter_width << "\n";
+
+	std::cout << "\tSupported counters\n";
+	if(0 == b.b.core_cycle) {
+		std::cout << "\t\tCore cycles\n";
+	}
+	if(0 == b.b.instructions_retired) {
+		std::cout << "\t\tInstructions retired\n";
+	}
+	if(0 == b.b.reference_cycles) {
+		std::cout << "\t\tReference cycles\n";
+	}
+	if(0 == b.b.llc_reference) {
+		std::cout << "\t\tLast-level cache reference\n";
+	}
+	if(0 == b.b.llc_misses) {
+		std::cout << "\t\tLast-level cache misses\n";
+	}
+	if(0 == b.b.branch_retired) {
+		std::cout << "\t\tBranch instructions retired\n";
+	}
+	if(0 == b.b.branch_mispredict) {
+		std::cout << "\t\tBranch instructions mispredicted\n";
+	}
 	std::cout << std::endl;
 }
