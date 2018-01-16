@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26403.3
+VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cache-analysis", "cache-analysis\cache-analysis.vcxproj", "{39A20863-62B1-4426-87C7-E732DACCD4DB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "memory-analysis", "memory-analysis\memory-analysis.vcxproj", "{39A20863-62B1-4426-87C7-E732DACCD4DB}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scheduler-analysis", "scheduler-analysis\scheduler-analysis.vcxproj", "{8F88A66F-8164-45E5-AE87-37117DC14AE4}"
 EndProject
@@ -19,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "disk-thrash", "disk-thrash\disk-thrash.vcxproj", "{1DF24689-96D0-483E-8D9D-4A5369C0B33E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cpuid", "cpuid\cpuid.vcxproj", "{CBE22B40-F50D-4CF0-BF3F-74096F04A3FC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,8 +40,15 @@ Global
 		{1DF24689-96D0-483E-8D9D-4A5369C0B33E}.Debug|x64.Build.0 = Debug|x64
 		{1DF24689-96D0-483E-8D9D-4A5369C0B33E}.Release|x64.ActiveCfg = Release|x64
 		{1DF24689-96D0-483E-8D9D-4A5369C0B33E}.Release|x64.Build.0 = Release|x64
+		{CBE22B40-F50D-4CF0-BF3F-74096F04A3FC}.Debug|x64.ActiveCfg = Debug|x64
+		{CBE22B40-F50D-4CF0-BF3F-74096F04A3FC}.Debug|x64.Build.0 = Debug|x64
+		{CBE22B40-F50D-4CF0-BF3F-74096F04A3FC}.Release|x64.ActiveCfg = Release|x64
+		{CBE22B40-F50D-4CF0-BF3F-74096F04A3FC}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C2B3CA64-F75F-446E-A492-A4FA25EC0D3F}
 	EndGlobalSection
 EndGlobal
