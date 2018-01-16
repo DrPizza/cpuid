@@ -158,6 +158,8 @@ int main(int, char*[]) {
 	::SetConsoleOutputCP(CP_UTF8);
 	std::cout.rdbuf()->pubsetbuf(nullptr, 1024);
 
+	::SetThreadAffinityMask(::GetCurrentThread(), 0x1);
+
 	cpu_t cpu = {};
 	register_set_t regs = { 0 };
 
