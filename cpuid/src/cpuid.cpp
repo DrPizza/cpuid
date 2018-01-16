@@ -986,12 +986,12 @@ void print_cache_parameters(const cpu_t& cpu) {
 			cache_scale = 'M';
 		}
 		w << "Level " << a.a.level << ", ";
-		w << "{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:f} {c}bytes"_format(b.b.coherency_line_size + 1i32,
-		                                                                                                           b.b.associativity_ways + 1ui32,
-		                                                                                                           b.b.physical_line_partitions + 1ui32,
-		                                                                                                           sets + 1ui32,
-		                                                                                                           printable_cache_size,
-		                                                                                                           cache_scale);
+		w << "{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:g} {:c}bytes"_format(b.b.coherency_line_size + 1i32,
+		                                                                                                            b.b.associativity_ways + 1ui32,
+		                                                                                                            b.b.physical_line_partitions + 1ui32,
+		                                                                                                            sets + 1ui32,
+		                                                                                                            printable_cache_size,
+		                                                                                                            cache_scale);
 		std::cout << w.str() << std::endl;
 	}
 }
