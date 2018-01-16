@@ -377,15 +377,15 @@ void print_version_info(const cpu_t& cpu) {
 	{
 		std::uint32_t raw;
 		split_model_t m;
-	} model;
+	} a;
 	
-	model.raw = regs[eax];
+	a.raw = regs[eax];
 	std::cout << "signature: 0x" << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n"
 	          << "   family: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.family << "\n"
 	          << "    model: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.model << "\n"
 	          << " stepping: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.stepping << "\n";
 	if(cpu.vendor == intel) {
-		switch(model.m.type) {
+		switch(a.m.type) {
 		case 0:
 			std::cout << "Original OEM Processor\n";
 			break;
@@ -402,7 +402,7 @@ void print_version_info(const cpu_t& cpu) {
 	}
 	std::cout << std::endl;
 
-	struct additional_t
+	struct version_b_t
 	{
 		std::uint8_t brand_id;
 		std::uint8_t cache_line_size;
@@ -413,14 +413,14 @@ void print_version_info(const cpu_t& cpu) {
 	union
 	{
 		std::uint32_t raw;
-		additional_t a;
-	} additional;
-	additional.raw = regs[ebx];
+		version_b_t b;
+	} b;
+	b.raw = regs[ebx];
 
 	if(cpu.vendor == intel) {
-		if(additional.a.brand_id != 0ui32) {
+		if(b.b.brand_id != 0ui32) {
 			std::cout << "brand ID: ";
-			switch(additional.a.brand_id) {
+			switch(b.b.brand_id) {
 			case 0x00: break;
 			case 0x01: std::cout << "Intel(R) Celeron(R) processor"; break;
 			case 0x02: std::cout << "Intel(R) Pentium(R) III processor"; break;
@@ -463,9 +463,9 @@ void print_version_info(const cpu_t& cpu) {
 			std::cout << "\n";
 		}
 	}
-	std::cout << "cache line size/bytes: " << std::dec << additional.a.cache_line_size * 8 << "\n"
-	          << "logical processors per package: " << gsl::narrow_cast<std::uint32_t>(additional.a.maximum_addressable_ids) << "\n"
-	          << "local APIC ID: " << gsl::narrow_cast<std::uint32_t>(additional.a.local_apic_id) << "\n";
+	std::cout << "cache line size/bytes: " << std::dec << b.b.cache_line_size * 8 << "\n"
+	          << "logical processors per package: " << gsl::narrow_cast<std::uint32_t>(b.b.maximum_addressable_ids) << "\n"
+	          << "local APIC ID: " << gsl::narrow_cast<std::uint32_t>(b.b.local_apic_id) << "\n";
 	std::cout << std::endl;
 
 	std::cout << "Feature identifiers\n";
@@ -800,6 +800,10 @@ std::string to_string(cache_descriptor_t desc) {
 void print_cache_info(const cpu_t& cpu) {
 	using namespace fmt::literals;
 
+	if(cpu.vendor != intel && cpu.vendor != cyrix) {
+		return;
+	}
+
 	const register_set_t& regs = cpu.features.at(cache_and_tlb).at(subleaf_t::zero);
 
 	if((regs[eax] & 0xff) != 0x01) {
@@ -861,6 +865,8 @@ void print_cache_info(const cpu_t& cpu) {
 			}
 		}
 	}
+
+	std::cout << "Cache and TLB\n";
 	for(const std::string& s : cache_entries) {
 		std::cout << s << std::endl;
 	}
@@ -895,6 +901,10 @@ void print_serial_number(const cpu_t& cpu) {
 }
 
 void enumerate_cache_parameters(cpu_t& cpu) {
+	if(cpu.vendor != intel) {
+		return;
+	}
+
 	register_set_t regs = { 0 };
 	std::uint32_t sub = subleaf_t::zero;
 	while(true) {
@@ -909,6 +919,10 @@ void enumerate_cache_parameters(cpu_t& cpu) {
 
 void print_cache_parameters(const cpu_t& cpu) {
 	using namespace fmt::literals;
+
+	if(cpu.vendor != intel) {
+		return;
+	}
 
 	struct cache_a_t
 	{
@@ -967,7 +981,7 @@ void print_cache_parameters(const cpu_t& cpu) {
 		                             * (sets                         + 1ui32);
 		
 		fmt::MemoryWriter w;
-
+		w << "Deterministic cache\n";
 		switch(a.a.type) {
 		case 1:
 			w << "Data Cache       , ";
@@ -1013,6 +1027,74 @@ void print_cache_parameters(const cpu_t& cpu) {
 	}
 }
 
+void print_mwait_parameters(const cpu_t& cpu) {
+	if(cpu.vendor != intel && cpu.vendor != amd) {
+		return;
+	}
+
+	const register_set_t& regs = cpu.features.at(monitor_mwait).at(subleaf_t::zero);
+
+	struct monitor_a_t
+	{
+		std::uint32_t smallest_monitor_line : 16;
+		std::uint32_t reserved_1            : 16;
+	};
+	struct monitor_b_t
+	{
+		std::uint32_t largest_monitor_line : 16;
+		std::uint32_t reserved_1           : 16;
+	};
+	struct monitor_c_t
+	{
+		std::uint32_t enumerable           : 1;
+		std::uint32_t interrupts_as_breaks : 1;
+		std::uint32_t reserved_1           : 30;
+	};
+
+	union
+	{
+		monitor_a_t a;
+		std::uint32_t raw;
+	} a;
+	a.raw = regs[eax];
+
+	union
+	{
+		monitor_b_t b;
+		std::uint32_t raw;
+	} b;
+	b.raw = regs[ebx];
+
+	union
+	{
+		monitor_c_t c;
+		std::uint32_t raw;
+	} c;
+	c.raw = regs[ecx];
+
+	using namespace fmt::literals;
+
+	fmt::MemoryWriter w;
+	w << "MONITOR/MWAIT leaf\n";
+	w << "\tSmallest monitor-line size: {:d} bytes\n"_format(a.a.smallest_monitor_line + 0ui32);
+	w << "\tLargest monitor-line size: {:d} bytes\n"_format (b.b.largest_monitor_line  + 0ui32);
+	if(c.c.enumerable) {
+		if(c.c.interrupts_as_breaks) {
+			w << "\tInterrupts break MWAIT, even when disabled\n";
+		}
+		if(cpu.vendor & intel) {
+			std::uint32_t mask = 0b1111;
+			for(std::size_t i = 0; i < 8; ++i) {
+				std::uint32_t states = (regs[edx] & (mask << (i * 4))) >> (i * 4);
+				w << "\t{:d} C{:d} sub C-states supported using MWAIT\n"_format(states, i);
+			}
+		}
+	}
+
+	std::cout << w.str() << std::flush;
+	std::cout << std::endl;
+}
+
 struct leaf_descriptor_t
 {
 	bool has_subleaves;
@@ -1026,7 +1108,7 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ cache_and_tlb                     , { false, nullptr                   , print_cache_info       } },
 	{ serial_number                     , { false, nullptr                   , print_serial_number    } },
 	{ cache_parameters                  , { true , enumerate_cache_parameters, print_cache_parameters } },
-	{ monitor_mwait                     , { false, nullptr                   , nullptr } },
+	{ monitor_mwait                     , { false, nullptr                   , print_mwait_parameters } },
 	{ thermal_and_power                 , { false, nullptr                   , nullptr } },
 	{ extended_features                 , { true , nullptr                   , nullptr } },
 	{ reserved_1                        , { false, nullptr                   , nullptr } },
