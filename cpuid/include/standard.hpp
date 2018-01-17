@@ -12,5 +12,7 @@ void enumerate_extended_features(cpu_t& cpu);
 void print_extended_features(const cpu_t& cpu);
 void print_direct_cache_access(const cpu_t& cpu);
 void print_performance_monitoring(const cpu_t& cpu);
+void enumerate_extended_state(cpu_t& cpu);
+void print_extended_state(const cpu_t& cpu);
 
 #endif

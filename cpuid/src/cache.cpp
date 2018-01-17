@@ -332,7 +332,7 @@ void print_cache_tlb_info(const cpu_t& cpu) {
 		return;
 	}
 
-	const register_set_t& regs = cpu.features.at(cache_and_tlb).at(subleaf_t::zero);
+	const register_set_t& regs = cpu.features.at(leaf_t::cache_and_tlb).at(subleaf_t::main);
 
 	if((regs[eax] & 0xff) != 0x01) {
 		return;
@@ -407,13 +407,13 @@ void enumerate_deterministic_cache(cpu_t& cpu) {
 	}
 
 	register_set_t regs = { 0 };
-	std::uint32_t sub = subleaf_t::zero;
+	subleaf_t sub = subleaf_t::main;
 	while(true) {
-		cpuid(regs, deterministic_cache, sub);
+		cpuid(regs, leaf_t::deterministic_cache, sub);
 		if((regs[eax] & 0x1fui32) == 0) {
 			break;
 		}
-		cpu.features[deterministic_cache][subleaf_t{ sub }] = regs;
+		cpu.features[leaf_t::deterministic_cache][subleaf_t{ sub }] = regs;
 		++sub;
 	}
 }
@@ -453,7 +453,7 @@ void print_deterministic_cache(const cpu_t& cpu) {
 
 	std::cout << "Deterministic cache\n";
 
-	for(const auto& m : cpu.features.at(deterministic_cache)) {
+	for(const auto& m : cpu.features.at(leaf_t::deterministic_cache)) {
 		const register_set_t& regs = m.second;
 
 		union

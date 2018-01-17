@@ -6,16 +6,18 @@
 #include <iostream>
 #include <iomanip>
 
+// TODO: enumerating the full topology requires bouncing to every core (even across processor groups) and amalgamating data
+
 void enumerate_extended_topology(cpu_t& cpu) {
 	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::extended_topology, subleaf_t::zero);
-	cpu.features[extended_topology][zero] = regs;
-	for(std::uint32_t sub = 1; ; ++sub) {
+	cpuid(regs, leaf_t::extended_topology, subleaf_t::main);
+	cpu.features[leaf_t::extended_topology][subleaf_t::main] = regs;
+	for(subleaf_t sub = subleaf_t{ 1 }; ; ++sub) {
 		cpuid(regs, leaf_t::extended_topology, sub);
 		if((regs[ebx] & 0x0000'ffffui32) == 0ui32) {
 			break;
 		}
-		cpu.features[extended_topology][subleaf_t{ sub }] = regs;
+		cpu.features[leaf_t::extended_topology][sub] = regs;
 	}
 }
 
@@ -23,16 +25,16 @@ void print_extended_topology(const cpu_t& cpu) {
 	if(cpu.vendor != intel && cpu.vendor != amd) {
 		return;
 	}
-	if(cpu.features.at(extended_topology).at(subleaf_t::zero)[eax] == 0ui32
-	&& cpu.features.at(extended_topology).at(subleaf_t::zero)[ebx] == 0ui32) {
+	if(cpu.features.at(leaf_t::extended_topology).at(subleaf_t::main)[eax] == 0ui32
+	&& cpu.features.at(leaf_t::extended_topology).at(subleaf_t::main)[ebx] == 0ui32) {
 		return;
 	}
 
-	std::uint32_t x2_apic_id = cpu.features.at(extended_topology).at(subleaf_t::zero)[edx];
+	const std::uint32_t x2_apic_id = cpu.features.at(leaf_t::extended_topology).at(subleaf_t::main)[edx];
 	
 	std::cout << "Extended topology\n";
 	std::cout << "\tx2 APIC id: " << std::hex << x2_apic_id << "\n";
-	for(const auto& m : cpu.features.at(extended_topology)) {
+	for(const auto& m : cpu.features.at(leaf_t::extended_topology)) {
 		const register_set_t& regs = m.second;
 		
 		struct topology_a_t
@@ -75,7 +77,6 @@ void print_extended_topology(const cpu_t& cpu) {
 		} c;
 		c.raw = regs[ecx];
 
-		std::cout << "\tecx: " << std::hex << m.first << "\n";
 		std::cout << "\t\tbits to shift: " << a.a.shift_distance << "\n";
 		std::cout << "\t\tlogical processors at level type: " << b.b.logical_procesors_at_level_type << "\n";
 		std::cout << "\t\tlevel number: " << c.c.level_number << "\n";
