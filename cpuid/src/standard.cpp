@@ -554,7 +554,7 @@ void print_extended_state(const cpu_t& cpu) {
 				if(a.a.xsaves) {
 					std::cout << "\t\tXSAVES\n";
 				}
-				std::cout << "\tSize for enabled features  : " << sub.second[ebx] << " bytes\n";
+				std::cout << "\tSize for enabled features: " << std::dec << sub.second[ebx] << " bytes\n";
 				std::cout << std::endl;
 			}
 			break;
