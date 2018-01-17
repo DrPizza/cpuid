@@ -8,7 +8,7 @@
 #include <iomanip>
 
 void print_basic_info(const cpu_t& cpu) {
-	const register_set_t& regs = cpu.features.at(basic_info).at(subleaf_t::zero);
+	const register_set_t& regs = cpu.features.at(leaf_t::basic_info).at(subleaf_t::main);
 	std::cout << "Basic Information" << std::endl;
 	std::cout << "Maximum basic cpuid leaf: 0x" << std::setw(2) << std::setfill('0') << std::hex << regs[eax] << "\n";
 
@@ -28,7 +28,7 @@ void print_basic_info(const cpu_t& cpu) {
 }
 
 void print_version_info(const cpu_t& cpu) {
-	const register_set_t& regs = cpu.features.at(version_info).at(subleaf_t::zero);
+	const register_set_t& regs = cpu.features.at(leaf_t::version_info).at(subleaf_t::main);
 	std::cout << "Version Information" << std::endl;
 
 	union
@@ -128,9 +128,9 @@ void print_version_info(const cpu_t& cpu) {
 	std::cout << std::endl;
 
 	std::cout << "Feature identifiers\n";
-	print_features(leaf_t::version_info, subleaf_t::zero, edx, cpu);
+	print_features(leaf_t::version_info, subleaf_t::main, edx, cpu);
 	std::cout << "\n";
-	print_features(leaf_t::version_info, subleaf_t::zero, ecx, cpu);
+	print_features(leaf_t::version_info, subleaf_t::main, ecx, cpu);
 	std::cout << std::endl;
 }
 
@@ -141,15 +141,15 @@ void print_serial_number(const cpu_t& cpu) {
 		return;
 	}
 	std::cout << "Processor serial number: ";
-	if(0 == (cpu.features.at(version_info).at(zero)[edx] & (1ui32 << 18ui32))) {
+	if(0 == (cpu.features.at(leaf_t::version_info).at(subleaf_t::main)[edx] & (1ui32 << 18ui32))) {
 		std::cout << "N/A" << std::endl;
 		return;
 	}
-	const register_set_t& regs = cpu.features.at(serial_number).at(subleaf_t::zero);
+	const register_set_t& regs = cpu.features.at(leaf_t::serial_number).at(subleaf_t::main);
 	switch(cpu.vendor) {
 	case intel:
 		{
-			const std::uint32_t top = cpu.features.at(version_info).at(zero)[eax];
+			const std::uint32_t top = cpu.features.at(leaf_t::version_info).at(subleaf_t::main)[eax];
 			const std::uint32_t middle = regs[edx];
 			const std::uint32_t bottom = regs[ecx];
 			std::cout << "{:04x}-{:04x}-{:04x}-{:04x}-{:04x}-{:04x}"_format(top >> 16ui32, top & 0xffffui32, middle >> 16ui32, middle & 0xffffui32, bottom >> 16ui32, bottom & 0xffffui32) << std::endl;
@@ -167,7 +167,7 @@ void print_mwait_parameters(const cpu_t& cpu) {
 		return;
 	}
 
-	const register_set_t& regs = cpu.features.at(monitor_mwait).at(subleaf_t::zero);
+	const register_set_t& regs = cpu.features.at(leaf_t::monitor_mwait).at(subleaf_t::main);
 
 	if(regs[eax] == 0ui32 && regs[ebx] == 0ui32) {
 		return;
@@ -240,8 +240,8 @@ void print_thermal_and_power(const cpu_t& cpu) {
 	}
 
 	std::cout << "Thermal and Power Management\n";
-	const register_set_t& regs = cpu.features.at(monitor_mwait).at(subleaf_t::zero);
-	print_features(leaf_t::thermal_and_power, subleaf_t::zero, eax, cpu);
+	const register_set_t& regs = cpu.features.at(leaf_t::monitor_mwait).at(subleaf_t::main);
+	print_features(leaf_t::thermal_and_power, subleaf_t::main, eax, cpu);
 	std::cout << std::endl;
 
 	if(cpu.vendor != intel) {
@@ -278,32 +278,32 @@ void print_thermal_and_power(const cpu_t& cpu) {
 	if(b.b.interrupt_thresholds) {
 		std::cout << b.b.interrupt_thresholds << " interrupt thresholds in Digital Thermal Sensor\n";
 	}
-	print_features(leaf_t::thermal_and_power, subleaf_t::zero, ecx, cpu);
+	print_features(leaf_t::thermal_and_power, subleaf_t::main, ecx, cpu);
 	std::cout << std::endl;
 }
 
 void enumerate_extended_features(cpu_t& cpu) {
 	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::extended_features, subleaf_t::zero);
-	cpu.features[extended_features][zero] = regs;
+	cpuid(regs,  leaf_t::extended_features, subleaf_t::main);
+	cpu.features[leaf_t::extended_features][subleaf_t::main] = regs;
 
-	const std::uint32_t limit = regs[eax];
-	for(std::uint32_t sub = 1; sub < limit; ++sub) {
-		cpuid(regs, leaf_t::extended_features, sub);
-		cpu.features[extended_features][subleaf_t{ sub }] = regs;
+	const subleaf_t limit = subleaf_t{ regs[eax] };
+	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
+		cpuid(regs,  leaf_t::extended_features, sub);
+		cpu.features[leaf_t::extended_features][sub] = regs;
 	}
 }
 
 void print_extended_features(const cpu_t& cpu) {
-	const register_set_t& regs = cpu.features.at(extended_features).at(subleaf_t::zero);
+	const register_set_t& regs = cpu.features.at(leaf_t::extended_features).at(subleaf_t::main);
 	std::cout << "Extended features\n";
-	print_features(leaf_t::extended_features, subleaf_t::zero, ebx, cpu);
+	print_features(leaf_t::extended_features, subleaf_t::main, ebx, cpu);
 	std::cout << "\n";
 	if(cpu.vendor & intel) {
-		print_features(leaf_t::extended_features, subleaf_t::zero, ecx, cpu);
+		print_features(leaf_t::extended_features, subleaf_t::main, ecx, cpu);
 		std::cout << "\n";
 	}
-	print_features(leaf_t::extended_features, subleaf_t::zero, edx, cpu);
+	print_features(leaf_t::extended_features, subleaf_t::main, edx, cpu);
 	std::cout << "\n";
 
 	struct extended_c_t
@@ -331,10 +331,10 @@ void print_direct_cache_access(const cpu_t& cpu) {
 	if(cpu.vendor != intel) {
 		return;
 	}
-	if(0 == (cpu.features.at(version_info).at(zero).at(ecx) & 0x0004'0000ui32)) {
+	if(0 == (cpu.features.at(leaf_t::version_info).at(subleaf_t::main).at(ecx) & 0x0004'0000ui32)) {
 		return;
 	}
-	const register_set_t& regs = cpu.features.at(direct_cache_access).at(subleaf_t::zero);
+	const register_set_t& regs = cpu.features.at(leaf_t::direct_cache_access).at(subleaf_t::main);
 	std::cout << "Direct Cache Access\n";
 	std::cout << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n";
 	std::cout << std::endl;
@@ -344,11 +344,11 @@ void print_performance_monitoring(const cpu_t& cpu) {
 	if(cpu.vendor != intel) {
 		return;
 	}
-	if(0 == (cpu.features.at(version_info).at(zero).at(ecx) & 0x0000'8000ui32)) {
+	if(0 == (cpu.features.at(leaf_t::version_info).at(subleaf_t::main).at(ecx) & 0x0000'8000ui32)) {
 		return;
 	}
 
-	const register_set_t& regs = cpu.features.at(performance_monitoring).at(subleaf_t::zero);
+	const register_set_t& regs = cpu.features.at(leaf_t::performance_monitoring).at(subleaf_t::main);
 
 	struct perfmon_a_t
 	{
@@ -435,3 +435,159 @@ void print_performance_monitoring(const cpu_t& cpu) {
 	}
 	std::cout << std::endl;
 }
+
+void enumerate_extended_state(cpu_t& cpu) {
+	register_set_t regs = { 0 };
+	cpuid(regs,  leaf_t::extended_state, subleaf_t::extended_state_main);
+	cpu.features[leaf_t::extended_state][subleaf_t::extended_state_main] = regs;
+	cpuid(regs,  leaf_t::extended_state, subleaf_t::extended_state_sub);
+	cpu.features[leaf_t::extended_state][subleaf_t::extended_state_sub] = regs;
+
+	const std::uint64_t valid_bits = regs[eax] | (gsl::narrow_cast<std::uint64_t>(regs[edx]) << 32ui64);
+	std::uint64_t mask = 0x1ui64 << 2ui64;
+	for(subleaf_t i = subleaf_t{ 2ui32 }; i < subleaf_t{ 64ui32 }; ++i, mask <<= 1ui64) {
+		if(valid_bits & mask) {
+			cpuid(regs,  leaf_t::extended_state, i);
+			if(regs[ebx] == 0ui32) {
+				continue;
+			}
+			cpu.features[leaf_t::extended_state][i] = regs;
+		}
+	}
+}
+
+void print_extended_state(const cpu_t& cpu) {
+	if(cpu.vendor != intel && cpu.vendor != amd) {
+		return;
+	}
+
+	std::cout << "Extended states" << std::endl;
+	for(const auto& sub : cpu.features.at(leaf_t::extended_state)) {
+		switch(sub.first) {
+		case subleaf_t::extended_state_main:
+			{
+				struct xsave_a_0_t
+				{
+					std::uint32_t x87               : 1;
+					std::uint32_t sse               : 1;
+					std::uint32_t avx               : 1;
+					std::uint32_t mpx_bounds        : 1;
+					std::uint32_t mpx_config        : 1;
+					std::uint32_t avx512_op_mask    : 1;
+					std::uint32_t avx512_zmm_hi_256 : 1;
+					std::uint32_t avx512_zmm_hi_16  : 1;
+					std::uint32_t ia32_xss          : 1;
+					std::uint32_t pkru              : 1;
+					std::uint32_t reserved_1        : 22;
+				};
+
+				union
+				{
+					xsave_a_0_t a;
+					std::uint32_t raw;
+				} a;
+				a.raw = sub.second[eax];
+
+				std::cout << "\tFeatures supported by xsave: \n";
+				if(a.a.x87) {
+					std::cout << "\t\tx87\n";
+				}
+				if(a.a.sse) {
+					std::cout << "\t\t128-bit SSE XMM\n";
+				}
+				if(a.a.avx) {
+					std::cout << "\t\t256-bit AVX YMM\n";
+				}
+				if(a.a.mpx_bounds) {
+					std::cout << "\t\tMPX bounds registers\n";
+				}
+				if(a.a.mpx_config) {
+					std::cout << "\t\tMPX bounds configuration\n";
+				}
+				if(a.a.avx512_op_mask) {
+					std::cout << "\t\tAVX512 op mask\n";
+				}
+				if(a.a.avx512_zmm_hi_256) {
+					std::cout << "\t\tAVX512 ZMM\n";
+				}
+				if(a.a.avx512_zmm_hi_16) {
+					std::cout << "\t\tAVX512 ZMM\n";
+				}
+				if(a.a.ia32_xss) {
+					std::cout << "IA32_XSS\n";
+				}
+				if(a.a.pkru) {
+					std::cout << "PKRU\n";
+				}
+				std::cout << "\tMaximum size for all enabled features  : " << sub.second[ebx] << " bytes\n";
+				std::cout << "\tMaximum size for all supported features: " << sub.second[ecx] << " bytes\n";
+				std::cout << std::endl;
+			}
+			break;
+		case subleaf_t::extended_state_sub:
+			{
+				struct xsave_a_1_t
+				{
+					std::uint32_t xsaveopt   : 1;
+					std::uint32_t xsavec     : 1;
+					std::uint32_t xgetbv     : 1;
+					std::uint32_t xsaves     : 1;
+					std::uint32_t reserved_1 : 28;
+				};
+
+				union
+				{
+					xsave_a_1_t a;
+					std::uint32_t raw;
+				} a;
+				a.raw = sub.second[eax];
+				std::cout << "\tXSAVE support:\n";
+				if(a.a.xsaveopt) {
+					std::cout << "\t\tXSAVEOPT\n";
+				}
+				if(a.a.xsavec) {
+					std::cout << "\t\tXSAVEC\n";
+				}
+				if(a.a.xgetbv) {
+					std::cout << "\t\tXGETBV\n";
+				}
+				if(a.a.xsaves) {
+					std::cout << "\t\tXSAVES\n";
+				}
+				std::cout << "\tSize for enabled features  : " << sub.second[ebx] << " bytes\n";
+				std::cout << std::endl;
+			}
+			break;
+		default:
+			{
+				struct xsave_c_n_t
+				{
+					std::uint32_t set_in_xss          : 1;
+					std::uint32_t aligned_to_64_bytes : 1;
+					std::uint32_t reserved_1          : 30;
+				};
+
+				union
+				{
+					xsave_c_n_t c;
+					std::uint32_t raw;
+				} c;
+				c.raw = sub.second[ecx];
+				std::cout << "Extended state " << std::hex << static_cast<std::uint32_t>(sub.first) << " uses " << sub.second[eax] << " bytes at offset " << sub.second[ebx] << "\n";
+				if(c.c.set_in_xss) {
+					std::cout << "\t\tBit set in XSS MSR\n";
+				} else {
+					std::cout << "\t\tBit set in XCR0\n";
+				}
+				if(c.c.aligned_to_64_bytes) {
+					std::cout << "\t\tAligned to next 64-byte boundary\n";
+				} else {
+					std::cout << "\t\tImmediately follows previous component.\n";
+				}
+				std::cout << std::endl;
+			}
+			break;
+		}
+	}
+}
+

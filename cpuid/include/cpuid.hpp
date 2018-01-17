@@ -7,7 +7,7 @@
 
 #include <gsl/gsl>
 
-enum leaf_t : std::uint32_t
+enum struct leaf_t : std::uint32_t
 {
 	basic_info                        = 0x0000'0000ui32,
 	version_info                      = 0x0000'0001ui32,
@@ -57,9 +57,9 @@ constexpr inline leaf_t operator++(leaf_t& lhs) {
 	return lhs;
 }
 
-enum subleaf_t : std::uint32_t
+enum struct subleaf_t : std::uint32_t
 {
-	zero                                    = 0x0000'0000ui32,
+	main                                    = 0x0000'0000ui32,
 	extended_state_main                     = 0x0000'0000ui32,
 	extended_state_sub                      = 0x0000'0001ui32,
 	resource_director_monitoring_main       = 0x0000'0000ui32,
@@ -152,16 +152,16 @@ struct model_t
 
 struct cpu_t
 {
-	std::uint32_t highest_leaf;
-	std::uint32_t highest_extended_leaf;
+	leaf_t highest_leaf;
+	leaf_t highest_extended_leaf;
 	vendor_t vendor;
 	model_t model;
 	features_t features;
 };
 
-inline void cpuid(std::array<std::uint32_t, 4>& regs, std::uint32_t lf, std::uint32_t sublf) noexcept {
+inline void cpuid(register_set_t& regs, leaf_t leaf, subleaf_t subleaf) noexcept {
 	std::array<int, 4> raw_regs;
-	__cpuidex(raw_regs.data(), gsl::narrow_cast<int>(lf), gsl::narrow_cast<int>(sublf));
+	__cpuidex(raw_regs.data(), gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf));
 	regs[eax] = gsl::narrow_cast<std::uint32_t>(raw_regs[eax]);
 	regs[ebx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ebx]);
 	regs[ecx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ecx]);
