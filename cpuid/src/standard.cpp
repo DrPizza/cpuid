@@ -3,9 +3,12 @@
 #include "standard.hpp"
 #include "features.hpp"
 
-#include <fmt/format.h>
 #include <iostream>
 #include <iomanip>
+#include <map>
+#include <vector>
+
+#include <fmt/format.h>
 
 void print_basic_info(const cpu_t& cpu) {
 	const register_set_t& regs = cpu.features.at(leaf_t::basic_info).at(subleaf_t::main);
@@ -445,7 +448,7 @@ void enumerate_extended_state(cpu_t& cpu) {
 
 	const std::uint64_t valid_bits = regs[eax] | (gsl::narrow_cast<std::uint64_t>(regs[edx]) << 32ui64);
 	std::uint64_t mask = 0x1ui64 << 2ui64;
-	for(subleaf_t i = subleaf_t{ 2ui32 }; i < subleaf_t{ 64ui32 }; ++i, mask <<= 1ui64) {
+	for(subleaf_t i = subleaf_t{ 2ui32 }; i < subleaf_t{ 63ui32 }; ++i, mask <<= 1ui64) {
 		if(valid_bits & mask) {
 			cpuid(regs,  leaf_t::extended_state, i);
 			if(regs[ebx] == 0ui32) {
@@ -461,64 +464,41 @@ void print_extended_state(const cpu_t& cpu) {
 		return;
 	}
 
+	static const std::vector<feature_t> saveables = {
+		{ intel | amd, 0x0000'0001ui32, "x87"         , "Legacy x87 floating point"    },
+		{ intel | amd, 0x0000'0002ui32, "SSE"         , "128-bit SSE XMM"              },
+		{ intel | amd, 0x0000'0004ui32, "AVX"         , "256-bit AVX YMM"              },
+		{ intel      , 0x0000'0008ui32, "MPX_bounds"  , "MPX bounds registers"         },
+		{ intel      , 0x0000'0010ui32, "MPX_CSR"     , "MPX CSR"                      },
+		{ intel      , 0x0000'0020ui32, "AVX512_mask" , "AVX-512 OpMask"               },
+		{ intel      , 0x0000'0040ui32, "AVX512_hi256", "AVX-512 ZMM0-15 upper bits"   },
+		{ intel      , 0x0000'0080ui32, "AVX512_hi16" , "AVX-512 ZMM16-31"             },
+		{ intel      , 0x0000'0100ui32, "XSS"         , "Processor Trace"              },
+		{ intel      , 0x0000'0200ui32, "PKRU"        , "Protection Keys User Register"},
+	};
+
+	static const std::vector<feature_t> optional_features = {
+		{ intel | amd, 0x0000'0001ui32, "XSAVEOPT"    , "XSAVEOPT available"           },
+		{ intel | amd, 0x0000'0002ui32, "XSAVEC"      , "XSAVEC and compacted XRSTOR"  },
+		{ intel | amd, 0x0000'0004ui32, "XGETBV"      , "XGETBV"                       },
+		{ intel | amd, 0x0000'0008ui32, "XSAVES"      , "XSAVES/XRSTORS"               },
+	};
+
 	std::cout << "Extended states" << std::endl;
 	for(const auto& sub : cpu.features.at(leaf_t::extended_state)) {
 		switch(sub.first) {
 		case subleaf_t::extended_state_main:
 			{
-				struct xsave_a_0_t
-				{
-					std::uint32_t x87               : 1;
-					std::uint32_t sse               : 1;
-					std::uint32_t avx               : 1;
-					std::uint32_t mpx_bounds        : 1;
-					std::uint32_t mpx_config        : 1;
-					std::uint32_t avx512_op_mask    : 1;
-					std::uint32_t avx512_zmm_hi_256 : 1;
-					std::uint32_t avx512_zmm_hi_16  : 1;
-					std::uint32_t ia32_xss          : 1;
-					std::uint32_t pkru              : 1;
-					std::uint32_t reserved_1        : 22;
-				};
+				std::cout << "\tFeatures supported by XSAVE: \n";
+				for(const feature_t& feature : saveables) {
+					if(cpu.vendor & feature.vendor) {
+						if(sub.second[eax] & feature.mask) {
+							std::cout << "\t\t" << feature.description << "\n";
+						}
+					}
+				}
+				std::cout << std::endl;
 
-				union
-				{
-					xsave_a_0_t a;
-					std::uint32_t raw;
-				} a;
-				a.raw = sub.second[eax];
-
-				std::cout << "\tFeatures supported by xsave: \n";
-				if(a.a.x87) {
-					std::cout << "\t\tx87\n";
-				}
-				if(a.a.sse) {
-					std::cout << "\t\t128-bit SSE XMM\n";
-				}
-				if(a.a.avx) {
-					std::cout << "\t\t256-bit AVX YMM\n";
-				}
-				if(a.a.mpx_bounds) {
-					std::cout << "\t\tMPX bounds registers\n";
-				}
-				if(a.a.mpx_config) {
-					std::cout << "\t\tMPX bounds configuration\n";
-				}
-				if(a.a.avx512_op_mask) {
-					std::cout << "\t\tAVX512 op mask\n";
-				}
-				if(a.a.avx512_zmm_hi_256) {
-					std::cout << "\t\tAVX512 ZMM\n";
-				}
-				if(a.a.avx512_zmm_hi_16) {
-					std::cout << "\t\tAVX512 ZMM\n";
-				}
-				if(a.a.ia32_xss) {
-					std::cout << "IA32_XSS\n";
-				}
-				if(a.a.pkru) {
-					std::cout << "PKRU\n";
-				}
 				std::cout << "\tMaximum size for all enabled features  : " << sub.second[ebx] << " bytes\n";
 				std::cout << "\tMaximum size for all supported features: " << sub.second[ecx] << " bytes\n";
 				std::cout << std::endl;
@@ -526,34 +506,16 @@ void print_extended_state(const cpu_t& cpu) {
 			break;
 		case subleaf_t::extended_state_sub:
 			{
-				struct xsave_a_1_t
-				{
-					std::uint32_t xsaveopt   : 1;
-					std::uint32_t xsavec     : 1;
-					std::uint32_t xgetbv     : 1;
-					std::uint32_t xsaves     : 1;
-					std::uint32_t reserved_1 : 28;
-				};
+				std::cout << "\tXSAVE extended features:\n";
+				for(const feature_t& feature : optional_features) {
+					if(cpu.vendor & feature.vendor) {
+						if(sub.second[eax] & feature.mask) {
+							std::cout << "\t\t" << feature.description << "\n";
+						}
+					}
+				}
+				std::cout << std::endl;
 
-				union
-				{
-					xsave_a_1_t a;
-					std::uint32_t raw;
-				} a;
-				a.raw = sub.second[eax];
-				std::cout << "\tXSAVE support:\n";
-				if(a.a.xsaveopt) {
-					std::cout << "\t\tXSAVEOPT\n";
-				}
-				if(a.a.xsavec) {
-					std::cout << "\t\tXSAVEC\n";
-				}
-				if(a.a.xgetbv) {
-					std::cout << "\t\tXGETBV\n";
-				}
-				if(a.a.xsaves) {
-					std::cout << "\t\tXSAVES\n";
-				}
 				std::cout << "\tSize for enabled features: " << std::dec << sub.second[ebx] << " bytes\n";
 				std::cout << std::endl;
 			}
@@ -573,7 +535,12 @@ void print_extended_state(const cpu_t& cpu) {
 					std::uint32_t raw;
 				} c;
 				c.raw = sub.second[ecx];
-				std::cout << "Extended state " << std::hex << static_cast<std::uint32_t>(sub.first) << " uses " << sub.second[eax] << " bytes at offset " << sub.second[ebx] << "\n";
+
+				const std::uint32_t idx = static_cast<std::uint32_t>(sub.first);
+				const char* const description = idx < saveables.size() ? saveables[idx].description
+				                                                       : "(unknown)";
+
+				std::cout << "\tExtended state for " << description << " (0x" << std::hex << std::setfill('0') << std::setw(2) << static_cast<std::uint32_t>(sub.first) << ") uses " << sub.second[eax] << " bytes at offset " << sub.second[ebx] << "\n";
 				if(c.c.set_in_xss) {
 					std::cout << "\t\tBit set in XSS MSR\n";
 				} else {

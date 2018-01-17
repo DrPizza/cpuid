@@ -8,14 +8,6 @@
 #include <map>
 #include <vector>
 
-struct feature_t
-{
-	vendor_t vendor;
-	std::uint32_t mask;
-	const char* mnemonic;
-	const char* description;
-};
-
 using feature_map_t = std::map<leaf_t, std::map<subleaf_t, std::map<register_t, std::vector<feature_t>>>>;
 
 const feature_map_t all_features = {
