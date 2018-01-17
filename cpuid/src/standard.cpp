@@ -553,7 +553,10 @@ void enumerate_rdt_monitoring(cpu_t& cpu) {
 }
 
 void print_rdt_monitoring(const cpu_t& cpu) {
-	std::cout << "Intel RDT Monitoring\n";
+	if(0 == (cpu.features.at(leaf_t::extended_features).at(subleaf_t::main).at(ebx) & 0x0000'1000ui32)) {
+		return;
+	}
+
 	static const std::vector<feature_t> monitorables = {
 		{ intel , 0x0000'0001ui32, "O", "Occupancy"       },
 		{ intel , 0x0000'0002ui32, "T", "Total Bandwidth" },
@@ -565,6 +568,7 @@ void print_rdt_monitoring(const cpu_t& cpu) {
 		case subleaf_t::rdt_monitoring_main:
 			std::cout << "Intel Resource Director Technology monitoring\n";
 			std::cout << "\tMaximum Resource Monitoring ID of all types: " << std::hex << sub.second[ebx] << "\n";
+			std::cout << std::endl;
 			break;
 		case subleaf_t::rdt_monitoring_l3:
 			std::cout << "\tL3 cache monitoring\n";
@@ -574,6 +578,7 @@ void print_rdt_monitoring(const cpu_t& cpu) {
 					std::cout << "\t\tL3 " << mon.description << "\n";
 				}
 			}
+			std::cout << std::endl;
 			break;
 		default:
 			std::cout << "\tUnknown resource type (0x" << std::setw(2) << std::setfill('0') << std::hex << static_cast<std::uint32_t>(sub.first) << ") monitoring\n";
@@ -583,7 +588,102 @@ void print_rdt_monitoring(const cpu_t& cpu) {
 					std::cout << "\t\tUnknown resource " << mon.description << "\n";
 				}
 			}
+			std::cout << std::endl;
 			break;
 		}
 	}
 }
+
+void enumerate_rdt_allocation(cpu_t& cpu) {
+	register_set_t regs = { 0 };
+	cpuid(regs,  leaf_t::rdt_allocation, subleaf_t::rdt_allocation_main);
+	cpu.features[leaf_t::rdt_allocation][subleaf_t::rdt_allocation_main] = regs;
+
+	const std::uint32_t valid_bits = regs[edx];
+	std::uint32_t mask = 0x1ui32 << 1ui32;
+	for(subleaf_t i = subleaf_t::rdt_cat_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1ui32) {
+		if(valid_bits & mask) {
+			cpuid(regs,  leaf_t::rdt_allocation, i);
+			cpu.features[leaf_t::rdt_allocation][i] = regs;
+		}
+	}
+}
+void print_rdt_allocation(const cpu_t& cpu) {
+	if(0 == (cpu.features.at(leaf_t::extended_features).at(subleaf_t::main).at(ebx) & 0x0000'8000ui32)) {
+		return;
+	}
+
+	struct rdt_a_1_t
+	{
+		std::uint32_t bit_mask_length : 5;
+		std::uint32_t reserved_1      : 27;
+	};
+
+	struct rdt_a_3_t
+	{
+		std::uint32_t max_throttle : 12;
+		std::uint32_t reserved_1   : 20;
+	};
+
+	struct rdt_d_t
+	{
+		std::uint32_t highest_cos_number : 16;
+		std::uint32_t reserved_1         : 16;
+	};
+
+	union
+	{
+		rdt_a_1_t a1;
+		rdt_a_3_t a3;
+		std::uint32_t raw;
+	} a;
+
+	union
+	{
+		rdt_d_t d;
+		std::uint32_t raw;
+	} d;
+
+	for(const auto& sub : cpu.features.at(leaf_t::rdt_allocation)) {
+		a.raw = sub.second[eax];
+		d.raw = sub.second[edx];
+		switch(sub.first) {
+		case subleaf_t::rdt_allocation_main:
+			std::cout << "Intel Resource Director Technology allocation\n";
+			std::cout << std::endl;
+			break;
+		case subleaf_t::rdt_cat_l3:
+			std::cout << "\tL3 Cache Allocation Technology\n";
+			std::cout << "\tLength of capacity bitmask: " << std::dec << (a.a1.bit_mask_length + 1ui32) << "\n";
+			std::cout << "\tBitmap of isolation/contention: 0x" << std::setw(8) << std::setfill('0') << sub.second[ebx] << "\n";
+			if(sub.second[ecx] & 0x0000'0004ui32) {
+				std::cout << "\tCode and Data Prioritization supported\n";
+			}
+			std::cout << "\tHighest COS number for this resource: " << std::dec << d.d.highest_cos_number << std::endl;
+			std::cout << std::endl;
+			break;
+		case subleaf_t::rdt_cat_l2:
+			std::cout << "\tL2 Cache Allocation Technology\n";
+			std::cout << "\tLength of capacity bitmask: " << std::dec << (a.a1.bit_mask_length + 1ui32) << "\n";
+			std::cout << "\tBitmap of isolation/contention: 0x" << std::setw(8) << std::setfill('0') << sub.second[ebx] << "\n";
+			std::cout << "\tHighest COS number for this resource: " << std::dec << d.d.highest_cos_number << std::endl;
+			std::cout << std::endl;
+			break;
+		case subleaf_t::rdt_mba:
+			std::cout << "\tMemory Bandwidth Allocation\n";
+			std::cout << "\tMaximum MBA throttling value: " << std::dec << (a.a3.max_throttle + 1ui32) << "\n";
+			if(sub.second[ecx] & 0x0000'0004ui32) {
+				std::cout << "\tResponse of delay values is linear\n";
+			}
+			std::cout << "\tHighest COS number for this resource: " << std::dec << d.d.highest_cos_number << std::endl;
+			std::cout << std::endl;
+			break;
+		default:
+			std::cout << "\tUnknown resource type (0x" << std::setw(2) << std::setfill('0') << std::hex << static_cast<std::uint32_t>(sub.first) << ") allocation\n";
+			std::cout << "\tHighest COS number for this resource: " << std::dec << d.d.highest_cos_number << std::endl;
+			std::cout << std::endl;
+			break;
+		}
+	}
+}
+

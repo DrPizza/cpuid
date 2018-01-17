@@ -16,5 +16,7 @@ void enumerate_extended_state(cpu_t& cpu);
 void print_extended_state(const cpu_t& cpu);
 void enumerate_rdt_monitoring(cpu_t& cpu);
 void print_rdt_monitoring(const cpu_t& cpu);
+void enumerate_rdt_allocation(cpu_t& cpu);
+void print_rdt_allocation(const cpu_t& cpu);
 
 #endif
