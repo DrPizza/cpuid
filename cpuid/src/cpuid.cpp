@@ -101,51 +101,49 @@ using leaf_enumerate = void(*)(cpu_t& cpu);
 
 struct leaf_descriptor_t
 {
+	vendor_t vendor;
 	bool has_subleaves;
 	leaf_enumerate enumerator;
 	leaf_print printer;
 };
 
 const std::map<leaf_t, leaf_descriptor_t> descriptors = {
-	{ leaf_t::basic_info                        , { false, nullptr                      , print_basic_info             } },
-	{ leaf_t::version_info                      , { false, nullptr                      , print_version_info           } },
-	{ leaf_t::cache_and_tlb                     , { false, nullptr                      , print_cache_tlb_info         } },
-	{ leaf_t::serial_number                     , { false, nullptr                      , print_serial_number          } },
-	{ leaf_t::deterministic_cache               , { true , enumerate_deterministic_cache, print_deterministic_cache    } },
-	{ leaf_t::monitor_mwait                     , { false, nullptr                      , print_mwait_parameters       } },
-	{ leaf_t::thermal_and_power                 , { false, nullptr                      , print_thermal_and_power      } },
-	{ leaf_t::extended_features                 , { true , enumerate_extended_features  , print_extended_features      } },
-	{ leaf_t::direct_cache_access               , { false, nullptr                      , print_direct_cache_access    } },
-	{ leaf_t::performance_monitoring            , { false, nullptr                      , print_performance_monitoring } },
-	{ leaf_t::extended_topology                 , { true , enumerate_extended_topology  , print_extended_topology      } },
-	{ leaf_t::extended_state                    , { true , enumerate_extended_state     , print_extended_state         } },
-	{ leaf_t::reserved_3                        , { false, nullptr                      , nullptr } },
-	{ leaf_t::resource_director_monitoring      , { true , nullptr                      , nullptr } },
-	{ leaf_t::cache_allocation_technology       , { true , nullptr                      , nullptr } },
-	{ leaf_t::reserved_4                        , { false, nullptr                      , nullptr } },
-	{ leaf_t::sgx_info                          , { true , nullptr                      , nullptr } },
-	{ leaf_t::reserved_5                        , { false, nullptr                      , nullptr } },
-	{ leaf_t::processor_trace                   , { true , nullptr                      , nullptr } },
-	{ leaf_t::time_stamp_counter                , { false, nullptr                      , nullptr } },
-	{ leaf_t::processor_frequency               , { false, nullptr                      , nullptr } },
-	{ leaf_t::system_on_chip_vendor             , { true , nullptr                      , nullptr } },
-	{ leaf_t::deterministic_address_translation , { true , nullptr                      , nullptr } },
-	{ leaf_t::extended_limit                    , { false, nullptr                      , nullptr } },
-	{ leaf_t::extended_signature_and_features   , { false, nullptr                      , nullptr } },
-	{ leaf_t::brand_string_0                    , { false, nullptr                      , nullptr } },
-	{ leaf_t::brand_string_1                    , { false, nullptr                      , nullptr } },
-	{ leaf_t::brand_string_2                    , { false, nullptr                      , nullptr } },
-	{ leaf_t::l1_cache_identifiers              , { false, nullptr                      , nullptr } },
-	{ leaf_t::l2_cache_identifiers              , { false, nullptr                      , nullptr } },
-	{ leaf_t::advanced_power_management         , { false, nullptr                      , nullptr } },
-	{ leaf_t::address_limits                    , { false, nullptr                      , nullptr } },
-	{ leaf_t::secure_virtual_machine            , { false, nullptr                      , nullptr } },
-	{ leaf_t::tlb_1g_identifiers                , { false, nullptr                      , nullptr } },
-	{ leaf_t::performance_optimization          , { false, nullptr                      , nullptr } },
-	{ leaf_t::instruction_based_sampling        , { false, nullptr                      , nullptr } },
-	{ leaf_t::cache_properties                  , { false, nullptr                      , nullptr } },
-	{ leaf_t::extended_apic                     , { false, nullptr                      , nullptr } },
-	{ leaf_t::secure_memory_encryption          , { false, nullptr                      , nullptr } }
+	{ leaf_t::basic_info                        , { any                    , false, nullptr                      , print_basic_info             } },
+	{ leaf_t::version_info                      , { any                    , false, nullptr                      , print_version_info           } },
+	{ leaf_t::cache_and_tlb                     , { intel                  , false, nullptr                      , print_cache_tlb_info         } },
+	{ leaf_t::serial_number                     , { intel       | transmeta, false, nullptr                      , print_serial_number          } },
+	{ leaf_t::deterministic_cache               , { intel                  , true , enumerate_deterministic_cache, print_deterministic_cache    } },
+	{ leaf_t::monitor_mwait                     , { intel | amd            , false, nullptr                      , print_mwait_parameters       } },
+	{ leaf_t::thermal_and_power                 , { intel | amd            , false, nullptr                      , print_thermal_and_power      } },
+	{ leaf_t::extended_features                 , { any                    , true , enumerate_extended_features  , print_extended_features      } },
+	{ leaf_t::direct_cache_access               , { intel                  , false, nullptr                      , print_direct_cache_access    } },
+	{ leaf_t::performance_monitoring            , { intel                  , false, nullptr                      , print_performance_monitoring } },
+	{ leaf_t::extended_topology                 , { intel                  , true , enumerate_extended_topology  , print_extended_topology      } },
+	{ leaf_t::extended_state                    , { intel | amd            , true , enumerate_extended_state     , print_extended_state         } },
+	{ leaf_t::rdt_monitoring                    , { intel                  , true , enumerate_rdt_monitoring     , print_rdt_monitoring         } },
+	{ leaf_t::rdt_allocation                    , { intel                  , true , nullptr                      , nullptr } },
+	{ leaf_t::sgx_info                          , { intel                  , true , nullptr                      , nullptr } },
+	{ leaf_t::processor_trace                   , { intel                  , true , nullptr                      , nullptr } },
+	{ leaf_t::time_stamp_counter                , { intel                  , false, nullptr                      , nullptr } },
+	{ leaf_t::processor_frequency               , { intel                  , false, nullptr                      , nullptr } },
+	{ leaf_t::system_on_chip_vendor             , { intel                  , true , nullptr                      , nullptr } },
+	{ leaf_t::deterministic_address_translation , { intel                  , true , nullptr                      , nullptr } },
+	{ leaf_t::extended_limit                    , { any                    , false, nullptr                      , nullptr } },
+	{ leaf_t::extended_signature_and_features   , { any                    , false, nullptr                      , nullptr } },
+	{ leaf_t::brand_string_0                    , { any                    , false, nullptr                      , nullptr } },
+	{ leaf_t::brand_string_1                    , { any                    , false, nullptr                      , nullptr } },
+	{ leaf_t::brand_string_2                    , { any                    , false, nullptr                      , nullptr } },
+	{ leaf_t::l1_cache_identifiers              , {         amd            , false, nullptr                      , nullptr } },
+	{ leaf_t::l2_cache_identifiers              , { intel | amd            , false, nullptr                      , nullptr } },
+	{ leaf_t::advanced_power_management         , { intel | amd            , false, nullptr                      , nullptr } },
+	{ leaf_t::address_limits                    , { intel | amd            , false, nullptr                      , nullptr } },
+	{ leaf_t::secure_virtual_machine            , {         amd            , false, nullptr                      , nullptr } },
+	{ leaf_t::tlb_1g_identifiers                , {         amd            , false, nullptr                      , nullptr } },
+	{ leaf_t::performance_optimization          , {         amd            , false, nullptr                      , nullptr } },
+	{ leaf_t::instruction_based_sampling        , {         amd            , false, nullptr                      , nullptr } },
+	{ leaf_t::cache_properties                  , {         amd            , false, nullptr                      , nullptr } },
+	{ leaf_t::extended_apic                     , {         amd            , false, nullptr                      , nullptr } },
+	{ leaf_t::secure_memory_encryption          , {         amd            , false, nullptr                      , nullptr } }
 };
 
 int main(int, char*[]) {
@@ -188,11 +186,13 @@ int main(int, char*[]) {
 	for(leaf_t lf = leaf_t::extended_limit; lf <= cpu.highest_extended_leaf; ++lf) {
 		auto it = descriptors.find(lf);
 		if(it != descriptors.end()) {
-			if(it->second.has_subleaves && it->second.enumerator) {
-				it->second.enumerator(cpu);
-			} else {
-				cpuid(regs, lf, subleaf_t::main);
-				cpu.features[lf][subleaf_t::main] = regs;
+			if(it->second.vendor & cpu.vendor) {
+				if(it->second.has_subleaves && it->second.enumerator) {
+					it->second.enumerator(cpu);
+				} else {
+					cpuid(regs, lf, subleaf_t::main);
+					cpu.features[lf][subleaf_t::main] = regs;
+				}
 			}
 		}
 	}
@@ -200,8 +200,10 @@ int main(int, char*[]) {
 	for(const auto& lf : cpu.features) {
 		auto it = descriptors.find(lf.first);
 		if(it != descriptors.end()) {
-			if(it->second.printer) {
-				it->second.printer(cpu);
+			if(it->second.vendor & cpu.vendor) {
+				if(it->second.printer) {
+					it->second.printer(cpu);
+				}
 			}
 		}
 	}

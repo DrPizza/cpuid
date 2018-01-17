@@ -140,9 +140,6 @@ void print_version_info(const cpu_t& cpu) {
 void print_serial_number(const cpu_t& cpu) {
 	using namespace fmt::literals;
 
-	if(cpu.vendor != intel && cpu.vendor != transmeta) {
-		return;
-	}
 	std::cout << "Processor serial number: ";
 	if(0 == (cpu.features.at(leaf_t::version_info).at(subleaf_t::main)[edx] & (1ui32 << 18ui32))) {
 		std::cout << "N/A" << std::endl;
@@ -166,10 +163,6 @@ void print_serial_number(const cpu_t& cpu) {
 }
 
 void print_mwait_parameters(const cpu_t& cpu) {
-	if(cpu.vendor != intel && cpu.vendor != amd) {
-		return;
-	}
-
 	const register_set_t& regs = cpu.features.at(leaf_t::monitor_mwait).at(subleaf_t::main);
 
 	if(regs[eax] == 0ui32 && regs[ebx] == 0ui32) {
@@ -238,10 +231,6 @@ void print_mwait_parameters(const cpu_t& cpu) {
 }
 
 void print_thermal_and_power(const cpu_t& cpu) {
-	if(cpu.vendor != intel && cpu.vendor != amd) {
-		return;
-	}
-
 	std::cout << "Thermal and Power Management\n";
 	const register_set_t& regs = cpu.features.at(leaf_t::monitor_mwait).at(subleaf_t::main);
 	print_features(leaf_t::thermal_and_power, subleaf_t::main, eax, cpu);
@@ -331,9 +320,6 @@ void print_extended_features(const cpu_t& cpu) {
 }
 
 void print_direct_cache_access(const cpu_t& cpu) {
-	if(cpu.vendor != intel) {
-		return;
-	}
 	if(0 == (cpu.features.at(leaf_t::version_info).at(subleaf_t::main).at(ecx) & 0x0004'0000ui32)) {
 		return;
 	}
@@ -344,9 +330,6 @@ void print_direct_cache_access(const cpu_t& cpu) {
 }
 
 void print_performance_monitoring(const cpu_t& cpu) {
-	if(cpu.vendor != intel) {
-		return;
-	}
 	if(0 == (cpu.features.at(leaf_t::version_info).at(subleaf_t::main).at(ecx) & 0x0000'8000ui32)) {
 		return;
 	}
@@ -460,10 +443,6 @@ void enumerate_extended_state(cpu_t& cpu) {
 }
 
 void print_extended_state(const cpu_t& cpu) {
-	if(cpu.vendor != intel && cpu.vendor != amd) {
-		return;
-	}
-
 	static const std::vector<feature_t> saveables = {
 		{ intel | amd, 0x0000'0001ui32, "x87"         , "Legacy x87 floating point"    },
 		{ intel | amd, 0x0000'0002ui32, "SSE"         , "128-bit SSE XMM"              },
@@ -558,3 +537,53 @@ void print_extended_state(const cpu_t& cpu) {
 	}
 }
 
+void enumerate_rdt_monitoring(cpu_t& cpu) {
+	register_set_t regs = { 0 };
+	cpuid(regs,  leaf_t::rdt_monitoring, subleaf_t::rdt_monitoring_main);
+	cpu.features[leaf_t::rdt_monitoring][subleaf_t::rdt_monitoring_main] = regs;
+
+	const std::uint32_t valid_bits = regs[edx];
+	std::uint32_t mask = 0x1ui32 << 1ui32;
+	for(subleaf_t i = subleaf_t::rdt_monitoring_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1ui32) {
+		if(valid_bits & mask) {
+			cpuid(regs,  leaf_t::rdt_monitoring, i);
+			cpu.features[leaf_t::rdt_monitoring][i] = regs;
+		}
+	}
+}
+
+void print_rdt_monitoring(const cpu_t& cpu) {
+	std::cout << "Intel RDT Monitoring\n";
+	static const std::vector<feature_t> monitorables = {
+		{ intel , 0x0000'0001ui32, "O", "Occupancy"       },
+		{ intel , 0x0000'0002ui32, "T", "Total Bandwidth" },
+		{ intel , 0x0000'0004ui32, "L", "Local Bandwidth" }
+	};
+
+	for(const auto& sub : cpu.features.at(leaf_t::rdt_monitoring)) {
+		switch(sub.first) {
+		case subleaf_t::rdt_monitoring_main:
+			std::cout << "Intel Resource Director Technology monitoring\n";
+			std::cout << "\tMaximum Resource Monitoring ID of all types: " << std::hex << sub.second[ebx] << "\n";
+			break;
+		case subleaf_t::rdt_monitoring_l3:
+			std::cout << "\tL3 cache monitoring\n";
+			std::cout << "\t\tConversion factor: " << sub.second[ebx] << "\n";
+			for(const feature_t& mon : monitorables) {
+				if(sub.second[edx] & mon.mask) {
+					std::cout << "\t\tL3 " << mon.description << "\n";
+				}
+			}
+			break;
+		default:
+			std::cout << "\tUnknown resource type (0x" << std::setw(2) << std::setfill('0') << std::hex << static_cast<std::uint32_t>(sub.first) << ") monitoring\n";
+			std::cout << "\t\tConversion factor: " << sub.second[ebx] << "\n";
+			for(const feature_t& mon : monitorables) {
+				if(sub.second[edx] & mon.mask) {
+					std::cout << "\t\tUnknown resource " << mon.description << "\n";
+				}
+			}
+			break;
+		}
+	}
+}
