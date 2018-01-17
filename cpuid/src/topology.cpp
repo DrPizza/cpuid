@@ -73,7 +73,7 @@ void print_extended_topology(const cpu_t& cpu) {
 			topology_c_t c;
 			std::uint32_t raw;
 		} c;
-		c.raw = regs[ebx];
+		c.raw = regs[ecx];
 
 		std::cout << "\tecx: " << std::hex << m.first << "\n";
 		std::cout << "\t\tbits to shift: " << a.a.shift_distance << "\n";
@@ -88,8 +88,10 @@ void print_extended_topology(const cpu_t& cpu) {
 			break;
 		case 2:
 			std::cout << "\t\tlevel type: Core\n";
+			break;
 		default:
 			std::cout << "\t\tlevel type: reserved " << std::hex << c.c.level_type << "\n";
+			break;
 		}
 		std::cout << std::flush;
 	}
