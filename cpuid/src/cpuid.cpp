@@ -47,14 +47,12 @@ vendor_t get_vendor_from_name(const register_set_t& regs) {
 		{ to_array("VMwareVMware"), vmware },
 		{ to_array("XenVMMXenVMM"), xen_hvm }
 	};
-	union
+
+	const union
 	{
+		std::array<std::uint32_t, 3> registers;
 		std::array<char, 12> vndr;
-		std::array<std::int32_t, 3> registers;
-	} data;
-	data.registers[0] = regs[ebx];
-	data.registers[1] = regs[edx];
-	data.registers[2] = regs[ecx];
+	} data = { regs[ebx], regs[edx], regs[ecx] };
 
 	auto it = vendors.find(data.vndr);
 	return it != vendors.end() ? it->second : unknown;

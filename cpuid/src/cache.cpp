@@ -512,7 +512,7 @@ void print_deterministic_cache(const cpu_t& cpu) {
 		fmt::MemoryWriter w;
 		w << "\t";
 		w << "{:g} {:c}byte "_format(printable_cache_size, cache_scale);
-		w << "L" << a.split.level;
+		w << "L" << a.split.level << " ";
 		switch(a.split.type) {
 		case 1:
 			w << "data";

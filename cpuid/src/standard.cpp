@@ -15,14 +15,11 @@ void print_basic_info(const cpu_t& cpu) {
 	std::cout << "Basic Information" << std::endl;
 	std::cout << "\tMaximum basic cpuid leaf: 0x" << std::setw(2) << std::setfill('0') << std::hex << regs[eax] << "\n";
 
-	union
+	const union
 	{
-		std::array<char, 12> vndr;
 		std::array<std::uint32_t, 3> registers;
-	} data;
-	data.registers[0] = regs[ebx];
-	data.registers[1] = regs[edx];
-	data.registers[2] = regs[ecx];
+		std::array<char, 12> vndr;
+	} data = { regs[ebx], regs[edx], regs[ecx] };
 
 	std::cout << "\t   vendor: ";
 	std::cout.write(data.vndr.data(), data.vndr.size());
@@ -788,10 +785,11 @@ void print_sgx_info(const cpu_t& cpu) {
 				} d = { regs[edx] };
 
 				std::cout << "\tEnclave Page Cache section\n";
-				const std::uint64_t physical_address = (std::uint64_t{b.split.epc_physical_address_hi_bits } << 32ui64)
-				                                     | (std::uint64_t{a.split.epc_physical_address_low_bits} << 12ui64);
-				const std::uint64_t epc_size = (std::uint64_t{d.split.epc_section_size_hi_bits } << 32ui64)
-				                             | (std::uint64_t{c.split.epc_section_size_low_bits} << 12ui64);
+
+				const std::uint64_t physical_address = (gsl::narrow_cast<std::uint64_t>(b.split.epc_physical_address_hi_bits ) << 32ui64)
+				                                     | (gsl::narrow_cast<std::uint64_t>(a.split.epc_physical_address_low_bits) << 12ui64);
+				const std::uint64_t epc_size = (gsl::narrow_cast<std::uint64_t>(d.split.epc_section_size_hi_bits ) << 32ui64)
+				                             | (gsl::narrow_cast<std::uint64_t>(c.split.epc_section_size_low_bits) << 12ui64);
 				std::cout << "\t\tEPC physical address: 0x" << std::setw(16) << std::setfill('0') << std::hex << physical_address << "\n";
 				std::cout << "\t\tEPC size: 0x"             << std::setw(16) << std::setfill('0') << std::hex << epc_size << "\n";
 				std::cout << std::endl;
