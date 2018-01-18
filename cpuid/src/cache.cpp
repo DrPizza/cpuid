@@ -273,16 +273,16 @@ using dual_descriptors_map_t = std::map<std::uint8_t, dual_descriptor_t>;
 
 const dual_descriptors_map_t dual_cache_descriptors = {
 	{ 0x49, {
-		{ unified    , level_3 , 4    MB, 0   , no_attributes                 , static_cast<cache_associativity_t>(0x10), 64 },
-		{ unified    , level_2 , 4    MB, 0   , no_attributes                 , static_cast<cache_associativity_t>(0x10), 64 }
+		{ unified    , level_3 , 4    MB, 0   , no_attributes      , static_cast<cache_associativity_t>(0x10), 64 },
+		{ unified    , level_2 , 4    MB, 0   , no_attributes      , static_cast<cache_associativity_t>(0x10), 64 }
 	} },
 	{ 0x63, {
-		{ data_tlb   , no_cache, 0      , 32  , pages_2m | pages_4m           , static_cast<cache_associativity_t>(0x04), 0 },
-		{ data_tlb   , no_cache, 0      , 4   , pages_1g                      , static_cast<cache_associativity_t>(0x04), 0 }
+		{ data_tlb   , no_cache, 0      , 32  , pages_2m | pages_4m, static_cast<cache_associativity_t>(0x04), 0 },
+		{ data_tlb   , no_cache, 0      , 4   , pages_1g           , static_cast<cache_associativity_t>(0x04), 0 }
 	} },
 	{ 0xc3, {
-		{ unified_tlb, level_2 , 0      , 1536, pages_4k | pages_2m           , static_cast<cache_associativity_t>(0x06), 0 },
-		{ unified_tlb, level_2 , 0      , 16  , pages_1g                      , static_cast<cache_associativity_t>(0x04), 0 }
+		{ unified_tlb, level_2 , 0      , 1536, pages_4k | pages_2m, static_cast<cache_associativity_t>(0x06), 0 },
+		{ unified_tlb, level_2 , 0      , 16  , pages_1g           , static_cast<cache_associativity_t>(0x04), 0 }
 	} }
 };
 
@@ -378,7 +378,7 @@ void print_cache_tlb_info(const cpu_t& cpu) {
 				{
 					auto dual = dual_cache_descriptors.find(value);
 					if(dual != dual_cache_descriptors.end()) {
-						cache_entries.push_back(to_string(dual->second.first) + " and "
+						cache_entries.push_back(to_string(dual->second.first) + "/"
 						                      + to_string(dual->second.second));
 						break;
 					}
@@ -425,57 +425,48 @@ void print_deterministic_cache(const cpu_t& cpu) {
 		return;
 	}
 
-	struct cache_a_t
-	{
-		std::uint32_t type                           : 5;
-		std::uint32_t level                          : 3;
-		std::uint32_t self_initializing              : 1;
-		std::uint32_t fully_associative              : 1;
-		std::uint32_t reserved_1                     : 4;
-		std::uint32_t maximum_addressable_thread_ids : 12;
-		std::uint32_t maximum_addressable_core_ids   : 6;
-	};
-
-	struct cache_b_t
-	{
-		std::uint32_t coherency_line_size      : 12;
-		std::uint32_t physical_line_partitions : 10;
-		std::uint32_t associativity_ways       : 10;
-	};
-
-	struct cache_d_t
-	{
-		std::uint32_t writeback_invalidates : 1;
-		std::uint32_t cache_inclusive       : 1;
-		std::uint32_t complex_indexing      : 1;
-		std::uint32_t reserved_1            : 29;
-	};
-
 	std::cout << "Deterministic cache\n";
 
-	for(const auto& m : cpu.features.at(leaf_t::deterministic_cache)) {
-		const register_set_t& regs = m.second;
+	for(const auto& sub : cpu.features.at(leaf_t::deterministic_cache)) {
+		const register_set_t& regs = sub.second;
 
 		union
 		{
-			std::uint32_t raw;
-			cache_a_t a;
-		} a;
-		a.raw = regs[eax];
+			std::uint32_t full;
+			struct
+			{
+				std::uint32_t type                           : 5;
+				std::uint32_t level                          : 3;
+				std::uint32_t self_initializing              : 1;
+				std::uint32_t fully_associative              : 1;
+				std::uint32_t reserved_1                     : 4;
+				std::uint32_t maximum_addressable_thread_ids : 12;
+				std::uint32_t maximum_addressable_core_ids   : 6;
+			} a;
+		} a = { regs[eax] };
 
 		union
 		{
-			std::uint32_t raw;
-			cache_b_t b;
-		} b;
-		b.raw = regs[ebx];
+			std::uint32_t full;
+			struct
+			{
+				std::uint32_t coherency_line_size      : 12;
+				std::uint32_t physical_line_partitions : 10;
+				std::uint32_t associativity_ways       : 10;
+			} b;
+		} b = { regs[ebx] };
 
 		union
 		{
-			std::uint32_t raw;
-			cache_d_t d;
-		} d;
-		d.raw = regs[edx];
+			std::uint32_t full;
+			struct
+			{
+				std::uint32_t writeback_invalidates : 1;
+				std::uint32_t cache_inclusive       : 1;
+				std::uint32_t complex_indexing      : 1;
+				std::uint32_t reserved_1            : 29;
+			} d;
+		} d = { regs[edx] };
 		
 		const std::size_t sets = regs[ecx];
 		const std::size_t cache_size = (b.b.associativity_ways       + 1ui32)
