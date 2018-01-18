@@ -161,6 +161,29 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::secure_memory_encryption          , {         amd            , nullptr                      , nullptr                              , {} } }
 };
 
+void print_generic(const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
+	using namespace fmt::literals;
+	const register_set_t& regs = cpu.features.at(leaf).at(subleaf);
+	std::cout << "{:#010x} {:#010x}: {:#010x} {:#010x} {:#010x} {:#010x}"_format(static_cast<std::uint32_t>(leaf),
+	                                                                             static_cast<std::uint32_t>(subleaf),
+	                                                                             regs[eax],
+	                                                                             regs[ebx],
+	                                                                             regs[ecx],
+	                                                                             regs[edx]) << std::endl;
+}
+
+void print_generic(const cpu_t& cpu, leaf_t leaf) {
+	for(const auto& sub : cpu.features.at(leaf)) {
+		print_generic(cpu, leaf, sub.first);
+	}
+}
+
+void print_generic(const cpu_t& cpu) {
+	for(const auto& leaf : cpu.features) {
+		print_generic(cpu, leaf.first);
+	}
+}
+
 int main(int, char*[]) {
 	HANDLE output = ::GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD mode = 0;
@@ -225,9 +248,14 @@ int main(int, char*[]) {
 				|| filter.mask == (filter.mask & cpu.features.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
 					if(it->second.printer) {
 						it->second.printer(cpu);
+					} else {
+						print_generic(cpu, lf.first);
+						std::cout << std::endl;
 					}
 				}
 			}
 		}
 	}
+
+	print_generic(cpu);
 }
