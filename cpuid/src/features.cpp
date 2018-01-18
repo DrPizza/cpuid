@@ -238,7 +238,7 @@ const feature_map_t all_features = {
 				{         amd            , 0x0000'0010ui32, "TM"                     , "Hardware thermal control (HTC)"       },
 				{         amd            , 0x0000'0040ui32, "100MHzSteps"            , "100 MHz multiplier control"           },
 				{         amd            , 0x0000'0080ui32, "HwPstate"               , "Hardware P-state control"             },
-				{ intel | amd            , 0x0000'0100ui32, "TscInvariant"           , "100 MHz multiplier control"           },
+				{ intel | amd            , 0x0000'0100ui32, "TscInvariant"           , "TSC invariant"                        },
 				{         amd            , 0x0000'0200ui32, "CPB"                    , "Core performance boost"               },
 				{         amd            , 0x0000'0400ui32, "EffFreqRO"              , "Read-only effective frequency interface" },
 				{         amd            , 0x0000'0800ui32, "ProcFeedbackInterface"  , "Processor feedback interface"         },
