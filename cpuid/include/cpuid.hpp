@@ -50,6 +50,8 @@ enum struct leaf_t : std::uint32_t
 	cache_properties                  = 0x8000'001dui32,
 	extended_apic                     = 0x8000'001eui32,
 	secure_memory_encryption          = 0x8000'001fui32,
+
+	none                              = 0x0000'0000ui32,
 };
 
 constexpr inline leaf_t operator++(leaf_t& lhs) {
@@ -76,6 +78,8 @@ enum struct subleaf_t : std::uint32_t
 	system_on_chip_vendor_sub              = 0x0000'0001ui32,
 	deterministic_address_translation_main = 0x0000'0000ui32,
 	deterministic_address_translation_sub  = 0x0000'0001ui32,
+
+	none                                   = 0x0000'0000ui32,
 };
 
 constexpr inline subleaf_t operator++(subleaf_t& lhs) {
@@ -88,7 +92,9 @@ enum register_t : std::uint8_t
 	eax,
 	ebx,
 	ecx,
-	edx
+	edx,
+
+	none = 0x00ui8,
 };
 
 constexpr inline register_t operator++(register_t& lhs) {

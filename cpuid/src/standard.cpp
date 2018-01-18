@@ -36,17 +36,17 @@ void print_version_info(const cpu_t& cpu) {
 
 	union
 	{
-		std::uint32_t raw;
-		split_model_t m;
+		split_model_t split;
+		std::uint32_t full;
 	} a;
 	
-	a.raw = regs[eax];
+	a.full = regs[eax];
 	std::cout << "signature: 0x" << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n"
 	          << "   family: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.family << "\n"
 	          << "    model: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.model << "\n"
 	          << " stepping: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.stepping << "\n";
 	if(cpu.vendor == intel) {
-		switch(a.m.type) {
+		switch(a.split.type) {
 		case 0:
 			std::cout << "Original OEM Processor\n";
 			break;
@@ -63,25 +63,23 @@ void print_version_info(const cpu_t& cpu) {
 	}
 	std::cout << std::endl;
 
-	struct version_b_t
-	{
-		std::uint8_t brand_id;
-		std::uint8_t cache_line_size;
-		std::uint8_t maximum_addressable_ids;
-		std::uint8_t local_apic_id;
-	};
-
 	union
 	{
-		std::uint32_t raw;
-		version_b_t b;
+		struct version_b_t
+		{
+			std::uint8_t brand_id;
+			std::uint8_t cache_line_size;
+			std::uint8_t maximum_addressable_ids;
+			std::uint8_t local_apic_id;
+		} split;
+		std::uint32_t full;
 	} b;
-	b.raw = regs[ebx];
+	b.full = regs[ebx];
 
 	if(cpu.vendor == intel) {
-		if(b.b.brand_id != 0ui32) {
+		if(b.split.brand_id != 0ui32) {
 			std::cout << "brand ID: ";
-			switch(b.b.brand_id) {
+			switch(b.split.brand_id) {
 			case 0x00: break;
 			case 0x01: std::cout << "Intel(R) Celeron(R) processor"; break;
 			case 0x02: std::cout << "Intel(R) Pentium(R) III processor"; break;
@@ -125,9 +123,9 @@ void print_version_info(const cpu_t& cpu) {
 		}
 	}
 
-	std::cout << "cache line size/bytes: " << std::dec << b.b.cache_line_size * 8 << "\n"
-	          << "logical processors per package: " << gsl::narrow_cast<std::uint32_t>(b.b.maximum_addressable_ids) << "\n"
-	          << "local APIC ID: " << gsl::narrow_cast<std::uint32_t>(b.b.local_apic_id) << "\n";
+	std::cout << "cache line size/bytes: " << std::dec << b.split.cache_line_size * 8 << "\n"
+	          << "logical processors per package: " << gsl::narrow_cast<std::uint32_t>(b.split.maximum_addressable_ids) << "\n"
+	          << "local APIC ID: " << gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id) << "\n";
 	std::cout << std::endl;
 
 	std::cout << "Feature identifiers\n";
@@ -169,52 +167,48 @@ void print_mwait_parameters(const cpu_t& cpu) {
 		return;
 	}
 
-	struct monitor_a_t
-	{
-		std::uint32_t smallest_monitor_line : 16;
-		std::uint32_t reserved_1            : 16;
-	};
-	struct monitor_b_t
-	{
-		std::uint32_t largest_monitor_line : 16;
-		std::uint32_t reserved_1           : 16;
-	};
-	struct monitor_c_t
-	{
-		std::uint32_t enumerable           : 1;
-		std::uint32_t interrupts_as_breaks : 1;
-		std::uint32_t reserved_1           : 30;
-	};
-
 	union
 	{
-		monitor_a_t a;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t smallest_monitor_line : 16;
+			std::uint32_t reserved_1            : 16;
+		} split;
+		std::uint32_t full;
 	} a;
-	a.raw = regs[eax];
+	a.full = regs[eax];
 
 	union
 	{
-		monitor_b_t b;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t largest_monitor_line : 16;
+			std::uint32_t reserved_1           : 16;
+		} split;
+		std::uint32_t full;
 	} b;
-	b.raw = regs[ebx];
+	b.full = regs[ebx];
 
 	union
 	{
-		monitor_c_t c;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t enumerable           : 1;
+			std::uint32_t interrupts_as_breaks : 1;
+			std::uint32_t reserved_1           : 30;
+		} split;
+		std::uint32_t full;
 	} c;
-	c.raw = regs[ecx];
+	c.full = regs[ecx];
 
 	using namespace fmt::literals;
 
 	fmt::MemoryWriter w;
 	w << "MONITOR/MWAIT leaf\n";
-	w << "\tSmallest monitor-line size: {:d} bytes\n"_format(a.a.smallest_monitor_line + 0ui32);
-	w << "\tLargest monitor-line size: {:d} bytes\n"_format (b.b.largest_monitor_line  + 0ui32);
-	if(c.c.enumerable) {
-		if(c.c.interrupts_as_breaks) {
+	w << "\tSmallest monitor-line size: {:d} bytes\n"_format(a.split.smallest_monitor_line + 0ui32);
+	w << "\tLargest monitor-line size: {:d} bytes\n"_format (b.split.largest_monitor_line  + 0ui32);
+	if(c.split.enumerable) {
+		if(c.split.interrupts_as_breaks) {
 			w << "\tInterrupts break MWAIT, even when disabled\n";
 		}
 		if(cpu.vendor & intel) {
@@ -232,7 +226,7 @@ void print_mwait_parameters(const cpu_t& cpu) {
 
 void print_thermal_and_power(const cpu_t& cpu) {
 	std::cout << "Thermal and Power Management\n";
-	const register_set_t& regs = cpu.features.at(leaf_t::monitor_mwait).at(subleaf_t::main);
+	const register_set_t& regs = cpu.features.at(leaf_t::thermal_and_power).at(subleaf_t::main);
 	print_features(leaf_t::thermal_and_power, subleaf_t::main, eax, cpu);
 	std::cout << std::endl;
 
@@ -240,35 +234,32 @@ void print_thermal_and_power(const cpu_t& cpu) {
 		return;
 	}
 
-	struct thermal_b_t
-	{
-		std::uint32_t interrupt_thresholds : 4;
-		std::uint32_t reserved_1           : 28;
-	};
-	struct thermal_c_t
-	{
-		std::uint32_t hcf : 1;
-		std::uint32_t reserved_1 : 2;
-		std::uint32_t bias_preference : 1;
-		std::uint32_t reserved_2 : 28;
-	};
-
 	union
 	{
-		thermal_b_t b;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t interrupt_thresholds : 4;
+			std::uint32_t reserved_1           : 28;
+		} split;
+		std::uint32_t full;
 	} b;
-	b.raw = regs[ebx];
+	b.full = regs[ebx];
 
 	union
 	{
-		thermal_c_t c;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t hcf : 1;
+			std::uint32_t reserved_1 : 2;
+			std::uint32_t bias_preference : 1;
+			std::uint32_t reserved_2 : 28;
+		} split;
+		std::uint32_t full;
 	} c;
-	c.raw = regs[ecx];
+	c.full = regs[ecx];
 
-	if(b.b.interrupt_thresholds) {
-		std::cout << b.b.interrupt_thresholds << " interrupt thresholds in Digital Thermal Sensor\n";
+	if(b.split.interrupt_thresholds) {
+		std::cout << b.split.interrupt_thresholds << " interrupt thresholds in Digital Thermal Sensor\n";
 	}
 	print_features(leaf_t::thermal_and_power, subleaf_t::main, ecx, cpu);
 	std::cout << std::endl;
@@ -298,22 +289,20 @@ void print_extended_features(const cpu_t& cpu) {
 	print_features(leaf_t::extended_features, subleaf_t::main, edx, cpu);
 	std::cout << "\n";
 
-	struct extended_c_t
-	{
-		std::uint32_t reserved_1  : 17;
-		std::uint32_t mawau_value : 5;
-		std::uint32_t reserve_2   : 10;
-	};
-	
 	union
 	{
-		extended_c_t c;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t reserved_1  : 17;
+			std::uint32_t mawau_value : 5;
+			std::uint32_t reserve_2   : 10;
+		} split;
+		std::uint32_t full;
 	} c;
-	c.raw = regs[ecx];
+	c.full = regs[ecx];
 
 	if(cpu.vendor & intel) {
-		std::cout << "MAWAU value: " << c.c.mawau_value << "\n";
+		std::cout << "MAWAU value: " << c.split.mawau_value << "\n";
 	}
 
 	std::cout << std::endl;
@@ -336,87 +325,81 @@ void print_performance_monitoring(const cpu_t& cpu) {
 
 	const register_set_t& regs = cpu.features.at(leaf_t::performance_monitoring).at(subleaf_t::main);
 
-	struct perfmon_a_t
-	{
-		std::uint32_t version              : 8;
-		std::uint32_t counters_per_logical : 8;
-		std::uint32_t counter_bit_width    : 8;
-		std::uint32_t ebx_length           : 8;
-	};
-
-	struct perfmon_b_t
-	{
-		std::uint32_t core_cycle           : 1;
-		std::uint32_t instructions_retired : 1;
-		std::uint32_t reference_cycles     : 1;
-		std::uint32_t llc_reference        : 1;
-		std::uint32_t llc_misses           : 1;
-		std::uint32_t branch_retired       : 1;
-		std::uint32_t branch_mispredict    : 1;
-		std::uint32_t reserved_1           : 25;
-	};
-
-	struct perfmon_d_t
-	{
-		std::uint32_t fixed_function_counters      : 5;
-		std::uint32_t fixed_function_counter_width : 8;
-		std::uint32_t reserved_1                   : 2;
-		std::uint32_t any_thread                   : 1;
-		std::uint32_t reserved_2                   : 16;
-	};
-
 	union
 	{
-		perfmon_a_t a;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t version              : 8;
+			std::uint32_t counters_per_logical : 8;
+			std::uint32_t counter_bit_width    : 8;
+			std::uint32_t ebx_length           : 8;
+		} split;
+		std::uint32_t full;
 	} a;
-	a.raw = regs[eax];
+	a.full = regs[eax];
 
 	union
 	{
-		perfmon_b_t b;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t core_cycle           : 1;
+			std::uint32_t instructions_retired : 1;
+			std::uint32_t reference_cycles     : 1;
+			std::uint32_t llc_reference        : 1;
+			std::uint32_t llc_misses           : 1;
+			std::uint32_t branch_retired       : 1;
+			std::uint32_t branch_mispredict    : 1;
+			std::uint32_t reserved_1           : 25;
+		} split;
+		std::uint32_t full;
 	} b;
-	b.raw = regs[ebx];
+	b.full = regs[ebx];
 
 	union
 	{
-		perfmon_d_t d;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t fixed_function_counters      : 5;
+			std::uint32_t fixed_function_counter_width : 8;
+			std::uint32_t reserved_1                   : 2;
+			std::uint32_t any_thread                   : 1;
+			std::uint32_t reserved_2                   : 16;
+		} split;
+		std::uint32_t full;
 	} d;
-	d.raw = regs[edx];
+	d.full = regs[edx];
 
-	if(a.a.version == 0) {
+	if(a.split.version == 0) {
 		return;
 	}
 
 	std::cout << "Architectural Performance Monitoring\n";
-	std::cout << "\tVersion: " << a.a.version << "\n";
-	std::cout << "\tCounters per logical processor: " << a.a.counters_per_logical << "\n";
-	std::cout << "\tCounter bit width: " << a.a.counter_bit_width << "\n";
-	std::cout << "\tFixed function counters: " << d.d.fixed_function_counters << "\n";
-	std::cout << "\tFixed function counter bit width: " << d.d.fixed_function_counter_width << "\n";
+	std::cout << "\tVersion: " << a.split.version << "\n";
+	std::cout << "\tCounters per logical processor: " << a.split.counters_per_logical << "\n";
+	std::cout << "\tCounter bit width: " << a.split.counter_bit_width << "\n";
+	std::cout << "\tFixed function counters: " << d.split.fixed_function_counters << "\n";
+	std::cout << "\tFixed function counter bit width: " << d.split.fixed_function_counter_width << "\n";
 
 	std::cout << "\tSupported counters\n";
-	if(0 == b.b.core_cycle) {
+	if(0 == b.split.core_cycle) {
 		std::cout << "\t\tCore cycles\n";
 	}
-	if(0 == b.b.instructions_retired) {
+	if(0 == b.split.instructions_retired) {
 		std::cout << "\t\tInstructions retired\n";
 	}
-	if(0 == b.b.reference_cycles) {
+	if(0 == b.split.reference_cycles) {
 		std::cout << "\t\tReference cycles\n";
 	}
-	if(0 == b.b.llc_reference) {
+	if(0 == b.split.llc_reference) {
 		std::cout << "\t\tLast-level cache reference\n";
 	}
-	if(0 == b.b.llc_misses) {
+	if(0 == b.split.llc_misses) {
 		std::cout << "\t\tLast-level cache misses\n";
 	}
-	if(0 == b.b.branch_retired) {
+	if(0 == b.split.branch_retired) {
 		std::cout << "\t\tBranch instructions retired\n";
 	}
-	if(0 == b.b.branch_mispredict) {
+	if(0 == b.split.branch_mispredict) {
 		std::cout << "\t\tBranch instructions mispredicted\n";
 	}
 	std::cout << std::endl;
@@ -501,31 +484,29 @@ void print_extended_state(const cpu_t& cpu) {
 			break;
 		default:
 			{
-				struct xsave_c_n_t
-				{
-					std::uint32_t set_in_xss          : 1;
-					std::uint32_t aligned_to_64_bytes : 1;
-					std::uint32_t reserved_1          : 30;
-				};
-
 				union
 				{
-					xsave_c_n_t c;
-					std::uint32_t raw;
+					struct
+					{
+						std::uint32_t set_in_xss          : 1;
+						std::uint32_t aligned_to_64_bytes : 1;
+						std::uint32_t reserved_1          : 30;
+					} split;
+					std::uint32_t full;
 				} c;
-				c.raw = sub.second[ecx];
+				c.full = sub.second[ecx];
 
 				const std::uint32_t idx = static_cast<std::uint32_t>(sub.first);
 				const char* const description = idx < saveables.size() ? saveables[idx].description
 				                                                       : "(unknown)";
 
 				std::cout << "\tExtended state for " << description << " (0x" << std::hex << std::setfill('0') << std::setw(2) << static_cast<std::uint32_t>(sub.first) << ") uses " << sub.second[eax] << " bytes at offset " << sub.second[ebx] << "\n";
-				if(c.c.set_in_xss) {
+				if(c.split.set_in_xss) {
 					std::cout << "\t\tBit set in XSS MSR\n";
 				} else {
 					std::cout << "\t\tBit set in XCR0\n";
 				}
-				if(c.c.aligned_to_64_bytes) {
+				if(c.split.aligned_to_64_bytes) {
 					std::cout << "\t\tAligned to next 64-byte boundary\n";
 				} else {
 					std::cout << "\t\tImmediately follows previous component.\n";
@@ -613,40 +594,34 @@ void print_rdt_allocation(const cpu_t& cpu) {
 		return;
 	}
 
-	struct rdt_a_1_t
-	{
-		std::uint32_t bit_mask_length : 5;
-		std::uint32_t reserved_1      : 27;
-	};
-
-	struct rdt_a_3_t
-	{
-		std::uint32_t max_throttle : 12;
-		std::uint32_t reserved_1   : 20;
-	};
-
-	struct rdt_d_t
-	{
-		std::uint32_t highest_cos_number : 16;
-		std::uint32_t reserved_1         : 16;
-	};
-
 	union
 	{
-		rdt_a_1_t a1;
-		rdt_a_3_t a3;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t bit_mask_length : 5;
+			std::uint32_t reserved_1      : 27;
+		} split_1;
+		struct
+		{
+			std::uint32_t max_throttle : 12;
+			std::uint32_t reserved_1   : 20;
+		} split_3;
+		std::uint32_t full;
 	} a;
 
 	union
 	{
-		rdt_d_t d;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t highest_cos_number : 16;
+			std::uint32_t reserved_1         : 16;
+		} split;
+		std::uint32_t full;
 	} d;
 
 	for(const auto& sub : cpu.features.at(leaf_t::rdt_allocation)) {
-		a.raw = sub.second[eax];
-		d.raw = sub.second[edx];
+		a.full = sub.second[eax];
+		d.full = sub.second[edx];
 		switch(sub.first) {
 		case subleaf_t::rdt_allocation_main:
 			std::cout << "Intel Resource Director Technology allocation\n";
@@ -654,33 +629,33 @@ void print_rdt_allocation(const cpu_t& cpu) {
 			break;
 		case subleaf_t::rdt_cat_l3:
 			std::cout << "\tL3 Cache Allocation Technology\n";
-			std::cout << "\tLength of capacity bitmask: " << std::dec << (a.a1.bit_mask_length + 1ui32) << "\n";
+			std::cout << "\tLength of capacity bitmask: " << std::dec << (a.split_1.bit_mask_length + 1ui32) << "\n";
 			std::cout << "\tBitmap of isolation/contention: 0x" << std::setw(8) << std::setfill('0') << sub.second[ebx] << "\n";
 			if(sub.second[ecx] & 0x0000'0004ui32) {
 				std::cout << "\tCode and Data Prioritization supported\n";
 			}
-			std::cout << "\tHighest COS number for this resource: " << std::dec << d.d.highest_cos_number << std::endl;
+			std::cout << "\tHighest COS number for this resource: " << std::dec << d.split.highest_cos_number << std::endl;
 			std::cout << std::endl;
 			break;
 		case subleaf_t::rdt_cat_l2:
 			std::cout << "\tL2 Cache Allocation Technology\n";
-			std::cout << "\tLength of capacity bitmask: " << std::dec << (a.a1.bit_mask_length + 1ui32) << "\n";
+			std::cout << "\tLength of capacity bitmask: " << std::dec << (a.split_1.bit_mask_length + 1ui32) << "\n";
 			std::cout << "\tBitmap of isolation/contention: 0x" << std::setw(8) << std::setfill('0') << sub.second[ebx] << "\n";
-			std::cout << "\tHighest COS number for this resource: " << std::dec << d.d.highest_cos_number << std::endl;
+			std::cout << "\tHighest COS number for this resource: " << std::dec << d.split.highest_cos_number << std::endl;
 			std::cout << std::endl;
 			break;
 		case subleaf_t::rdt_mba:
 			std::cout << "\tMemory Bandwidth Allocation\n";
-			std::cout << "\tMaximum MBA throttling value: " << std::dec << (a.a3.max_throttle + 1ui32) << "\n";
+			std::cout << "\tMaximum MBA throttling value: " << std::dec << (a.split_3.max_throttle + 1ui32) << "\n";
 			if(sub.second[ecx] & 0x0000'0004ui32) {
 				std::cout << "\tResponse of delay values is linear\n";
 			}
-			std::cout << "\tHighest COS number for this resource: " << std::dec << d.d.highest_cos_number << std::endl;
+			std::cout << "\tHighest COS number for this resource: " << std::dec << d.split.highest_cos_number << std::endl;
 			std::cout << std::endl;
 			break;
 		default:
 			std::cout << "\tUnknown resource type (0x" << std::setw(2) << std::setfill('0') << std::hex << static_cast<std::uint32_t>(sub.first) << ") allocation\n";
-			std::cout << "\tHighest COS number for this resource: " << std::dec << d.d.highest_cos_number << std::endl;
+			std::cout << "\tHighest COS number for this resource: " << std::dec << d.split.highest_cos_number << std::endl;
 			std::cout << std::endl;
 			break;
 		}
@@ -716,69 +691,59 @@ void print_sgx_info(const cpu_t& cpu) {
 		{ intel, 0x0000'0040ui32, "ENCLS", "ETRACKC, ERDINFO, ELDBC, and ELDUC"            },
 	};
 
-	struct sgx_a_n_t
-	{
-		std::uint32_t type                          : 4;
-		std::uint32_t reserved_1                    : 8;
-		std::uint32_t epc_physical_address_low_bits : 20;
-	};
-
-	struct sgx_b_n_t
-	{
-		std::uint32_t epc_physical_address_hi_bits : 20;
-		std::uint32_t reserved_1                   : 12;
-	};
-
-	struct sgx_c_n_t
-	{
-		std::uint32_t epc_section_properties    : 4;
-		std::uint32_t reserved_1                : 8;
-		std::uint32_t epc_section_size_low_bits : 20;
-	};
-
-	struct sgx_d_0_t
-	{
-		std::uint32_t max_enclave_32_bit : 8;
-		std::uint32_t max_enclave_64_bit : 8;
-		std::uint32_t reserved_1         : 16;
-	};
-
-	struct sgx_d_n_t
-	{
-		std::uint32_t epc_section_size_hi_bits : 20;
-		std::uint32_t reserved_1               : 12;
-	};
-
 	union
 	{
-		sgx_a_n_t an;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t type                          : 4;
+			std::uint32_t reserved_1                    : 8;
+			std::uint32_t epc_physical_address_low_bits : 20;
+		} split;
+		std::uint32_t full;
 	} a;
 
 	union
 	{
-		sgx_b_n_t bn;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t epc_physical_address_hi_bits : 20;
+			std::uint32_t reserved_1                   : 12;
+		} split;
+		std::uint32_t full;
 	} b;
 
 	union
 	{
-		sgx_c_n_t cn;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t epc_section_properties    : 4;
+			std::uint32_t reserved_1                : 8;
+			std::uint32_t epc_section_size_low_bits : 20;
+		} split;
+		std::uint32_t full;
 	} c;
 
 	union
 	{
-		sgx_d_0_t d0;
-		sgx_d_n_t dn;
-		std::uint32_t raw;
+		struct
+		{
+			std::uint32_t max_enclave_32_bit : 8;
+			std::uint32_t max_enclave_64_bit : 8;
+			std::uint32_t reserved_1         : 16;
+		} split_0;
+		struct
+		{
+			std::uint32_t epc_section_size_hi_bits : 20;
+			std::uint32_t reserved_1               : 12;
+		} split_n;
+		std::uint32_t full;
 	} d;
 
 	for(const auto& sub : cpu.features.at(leaf_t::sgx_info)) {
-		a.raw = sub.second[eax];
-		b.raw = sub.second[ebx];
-		c.raw = sub.second[ecx];
-		d.raw = sub.second[edx];
+		a.full = sub.second[eax];
+		b.full = sub.second[ebx];
+		c.full = sub.second[ecx];
+		d.full = sub.second[edx];
 		switch(sub.first) {
 		case subleaf_t::sgx_capabilities:
 			std::cout << "Intel SGX\n";
@@ -790,8 +755,8 @@ void print_sgx_info(const cpu_t& cpu) {
 			}
 			std::cout << std::endl;
 			std::cout << "\tMISCSELECT extended features: 0x" << std::setw(8) << std::setfill('0') << std::hex << sub.second[ebx] << "\n";
-			std::cout << "\tMaximum enclage size in 32-bit mode: " << (2ui64 << d.d0.max_enclave_32_bit) << " bytes\n";
-			std::cout << "\tMaximum enclage size in 64-bit mode: " << (2ui64 << d.d0.max_enclave_64_bit) << " bytes\n";
+			std::cout << "\tMaximum enclage size in 32-bit mode: " << (2ui64 << d.split_0.max_enclave_32_bit) << " bytes\n";
+			std::cout << "\tMaximum enclage size in 64-bit mode: " << (2ui64 << d.split_0.max_enclave_64_bit) << " bytes\n";
 			std::cout << std::endl;
 			break;
 		case subleaf_t::sgx_attributes:
@@ -804,10 +769,10 @@ void print_sgx_info(const cpu_t& cpu) {
 		default:
 			std::cout << "\tEnclave Page Cache section\n";
 			{
-				const std::uint64_t physical_address = (static_cast<std::uint64_t>(b.bn.epc_physical_address_hi_bits ) << 32ui64)
-				                                     | (static_cast<std::uint64_t>(a.an.epc_physical_address_low_bits) << 12ui64);
-				const std::uint64_t epc_size = (static_cast<std::uint64_t>(d.dn.epc_section_size_hi_bits ) << 32ui64)
-				                             | (static_cast<std::uint64_t>(c.cn.epc_section_size_low_bits) << 12ui64);
+				const std::uint64_t physical_address = (std::uint64_t{b.split.epc_physical_address_hi_bits } << 32ui64)
+				                                     | (std::uint64_t{a.split.epc_physical_address_low_bits} << 12ui64);
+				const std::uint64_t epc_size = (std::uint64_t{d.split_n.epc_section_size_hi_bits } << 32ui64)
+				                             | (std::uint64_t{c.split.epc_section_size_low_bits} << 12ui64);
 				std::cout << "\t\tEPC physical address: 0x" << std::setw(16) << std::setfill('0') << std::hex << physical_address << "\n";
 				std::cout << "\t\tEPC size: 0x"             << std::setw(16) << std::setfill('0') << std::hex << epc_size << "\n";
 			}
