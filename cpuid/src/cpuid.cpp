@@ -145,7 +145,7 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::deterministic_address_translation , { intel                  , nullptr                      , nullptr                              , {} } },
 	{ leaf_t::extended_limit                    , { any                    , nullptr                      , print_extended_limit                 , {} } },
 	{ leaf_t::extended_signature_and_features   , { any                    , nullptr                      , print_extended_signature_and_features, {} } },
-	{ leaf_t::brand_string_0                    , { any                    , nullptr                      , nullptr                              , {} } },
+	{ leaf_t::brand_string_0                    , { any                    , nullptr                      , print_brand_string                   , {} } },
 	{ leaf_t::brand_string_1                    , { any                    , nullptr                      , nullptr                              , {} } },
 	{ leaf_t::brand_string_2                    , { any                    , nullptr                      , nullptr                              , {} } },
 	{ leaf_t::l1_cache_identifiers              , {         amd            , nullptr                      , nullptr                              , {} } },

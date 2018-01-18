@@ -837,3 +837,21 @@ void print_extended_signature_and_features(const cpu_t& cpu) {
 	print_features(leaf_t::extended_signature_and_features, subleaf_t::main, edx, cpu);
 	std::cout << std::endl;
 }
+
+void print_brand_string(const cpu_t& cpu) {
+	std::cout << "Processor brand string\n";
+	const union
+	{
+		std::array<register_set_t, 3> split;
+		std::array<char, 48> full;
+	} brand = {
+		cpu.features.at(leaf_t::brand_string_0).at(subleaf_t::main),
+		cpu.features.at(leaf_t::brand_string_1).at(subleaf_t::main),
+		cpu.features.at(leaf_t::brand_string_2).at(subleaf_t::main)
+	};
+
+	std::cout << "\t";
+	std::cout.write(brand.full.data(), 48);
+	std::cout << "\n";
+	std::cout << std::endl;
+}
