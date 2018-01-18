@@ -223,37 +223,35 @@ void print_thermal_and_power(const cpu_t& cpu) {
 	print_features(leaf_t::thermal_and_power, subleaf_t::main, eax, cpu);
 	std::cout << std::endl;
 
-	if(cpu.vendor != intel) {
-		return;
-	}
-
-	const union
-	{
-		std::uint32_t full;
-		struct
+	if(cpu.vendor == intel) {
+		const union
 		{
-			std::uint32_t interrupt_thresholds : 4;
-			std::uint32_t reserved_1           : 28;
-		} split;
-	} b = { regs[ebx] };
+			std::uint32_t full;
+			struct
+			{
+				std::uint32_t interrupt_thresholds : 4;
+				std::uint32_t reserved_1           : 28;
+			} split;
+		} b = { regs[ebx] };
 
-	const union
-	{
-		std::uint32_t full;
-		struct
+		const union
 		{
-			std::uint32_t hcf : 1;
-			std::uint32_t reserved_1 : 2;
-			std::uint32_t bias_preference : 1;
-			std::uint32_t reserved_2 : 28;
-		} split;
-	} c = { regs[ecx] };
+			std::uint32_t full;
+			struct
+			{
+				std::uint32_t hcf : 1;
+				std::uint32_t reserved_1 : 2;
+				std::uint32_t bias_preference : 1;
+				std::uint32_t reserved_2 : 28;
+			} split;
+		} c = { regs[ecx] };
 
-	if(b.split.interrupt_thresholds) {
-		std::cout << b.split.interrupt_thresholds << " interrupt thresholds in Digital Thermal Sensor\n";
+		if(b.split.interrupt_thresholds) {
+			std::cout << b.split.interrupt_thresholds << " interrupt thresholds in Digital Thermal Sensor\n";
+		}
+		print_features(leaf_t::thermal_and_power, subleaf_t::main, ecx, cpu);
+		std::cout << std::endl;
 	}
-	print_features(leaf_t::thermal_and_power, subleaf_t::main, ecx, cpu);
-	std::cout << std::endl;
 }
 
 void enumerate_extended_features(cpu_t& cpu) {

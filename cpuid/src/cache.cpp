@@ -304,7 +304,7 @@ std::string to_string(cache_descriptor_t desc) {
 			printable_cache_size /= 1'024.0;
 			cache_scale = 'M';
 		}
-		w << "{:g} {:c}bytes"_format(printable_cache_size, cache_scale);
+		w << "{:g} {:c}byte"_format(printable_cache_size, cache_scale);
 	} else if(desc.type & all_tlb) {
 		w << to_string(desc.attributes);
 	} else if(desc.type & trace) {
@@ -327,10 +327,6 @@ std::string to_string(cache_descriptor_t desc) {
 
 void print_cache_tlb_info(const cpu_t& cpu) {
 	using namespace fmt::literals;
-
-	if(cpu.vendor != intel && cpu.vendor != cyrix) {
-		return;
-	}
 
 	const register_set_t& regs = cpu.features.at(leaf_t::cache_and_tlb).at(subleaf_t::main);
 
@@ -431,10 +427,6 @@ void print_cache_tlb_info(const cpu_t& cpu) {
 }
 
 void enumerate_deterministic_cache(cpu_t& cpu) {
-	if(cpu.vendor != intel) {
-		return;
-	}
-
 	register_set_t regs = { 0 };
 	subleaf_t sub = subleaf_t::main;
 	while(true) {
@@ -449,10 +441,6 @@ void enumerate_deterministic_cache(cpu_t& cpu) {
 
 void print_deterministic_cache(const cpu_t& cpu) {
 	using namespace fmt::literals;
-
-	if(cpu.vendor != intel) {
-		return;
-	}
 
 	std::cout << "Deterministic cache\n";
 
@@ -549,5 +537,251 @@ void print_deterministic_cache(const cpu_t& cpu) {
 		w << "\t\tCache is {:s}direct mapped.\n"_format(d.split.complex_indexing != 0 ? "not " : "");
 		w << "\t\tCache is shared by up to {:d} threads, with up to {:d} cores in the package.\n"_format(a.split.maximum_addressable_thread_ids + 1, a.split.maximum_addressable_core_ids + 1);
 		std::cout << w.str() << std::endl;
+	}
+}
+
+void print_l1_cache_tlb(const cpu_t & cpu) {
+	const register_set_t& regs = cpu.features.at(leaf_t::l1_cache_identifiers).at(subleaf_t::main);
+
+	struct tlb_element
+	{
+		std::uint8_t entries;
+		std::uint8_t associativity;
+	};
+
+	struct tlb_info
+	{
+		tlb_element i;
+		tlb_element d;
+	};
+
+	struct cache_info
+	{
+		std::uint32_t line_size     : 8;
+		std::uint32_t lines_per_tag : 8;
+		std::uint32_t associativity : 8;
+		std::uint32_t size_kb       : 8;
+	};
+
+	const union
+	{
+		std::uint32_t full;
+		tlb_info split; // 2M page
+	} a = { regs[eax] };
+
+	const union
+	{
+		std::uint32_t full;
+		tlb_info split; // 4K page
+
+	} b = { regs[ebx] };
+
+	const union
+	{
+		std::uint32_t full;
+		cache_info split; // L1d
+	} c = { regs[ecx] };
+
+	const union
+	{
+		std::uint32_t full;
+		cache_info split; // L1i
+	} d = { regs[edx] };
+
+	auto print_associativity = [](std::uint8_t assoc) -> std::string {
+		switch(assoc) {
+		case 0ui8:
+			return "unknown assocativity";
+		case 1ui8:
+			return "direct-mapped";
+		case 0xffui8:
+			return "fully associative";
+		default:
+			return std::to_string(gsl::narrow_cast<std::uint32_t>(assoc)) + "-way associative";
+		}
+	};
+
+	auto print_tlb = [&print_associativity](const tlb_element& tlb, const std::string& type, const std::string& page_size) {
+		using namespace fmt::literals;
+		return "{:d}-entry {:s} L1 {:s} TLB for {:s} pages"_format(tlb.entries, print_associativity(tlb.associativity), type, page_size);
+	};
+
+	auto print_cache = [&print_associativity](const cache_info& cache, const std::string& type) {
+		using namespace fmt::literals;
+		return "{:d} Kbyte {:s} L1 {:s} cache with {:d} bytes per line and {:d} lines per tag"_format(cache.size_kb,
+		                                                                                              print_associativity(cache.associativity),
+		                                                                                              type,
+		                                                                                              cache.line_size,
+		                                                                                              cache.lines_per_tag);
+	};
+
+	std::cout << "Level 1 TLB\n";
+	std::cout << "\t" << print_tlb(a.split.d, "data", "2M") << "\n";
+	std::cout << "\t" << print_tlb(a.split.i, "instruction", "2M") << "\n";
+	std::cout << "\t" << print_tlb(b.split.d, "data", "4K") << "\n";
+	std::cout << "\t" << print_tlb(b.split.i, "instruction", "4K") << "\n";
+	std::cout << std::endl;
+
+	std::cout << "Level 1 cache\n";
+	std::cout << "\t" << print_cache(c.split, "data") << "\n";
+	std::cout << "\t" << print_cache(d.split, "instruction") << "\n";
+
+	std::cout << std::endl;
+}
+
+void print_l2_cache_tlb(const cpu_t & cpu) {
+	const register_set_t& regs = cpu.features.at(leaf_t::l2_cache_identifiers).at(subleaf_t::main);
+
+	struct tlb_element
+	{
+		std::uint16_t entries       : 12;
+		std::uint16_t associativity : 4;
+	};
+
+	struct tlb_info
+	{
+		tlb_element i;
+		tlb_element d;
+	};
+
+	struct l2_cache_info
+	{
+		std::uint32_t line_size     : 8;
+		std::uint32_t lines_per_tag : 4;
+		std::uint32_t associativity : 4;
+		std::uint32_t size          : 16;
+	};
+
+	struct l3_cache_info
+	{
+		std::uint32_t line_size     : 8;
+		std::uint32_t lines_per_tag : 4;
+		std::uint32_t associativity : 4;
+		std::uint32_t reserved_1    : 2;
+		std::uint32_t size          : 14;
+	};
+
+	const union
+	{
+		std::uint32_t full;
+		tlb_info split; // 2M page
+	} a = { regs[eax] };
+
+	const union
+	{
+		std::uint32_t full;
+		tlb_info split; // 4K page
+
+	} b = { regs[ebx] };
+
+	const union
+	{
+		std::uint32_t full;
+		l2_cache_info split;
+	} c = { regs[ecx] };
+
+	const union
+	{
+		std::uint32_t full;
+		l3_cache_info split;
+	} d = { regs[edx] };
+
+	auto print_associativity = [](std::uint32_t assoc) -> std::string {
+		switch(assoc) {
+		case 0x0ui32:
+			return "disabled";
+		case 0x1ui32:
+			return "direct-mapped";
+		case 0x2ui32:
+			return "2-way associative";
+		case 0x3ui32:
+			return "3-way associative";
+		case 0x4ui32:
+			return "4-way associative";
+		case 0x5ui32:
+			return "6-way associative";
+		case 0x6ui32:
+			return "8-way associative";
+		case 0x8ui32:
+			return "16-way associative";
+		case 0xaui32:
+			return "32-way associative";
+		case 0xbui32:
+			return "48-way associative";
+		case 0xcui32:
+			return "64-way associative";
+		case 0xdui32:
+			return "96-way associative";
+		case 0xeui32:
+			return "128-way associative";
+		case 0xfui32:
+			return "fully associative";
+		default:
+			return std::to_string(assoc) + "-way associative";
+		}
+	};
+
+	auto print_size = [](std::uint32_t cache_bytes) {
+		using namespace fmt::literals;
+
+		double printable_cache_size = cache_bytes / 1024.0;
+		char   cache_scale = 'K';
+		if(printable_cache_size > 1'024.0) {
+			printable_cache_size /= 1'024.0;
+			cache_scale = 'M';
+		}
+		return "{:g} {:c}byte"_format(printable_cache_size, cache_scale);
+	};
+
+	auto print_l2_size = [&print_size](std::uint32_t cache_size) {
+		return print_size(cache_size * 1024);
+	};
+
+	auto print_l3_size = [&print_size](std::uint32_t cache_size) {
+		return print_size(cache_size * 1024 * 512);
+	};
+
+	auto print_tlb = [&print_associativity](const tlb_element& tlb, const std::string& type, const std::string& page_size) {
+		using namespace fmt::literals;
+		return "{:d}-entry {:s} L2 {:s} TLB for {:s} pages"_format(tlb.entries, print_associativity(tlb.associativity), type, page_size);
+	};
+
+	auto print_l2_cache = [&print_associativity, &print_l2_size](const l2_cache_info& cache) {
+		using namespace fmt::literals;
+		return "{:s} {:s} L2 cache with {:d} bytes per line and {:d} lines per tag"_format(print_l2_size(cache.size),
+		                                                                                   print_associativity(cache.associativity),
+		                                                                                   cache.line_size,
+		                                                                                   cache.lines_per_tag);
+	};
+	auto print_l3_cache = [&print_associativity, &print_l3_size](const l3_cache_info& cache) {
+		using namespace fmt::literals;
+		return "{:s} {:s} L3 cache with {:d} bytes per line and {:d} lines per tag"_format(print_l3_size(cache.size),
+		                                                                                   print_associativity(cache.associativity),
+		                                                                                   cache.line_size,
+		                                                                                   cache.lines_per_tag);
+	};
+
+	switch(cpu.vendor) {
+	case amd:
+		std::cout << "Level 2 TLB\n";
+		std::cout << "\t" << print_tlb(a.split.d, "data", "2M") << "\n";
+		std::cout << "\t" << print_tlb(a.split.i, "instruction", "2M") << "\n";
+		std::cout << "\t" << print_tlb(b.split.d, "data", "4K") << "\n";
+		std::cout << "\t" << print_tlb(b.split.i, "instruction", "4K") << "\n";
+		std::cout << std::endl;
+
+		std::cout << "Level 2 cache\n";
+		std::cout << "\t" << print_l2_cache(c.split) << "\n";
+		std::cout << std::endl;
+
+		std::cout << "Level 3 cache\n";
+		std::cout << "\t" << print_l3_cache(d.split) << "\n";
+		std::cout << std::endl;
+		break;
+	case intel:
+		std::cout << "Level 2 cache\n";
+		std::cout << "\t" << print_l2_cache(c.split) << "\n";
+		std::cout << std::endl;
+		break;
 	}
 }
