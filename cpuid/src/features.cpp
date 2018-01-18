@@ -171,9 +171,9 @@ void print_features(leaf_t leaf, subleaf_t sub, register_t reg, const cpu_t& cpu
 	for(const feature_t& f : features) {
 		if(0 != (cpu.vendor & f.vendor)) {
 			if(0 != (value & f.mask)) {
-				std::cout << std::setw(12) << std::setfill(' ') << f.mnemonic << " \x1b[32;1m[+]\x1b[0m " << f.description << "\n";
+				std::cout << std::setw(16) << std::setfill(' ') << f.mnemonic << " \x1b[32;1m[+]\x1b[0m " << f.description << "\n";
 			} else {
-				std::cout << std::setw(12) << std::setfill(' ') << f.mnemonic << " \x1b[31;1m[-]\x1b[0m " << f.description << "\n";
+				std::cout << std::setw(16) << std::setfill(' ') << f.mnemonic << " \x1b[31;1m[-]\x1b[0m " << f.description << "\n";
 			}
 		}
 	}
