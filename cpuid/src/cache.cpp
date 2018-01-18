@@ -630,6 +630,8 @@ void print_l1_cache_tlb(const cpu_t & cpu) {
 }
 
 void print_l2_cache_tlb(const cpu_t & cpu) {
+	using namespace fmt::literals;
+
 	const register_set_t& regs = cpu.features.at(leaf_t::l2_cache_identifiers).at(subleaf_t::main);
 
 	struct tlb_element
@@ -746,21 +748,6 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 		return "{:d}-entry {:s} L2 {:s} TLB for {:s} pages"_format(tlb.entries, print_associativity(tlb.associativity), type, page_size);
 	};
 
-	auto print_l2_cache = [&print_associativity, &print_l2_size](const l2_cache_info& cache) {
-		using namespace fmt::literals;
-		return "{:s} {:s} L2 cache with {:d} bytes per line and {:d} lines per tag"_format(print_l2_size(cache.size),
-		                                                                                   print_associativity(cache.associativity),
-		                                                                                   cache.line_size,
-		                                                                                   cache.lines_per_tag);
-	};
-	auto print_l3_cache = [&print_associativity, &print_l3_size](const l3_cache_info& cache) {
-		using namespace fmt::literals;
-		return "{:s} {:s} L3 cache with {:d} bytes per line and {:d} lines per tag"_format(print_l3_size(cache.size),
-		                                                                                   print_associativity(cache.associativity),
-		                                                                                   cache.line_size,
-		                                                                                   cache.lines_per_tag);
-	};
-
 	switch(cpu.vendor) {
 	case amd:
 		std::cout << "Level 2 TLB\n";
@@ -771,16 +758,30 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 		std::cout << std::endl;
 
 		std::cout << "Level 2 cache\n";
-		std::cout << "\t" << print_l2_cache(c.split) << "\n";
+		std::cout << "\t";
+		std::cout << "{:s} {:s} L2 cache with {:d} bytes per line and {:d} lines per tag"_format(print_l2_size(c.split.size),
+		                                                                                         print_associativity(c.split.associativity),
+		                                                                                         c.split.line_size,
+		                                                                                         c.split.lines_per_tag);
+
+		std::cout << "\n";
 		std::cout << std::endl;
 
 		std::cout << "Level 3 cache\n";
-		std::cout << "\t" << print_l3_cache(d.split) << "\n";
+		std::cout << "\t";
+		std::cout << "{:s} {:s} L3 cache with {:d} bytes per line and {:d} lines per tag"_format(print_l3_size(d.split.size),
+		                                                                                         print_associativity(d.split.associativity),
+		                                                                                         d.split.line_size,
+		                                                                                         d.split.lines_per_tag);
+		std::cout << "\n";
 		std::cout << std::endl;
 		break;
 	case intel:
 		std::cout << "Level 2 cache\n";
-		std::cout << "\t" << print_l2_cache(c.split) << "\n";
+		std::cout << "\t" "{:s} {:s} L2 cache with {:d} bytes per line"_format(print_l2_size(c.split.size),
+		                                                                       print_associativity(c.split.associativity),
+		                                                                       c.split.line_size);
+		std::cout << "\n";
 		std::cout << std::endl;
 		break;
 	}
