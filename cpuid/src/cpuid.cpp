@@ -122,6 +122,9 @@ struct leaf_descriptor_t
 	filter_t filter;
 };
 
+void print_null(const cpu_t&) {
+}
+
 const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::basic_info                        , { any                    , nullptr                      , print_basic_info                     , {} } },
 	{ leaf_t::version_info                      , { any                    , nullptr                      , print_version_info                   , {} } },
@@ -146,8 +149,8 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::extended_limit                    , { any                    , nullptr                      , print_extended_limit                 , {} } },
 	{ leaf_t::extended_signature_and_features   , { any                    , nullptr                      , print_extended_signature_and_features, {} } },
 	{ leaf_t::brand_string_0                    , { any                    , nullptr                      , print_brand_string                   , {} } },
-	{ leaf_t::brand_string_1                    , { any                    , nullptr                      , nullptr                              , {} } },
-	{ leaf_t::brand_string_2                    , { any                    , nullptr                      , nullptr                              , {} } },
+	{ leaf_t::brand_string_1                    , { any                    , nullptr                      , print_null                           , {} } },
+	{ leaf_t::brand_string_2                    , { any                    , nullptr                      , print_null                           , {} } },
 	{ leaf_t::l1_cache_identifiers              , {         amd            , nullptr                      , print_l1_cache_tlb                   , {} } },
 	{ leaf_t::l2_cache_identifiers              , { intel | amd            , nullptr                      , print_l2_cache_tlb                   , {} } },
 	{ leaf_t::ras_advanced_power_management     , { intel | amd            , nullptr                      , print_ras_advanced_power_management  , {} } },
