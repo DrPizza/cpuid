@@ -247,6 +247,15 @@ const feature_map_t all_features = {
 				{         amd            , 0x0000'4000ui32, "RAPL"                   , "Running average power limit"          },
 			}}
 		}}
+	}},
+	{ leaf_t::address_limits, {
+		{ subleaf_t::main, {
+			{ ebx, {
+				{         amd            , 0x0000'0001ui32, "CLZERO"                 , "CLZERO instruction"                   },
+				{         amd            , 0x0000'0002ui32, "IRPerf"                 , "Instructions retired count support"   },
+				{         amd            , 0x0000'0002ui32, "XSaveErPtr"             , "XSAVE (etc.) saves error pointer"     },
+			}}
+		}}
 	}}
 };
 

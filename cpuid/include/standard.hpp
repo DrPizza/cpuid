@@ -40,4 +40,6 @@ void print_brand_string(const cpu_t& cpu);
 
 void print_ras_advanced_power_management(const cpu_t& cpu);
 
+void print_address_limits(const cpu_t& cpu);
+
 #endif

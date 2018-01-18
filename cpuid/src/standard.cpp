@@ -891,3 +891,78 @@ void print_ras_advanced_power_management(const cpu_t& cpu) {
 	}
 }
 
+void print_address_limits(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.features.at(leaf_t::address_limits).at(subleaf_t::main);
+
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t physical_address_size : 8;
+			std::uint32_t virtual_address_size  : 8;
+			std::uint32_t guest_physical_size   : 8;
+			std::uint32_t reserved_1            : 8;
+		} split;
+	} a = { regs[eax] };
+
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t package_threads : 8;
+			std::uint32_t reserved_1      : 4;
+			std::uint32_t apic_id_size    : 4;
+			std::uint32_t perf_tsc_size   : 2;
+			std::uint32_t reserved_2      : 24;
+		} split;
+	} c = { regs[ecx] };
+
+	switch(cpu.vendor) {
+	case amd:
+		std::cout << "Address size limits\n";
+		std::cout << "\tPhysical address size/bits: " << a.split.physical_address_size << "\n";
+		std::cout << "\tVirtual address size/bits: " << a.split.virtual_address_size << "\n";
+		if(0 == a.split.guest_physical_size) {
+			std::cout << "\tGuest physical size matches machine physical size\n";
+		}
+		std::cout << std::endl;
+
+		std::cout << "\tExtended features\n";
+		print_features(leaf_t::address_limits, subleaf_t::main, ebx, cpu);
+		std::cout << std::endl;
+
+		std::cout << "\tSize identifiers\n";
+		std::cout << "\t\tThreads in package: " << c.split.package_threads + 1ui32 << "\n";
+		std::cout << "\t\t" << c.split.apic_id_size << " bits of APIC ID denote threads within a package\n";
+
+		if(0 != (cpu.features.at(leaf_t::extended_signature_and_features).at(subleaf_t::main).at(ecx) & 0x0400'0000ui32)) {
+			std::cout << "\t\tPerforamnce time-stamp counter size/bits: ";
+			switch(c.split.perf_tsc_size) {
+			case 0b00ui32:
+				std::cout << "40";
+				break;
+			case 0b01ui32:
+				std::cout << "48";
+				break;
+			case 0b10ui32:
+				std::cout << "56";
+				break;
+			case 0b11ui32:
+				std::cout << "64";
+				break;
+			}
+			std::cout << "\n";
+		}
+
+		std::cout << std::endl;
+		break;
+	case intel:
+		std::cout << "Address size limits\n";
+		std::cout << "\tPhysical address size/bits: " << a.split.physical_address_size << "\n";
+		std::cout << "\tVirtual address size/bits: " << a.split.virtual_address_size << "\n";
+		std::cout << std::endl;
+		break;
+	}
+}
