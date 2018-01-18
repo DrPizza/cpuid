@@ -102,48 +102,47 @@ using leaf_enumerate = void(*)(cpu_t& cpu);
 struct leaf_descriptor_t
 {
 	vendor_t vendor;
-	bool has_subleaves;
 	leaf_enumerate enumerator;
 	leaf_print printer;
 };
 
 const std::map<leaf_t, leaf_descriptor_t> descriptors = {
-	{ leaf_t::basic_info                        , { any                    , false, nullptr                      , print_basic_info             } },
-	{ leaf_t::version_info                      , { any                    , false, nullptr                      , print_version_info           } },
-	{ leaf_t::cache_and_tlb                     , { intel                  , false, nullptr                      , print_cache_tlb_info         } },
-	{ leaf_t::serial_number                     , { intel       | transmeta, false, nullptr                      , print_serial_number          } },
-	{ leaf_t::deterministic_cache               , { intel                  , true , enumerate_deterministic_cache, print_deterministic_cache    } },
-	{ leaf_t::monitor_mwait                     , { intel | amd            , false, nullptr                      , print_mwait_parameters       } },
-	{ leaf_t::thermal_and_power                 , { intel | amd            , false, nullptr                      , print_thermal_and_power      } },
-	{ leaf_t::extended_features                 , { any                    , true , enumerate_extended_features  , print_extended_features      } },
-	{ leaf_t::direct_cache_access               , { intel                  , false, nullptr                      , print_direct_cache_access    } },
-	{ leaf_t::performance_monitoring            , { intel                  , false, nullptr                      , print_performance_monitoring } },
-	{ leaf_t::extended_topology                 , { intel                  , true , enumerate_extended_topology  , print_extended_topology      } },
-	{ leaf_t::extended_state                    , { intel | amd            , true , enumerate_extended_state     , print_extended_state         } },
-	{ leaf_t::rdt_monitoring                    , { intel                  , true , enumerate_rdt_monitoring     , print_rdt_monitoring         } },
-	{ leaf_t::rdt_allocation                    , { intel                  , true , nullptr                      , nullptr } },
-	{ leaf_t::sgx_info                          , { intel                  , true , nullptr                      , nullptr } },
-	{ leaf_t::processor_trace                   , { intel                  , true , nullptr                      , nullptr } },
-	{ leaf_t::time_stamp_counter                , { intel                  , false, nullptr                      , nullptr } },
-	{ leaf_t::processor_frequency               , { intel                  , false, nullptr                      , nullptr } },
-	{ leaf_t::system_on_chip_vendor             , { intel                  , true , nullptr                      , nullptr } },
-	{ leaf_t::deterministic_address_translation , { intel                  , true , nullptr                      , nullptr } },
-	{ leaf_t::extended_limit                    , { any                    , false, nullptr                      , nullptr } },
-	{ leaf_t::extended_signature_and_features   , { any                    , false, nullptr                      , nullptr } },
-	{ leaf_t::brand_string_0                    , { any                    , false, nullptr                      , nullptr } },
-	{ leaf_t::brand_string_1                    , { any                    , false, nullptr                      , nullptr } },
-	{ leaf_t::brand_string_2                    , { any                    , false, nullptr                      , nullptr } },
-	{ leaf_t::l1_cache_identifiers              , {         amd            , false, nullptr                      , nullptr } },
-	{ leaf_t::l2_cache_identifiers              , { intel | amd            , false, nullptr                      , nullptr } },
-	{ leaf_t::advanced_power_management         , { intel | amd            , false, nullptr                      , nullptr } },
-	{ leaf_t::address_limits                    , { intel | amd            , false, nullptr                      , nullptr } },
-	{ leaf_t::secure_virtual_machine            , {         amd            , false, nullptr                      , nullptr } },
-	{ leaf_t::tlb_1g_identifiers                , {         amd            , false, nullptr                      , nullptr } },
-	{ leaf_t::performance_optimization          , {         amd            , false, nullptr                      , nullptr } },
-	{ leaf_t::instruction_based_sampling        , {         amd            , false, nullptr                      , nullptr } },
-	{ leaf_t::cache_properties                  , {         amd            , false, nullptr                      , nullptr } },
-	{ leaf_t::extended_apic                     , {         amd            , false, nullptr                      , nullptr } },
-	{ leaf_t::secure_memory_encryption          , {         amd            , false, nullptr                      , nullptr } }
+	{ leaf_t::basic_info                        , { any                    , nullptr                      , print_basic_info             } },
+	{ leaf_t::version_info                      , { any                    , nullptr                      , print_version_info           } },
+	{ leaf_t::cache_and_tlb                     , { intel                  , nullptr                      , print_cache_tlb_info         } },
+	{ leaf_t::serial_number                     , { intel       | transmeta, nullptr                      , print_serial_number          } },
+	{ leaf_t::deterministic_cache               , { intel                  , enumerate_deterministic_cache, print_deterministic_cache    } },
+	{ leaf_t::monitor_mwait                     , { intel | amd            , nullptr                      , print_mwait_parameters       } },
+	{ leaf_t::thermal_and_power                 , { intel | amd            , nullptr                      , print_thermal_and_power      } },
+	{ leaf_t::extended_features                 , { any                    , enumerate_extended_features  , print_extended_features      } },
+	{ leaf_t::direct_cache_access               , { intel                  , nullptr                      , print_direct_cache_access    } },
+	{ leaf_t::performance_monitoring            , { intel                  , nullptr                      , print_performance_monitoring } },
+	{ leaf_t::extended_topology                 , { intel                  , enumerate_extended_topology  , print_extended_topology      } },
+	{ leaf_t::extended_state                    , { intel | amd            , enumerate_extended_state     , print_extended_state         } },
+	{ leaf_t::rdt_monitoring                    , { intel                  , enumerate_rdt_monitoring     , print_rdt_monitoring         } },
+	{ leaf_t::rdt_allocation                    , { intel                  , enumerate_rdt_allocation     , print_rdt_allocation         } },
+	{ leaf_t::sgx_info                          , { intel                  , enumerate_sgx_info           , print_sgx_info               } },
+	{ leaf_t::processor_trace                   , { intel                  , nullptr                      , nullptr } },
+	{ leaf_t::time_stamp_counter                , { intel                  , nullptr                      , nullptr } },
+	{ leaf_t::processor_frequency               , { intel                  , nullptr                      , nullptr } },
+	{ leaf_t::system_on_chip_vendor             , { intel                  , nullptr                      , nullptr } },
+	{ leaf_t::deterministic_address_translation , { intel                  , nullptr                      , nullptr } },
+	{ leaf_t::extended_limit                    , { any                    , nullptr                      , nullptr } },
+	{ leaf_t::extended_signature_and_features   , { any                    , nullptr                      , nullptr } },
+	{ leaf_t::brand_string_0                    , { any                    , nullptr                      , nullptr } },
+	{ leaf_t::brand_string_1                    , { any                    , nullptr                      , nullptr } },
+	{ leaf_t::brand_string_2                    , { any                    , nullptr                      , nullptr } },
+	{ leaf_t::l1_cache_identifiers              , {         amd            , nullptr                      , nullptr } },
+	{ leaf_t::l2_cache_identifiers              , { intel | amd            , nullptr                      , nullptr } },
+	{ leaf_t::advanced_power_management         , { intel | amd            , nullptr                      , nullptr } },
+	{ leaf_t::address_limits                    , { intel | amd            , nullptr                      , nullptr } },
+	{ leaf_t::secure_virtual_machine            , {         amd            , nullptr                      , nullptr } },
+	{ leaf_t::tlb_1g_identifiers                , {         amd            , nullptr                      , nullptr } },
+	{ leaf_t::performance_optimization          , {         amd            , nullptr                      , nullptr } },
+	{ leaf_t::instruction_based_sampling        , {         amd            , nullptr                      , nullptr } },
+	{ leaf_t::cache_properties                  , {         amd            , nullptr                      , nullptr } },
+	{ leaf_t::extended_apic                     , {         amd            , nullptr                      , nullptr } },
+	{ leaf_t::secure_memory_encryption          , {         amd            , nullptr                      , nullptr } }
 };
 
 int main(int, char*[]) {
@@ -171,7 +170,7 @@ int main(int, char*[]) {
 	for(leaf_t lf = leaf_t::basic_info; lf <= cpu.highest_leaf; ++lf) {
 		auto it = descriptors.find(lf);
 		if(it != descriptors.end()) {
-			if(it->second.has_subleaves && it->second.enumerator) {
+			if(it->second.enumerator) {
 				it->second.enumerator(cpu);
 			} else {
 				cpuid(regs, lf, subleaf_t::main);
@@ -187,7 +186,7 @@ int main(int, char*[]) {
 		auto it = descriptors.find(lf);
 		if(it != descriptors.end()) {
 			if(it->second.vendor & cpu.vendor) {
-				if(it->second.has_subleaves && it->second.enumerator) {
+				if(it->second.enumerator) {
 					it->second.enumerator(cpu);
 				} else {
 					cpuid(regs, lf, subleaf_t::main);

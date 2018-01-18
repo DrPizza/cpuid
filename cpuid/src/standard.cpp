@@ -687,3 +687,132 @@ void print_rdt_allocation(const cpu_t& cpu) {
 	}
 }
 
+void enumerate_sgx_info(cpu_t& cpu) {
+	register_set_t regs = { 0 };
+	cpuid(regs,  leaf_t::sgx_info, subleaf_t::sgx_capabilities);
+	cpu.features[leaf_t::sgx_info][subleaf_t::sgx_capabilities] = regs;
+
+	cpuid(regs,  leaf_t::sgx_info, subleaf_t::sgx_attributes);
+	cpu.features[leaf_t::sgx_info][subleaf_t::sgx_attributes] = regs;
+
+	for(subleaf_t i = subleaf_t{ 2 }; ; ++i) {
+		cpuid(regs, leaf_t::sgx_info, i);
+		if(0 == (regs[eax] & 0xfui32)) {
+			break;
+		}
+		cpu.features[leaf_t::sgx_info][i] = regs;
+	}
+}
+
+void print_sgx_info(const cpu_t& cpu) {
+	if(0 == (cpu.features.at(leaf_t::extended_features).at(subleaf_t::main).at(ebx) & 0x0000'0004ui32)) {
+		return;
+	}
+
+	static const std::vector<feature_t> sgx_features = {
+		{ intel, 0x0000'0001ui32, "SGX1" , "SGX1 functions available"                      },
+		{ intel, 0x0000'0002ui32, "SGX2" , "SGX2 functions available"                      },
+		{ intel, 0x0000'0020ui32, "ENCLV", "EINCVIRTCHILD, EDECVIRTCHILD, and ESETCONTEXT" },
+		{ intel, 0x0000'0040ui32, "ENCLS", "ETRACKC, ERDINFO, ELDBC, and ELDUC"            },
+	};
+
+	struct sgx_a_n_t
+	{
+		std::uint32_t type                          : 4;
+		std::uint32_t reserved_1                    : 8;
+		std::uint32_t epc_physical_address_low_bits : 20;
+	};
+
+	struct sgx_b_n_t
+	{
+		std::uint32_t epc_physical_address_hi_bits : 20;
+		std::uint32_t reserved_1                   : 12;
+	};
+
+	struct sgx_c_n_t
+	{
+		std::uint32_t epc_section_properties    : 4;
+		std::uint32_t reserved_1                : 8;
+		std::uint32_t epc_section_size_low_bits : 20;
+	};
+
+	struct sgx_d_0_t
+	{
+		std::uint32_t max_enclave_32_bit : 8;
+		std::uint32_t max_enclave_64_bit : 8;
+		std::uint32_t reserved_1         : 16;
+	};
+
+	struct sgx_d_n_t
+	{
+		std::uint32_t epc_section_size_hi_bits : 20;
+		std::uint32_t reserved_1               : 12;
+	};
+
+	union
+	{
+		sgx_a_n_t an;
+		std::uint32_t raw;
+	} a;
+
+	union
+	{
+		sgx_b_n_t bn;
+		std::uint32_t raw;
+	} b;
+
+	union
+	{
+		sgx_c_n_t cn;
+		std::uint32_t raw;
+	} c;
+
+	union
+	{
+		sgx_d_0_t d0;
+		sgx_d_n_t dn;
+		std::uint32_t raw;
+	} d;
+
+	for(const auto& sub : cpu.features.at(leaf_t::sgx_info)) {
+		a.raw = sub.second[eax];
+		b.raw = sub.second[ebx];
+		c.raw = sub.second[ecx];
+		d.raw = sub.second[edx];
+		switch(sub.first) {
+		case subleaf_t::sgx_capabilities:
+			std::cout << "Intel SGX\n";
+			std::cout << "\tFeatures:\n";
+			for(const feature_t& f : sgx_features) {
+				if(sub.second[eax] & f.mask) {
+					std::cout << "\t\t" << f.description << "\n";
+				}
+			}
+			std::cout << std::endl;
+			std::cout << "\tMISCSELECT extended features: 0x" << std::setw(8) << std::setfill('0') << std::hex << sub.second[ebx] << "\n";
+			std::cout << "\tMaximum enclage size in 32-bit mode: " << (2ui64 << d.d0.max_enclave_32_bit) << " bytes\n";
+			std::cout << "\tMaximum enclage size in 64-bit mode: " << (2ui64 << d.d0.max_enclave_64_bit) << " bytes\n";
+			std::cout << std::endl;
+			break;
+		case subleaf_t::sgx_attributes:
+			std::cout << "\tSECS.ATTRIBUTES valid bits: " << std::setw(8) << std::setfill('0') << std::hex << sub.second[edx]
+			                                              << std::setw(8) << std::setfill('0') << std::hex << sub.second[ecx]
+			                                              << std::setw(8) << std::setfill('0') << std::hex << sub.second[ebx]
+			                                              << std::setw(8) << std::setfill('0') << std::hex << sub.second[eax];
+			std::cout << std::endl;
+			break;
+		default:
+			std::cout << "\tEnclave Page Cache section\n";
+			{
+				const std::uint64_t physical_address = (static_cast<std::uint64_t>(b.bn.epc_physical_address_hi_bits ) << 32ui64)
+				                                     | (static_cast<std::uint64_t>(a.an.epc_physical_address_low_bits) << 12ui64);
+				const std::uint64_t epc_size = (static_cast<std::uint64_t>(d.dn.epc_section_size_hi_bits ) << 32ui64)
+				                             | (static_cast<std::uint64_t>(c.cn.epc_section_size_low_bits) << 12ui64);
+				std::cout << "\t\tEPC physical address: 0x" << std::setw(16) << std::setfill('0') << std::hex << physical_address << "\n";
+				std::cout << "\t\tEPC size: 0x"             << std::setw(16) << std::setfill('0') << std::hex << epc_size << "\n";
+			}
+			std::cout << std::endl;
+			break;
+		}
+	}
+}
