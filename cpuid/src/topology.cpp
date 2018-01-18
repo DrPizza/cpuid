@@ -94,7 +94,6 @@ void print_extended_topology(const cpu_t& cpu) {
 			std::cout << "\t\tlevel type: reserved " << std::hex << c.c.level_type << "\n";
 			break;
 		}
-		std::cout << std::flush;
+		std::cout << std::endl;
 	}
-	std::cout << std::endl;
 }

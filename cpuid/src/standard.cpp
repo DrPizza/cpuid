@@ -34,7 +34,7 @@ void print_version_info(const cpu_t& cpu) {
 	const register_set_t& regs = cpu.features.at(leaf_t::version_info).at(subleaf_t::main);
 	std::cout << "Version Information" << std::endl;
 
-	union
+	const union
 	{
 		std::uint32_t full;
 		split_model_t split;
@@ -63,7 +63,7 @@ void print_version_info(const cpu_t& cpu) {
 	}
 	std::cout << std::endl;
 
-	union
+	const union
 	{
 		std::uint32_t full;
 		struct version_b_t
@@ -166,7 +166,7 @@ void print_mwait_parameters(const cpu_t& cpu) {
 		return;
 	}
 
-	union
+	const union
 	{
 		std::uint32_t full;
 		struct
@@ -176,7 +176,7 @@ void print_mwait_parameters(const cpu_t& cpu) {
 		} split;
 	} a = { regs[eax] };
 
-	union
+	const union
 	{
 		std::uint32_t full;
 		struct
@@ -186,7 +186,7 @@ void print_mwait_parameters(const cpu_t& cpu) {
 		} split;
 	} b = { regs[ebx] };
 
-	union
+	const union
 	{
 		std::uint32_t full;
 		struct
@@ -230,7 +230,7 @@ void print_thermal_and_power(const cpu_t& cpu) {
 		return;
 	}
 
-	union
+	const union
 	{
 		std::uint32_t full;
 		struct
@@ -240,7 +240,7 @@ void print_thermal_and_power(const cpu_t& cpu) {
 		} split;
 	} b = { regs[ebx] };
 
-	union
+	const union
 	{
 		std::uint32_t full;
 		struct
@@ -283,7 +283,7 @@ void print_extended_features(const cpu_t& cpu) {
 	print_features(leaf_t::extended_features, subleaf_t::main, edx, cpu);
 	std::cout << "\n";
 
-	union
+	const union
 	{
 		std::uint32_t full;
 		struct
@@ -318,7 +318,7 @@ void print_performance_monitoring(const cpu_t& cpu) {
 
 	const register_set_t& regs = cpu.features.at(leaf_t::performance_monitoring).at(subleaf_t::main);
 
-	union
+	const union
 	{
 		std::uint32_t full;
 		struct
@@ -330,7 +330,7 @@ void print_performance_monitoring(const cpu_t& cpu) {
 		} split;
 	} a = { regs[eax] };
 
-	union
+	const union
 	{
 		std::uint32_t full;
 		struct
@@ -346,7 +346,7 @@ void print_performance_monitoring(const cpu_t& cpu) {
 		} split;
 	} b = { regs[ebx] };
 
-	union
+	const union
 	{
 		std::uint32_t full;
 		struct
@@ -475,7 +475,7 @@ void print_extended_state(const cpu_t& cpu) {
 			break;
 		default:
 			{
-				union
+				const union
 				{
 					std::uint32_t full;
 					struct
@@ -589,7 +589,7 @@ void print_rdt_allocation(const cpu_t& cpu) {
 	for(const auto& sub : cpu.features.at(leaf_t::rdt_allocation)) {
 		const register_set_t& regs = sub.second;
 
-		union
+		const union
 		{
 			std::uint32_t full;
 			struct
@@ -606,7 +606,7 @@ void print_rdt_allocation(const cpu_t& cpu) {
 			break;
 		case subleaf_t::rdt_cat_l3:
 			{
-				union
+				const union
 				{
 					std::uint32_t full;
 					struct
@@ -628,7 +628,7 @@ void print_rdt_allocation(const cpu_t& cpu) {
 			break;
 		case subleaf_t::rdt_cat_l2:
 			{
-				union
+				const union
 				{
 					std::uint32_t full;
 					struct
@@ -647,7 +647,7 @@ void print_rdt_allocation(const cpu_t& cpu) {
 			break;
 		case subleaf_t::rdt_mba:
 			{
-				union
+				const union
 				{
 					std::uint32_t full;
 					struct
@@ -710,7 +710,7 @@ void print_sgx_info(const cpu_t& cpu) {
 		switch(sub.first) {
 		case subleaf_t::sgx_capabilities:
 			{
-				union
+				const union
 				{
 					std::uint32_t full;
 					struct
@@ -746,7 +746,7 @@ void print_sgx_info(const cpu_t& cpu) {
 			break;
 		default:
 			{
-				union
+				const union
 				{
 					std::uint32_t full;
 					struct
@@ -757,7 +757,7 @@ void print_sgx_info(const cpu_t& cpu) {
 					} split;
 				} a = { regs[eax] };
 
-				union
+				const union
 				{
 					std::uint32_t full;
 					struct
@@ -767,7 +767,7 @@ void print_sgx_info(const cpu_t& cpu) {
 					} split;
 				} b = { regs[ebx] };
 
-				union
+				const union
 				{
 					std::uint32_t full;
 					struct
@@ -777,7 +777,7 @@ void print_sgx_info(const cpu_t& cpu) {
 						std::uint32_t epc_section_size_low_bits : 20;
 					} split;
 				} c = { regs[ecx] };
-				union
+				const union
 				{
 					std::uint32_t full;
 					struct
