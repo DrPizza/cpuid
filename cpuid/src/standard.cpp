@@ -13,7 +13,7 @@
 void print_basic_info(const cpu_t& cpu) {
 	const register_set_t& regs = cpu.features.at(leaf_t::basic_info).at(subleaf_t::main);
 	std::cout << "Basic Information" << std::endl;
-	std::cout << "Maximum basic cpuid leaf: 0x" << std::setw(2) << std::setfill('0') << std::hex << regs[eax] << "\n";
+	std::cout << "\tMaximum basic cpuid leaf: 0x" << std::setw(2) << std::setfill('0') << std::hex << regs[eax] << "\n";
 
 	union
 	{
@@ -24,7 +24,7 @@ void print_basic_info(const cpu_t& cpu) {
 	data.registers[1] = regs[edx];
 	data.registers[2] = regs[ecx];
 
-	std::cout << "   vendor: ";
+	std::cout << "\t   vendor: ";
 	std::cout.write(data.vndr.data(), data.vndr.size());
 	std::cout << "\n";
 	std::cout << std::endl;
@@ -40,11 +40,12 @@ void print_version_info(const cpu_t& cpu) {
 		split_model_t split;
 	} a = { regs[eax] };
 
-	std::cout << "signature: 0x" << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n"
-	          << "   family: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.family << "\n"
-	          << "    model: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.model << "\n"
-	          << " stepping: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.stepping << "\n";
+	std::cout << "\tsignature: 0x" << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n"
+	          << "\t   family: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.family << "\n"
+	          << "\t    model: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.model << "\n"
+	          << "\t stepping: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.stepping << "\n";
 	if(cpu.vendor == intel) {
+		std::cout << "\t";
 		switch(a.split.type) {
 		case 0:
 			std::cout << "Original OEM Processor\n";
@@ -76,7 +77,7 @@ void print_version_info(const cpu_t& cpu) {
 
 	if(cpu.vendor == intel) {
 		if(b.split.brand_id != 0ui32) {
-			std::cout << "brand ID: ";
+			std::cout << "\tbrand ID: ";
 			switch(b.split.brand_id) {
 			case 0x00: break;
 			case 0x01: std::cout << "Intel(R) Celeron(R) processor"; break;
@@ -121,9 +122,9 @@ void print_version_info(const cpu_t& cpu) {
 		}
 	}
 
-	std::cout << "cache line size/bytes: " << std::dec << b.split.cache_line_size * 8 << "\n"
-	          << "logical processors per package: " << gsl::narrow_cast<std::uint32_t>(b.split.maximum_addressable_ids) << "\n"
-	          << "local APIC ID: " << gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id) << "\n";
+	std::cout << "\tcache line size/bytes: " << std::dec << b.split.cache_line_size * 8 << "\n"
+	          << "\tlogical processors per package: " << gsl::narrow_cast<std::uint32_t>(b.split.maximum_addressable_ids) << "\n"
+	          << "\tlocal APIC ID: " << gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id) << "\n";
 	std::cout << std::endl;
 
 	std::cout << "Feature identifiers\n";

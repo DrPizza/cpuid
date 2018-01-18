@@ -340,7 +340,10 @@ void print_cache_tlb_info(const cpu_t& cpu) {
 
 	const auto bytes = gsl::as_bytes(gsl::make_span(regs));
 
-	std::vector<std::string> cache_entries;
+	std::vector<const cache_descriptor_t*> tlb_descriptors;
+	std::vector<const cache_descriptor_t*> cache_descriptors;
+	std::vector<const cache_descriptor_t*> other_descriptors;
+	std::vector<std::string>               non_conformant_descriptors;
 
 	std::ptrdiff_t idx = 0;
 	for(register_t r = eax; r <= edx; ++r, idx += sizeof(std::uint32_t)) {
@@ -353,23 +356,23 @@ void print_cache_tlb_info(const cpu_t& cpu) {
 			case 0x00ui8:
 				break;
 			case 0x40ui8:
-				cache_entries.push_back("No 2nd-level cache or, if processor contains a valid 2nd-level cache, no 3rd-level cache");
+				non_conformant_descriptors.push_back("No 2nd-level cache or, if processor contains a valid 2nd-level cache, no 3rd-level cache");
 				break;
 			case 0x49ui8:
 				{
 					auto it = dual_cache_descriptors.find(value);
 					if(cpu.model.family == 0x0f && cpu.model.model == 0x06) {
-						cache_entries.push_back(to_string(it->second.first));
+						cache_descriptors.push_back(&(it->second.first));
 					} else {
-						cache_entries.push_back(to_string(it->second.second));
+						cache_descriptors.push_back(&(it->second.second));
 					}
 				}
 				break;
 			case 0xf0ui8:
-				cache_entries.push_back("64-Byte prefetching");
+				non_conformant_descriptors.push_back("64-Byte prefetching");
 				break;
 			case 0xf1ui8:
-				cache_entries.push_back("128-Byte prefetching");
+				non_conformant_descriptors.push_back("128-Byte prefetching");
 				break;
 			case 0xfeui8:
 			case 0xffui8:
@@ -378,25 +381,51 @@ void print_cache_tlb_info(const cpu_t& cpu) {
 				{
 					auto dual = dual_cache_descriptors.find(value);
 					if(dual != dual_cache_descriptors.end()) {
-						cache_entries.push_back(to_string(dual->second.first) + "/"
-						                      + to_string(dual->second.second));
+						tlb_descriptors.push_back(&(dual->second.first));
+						tlb_descriptors.push_back(&(dual->second.second));
 						break;
 					}
 					auto it = standard_cache_descriptors.find(value);
 					if(it != standard_cache_descriptors.end()) {
-						cache_entries.push_back(to_string(it->second));
+						if(it->second.type & all_tlb) {
+							tlb_descriptors.push_back(&(it->second));
+						} else if(it->second.type & all_cache) {
+							cache_descriptors.push_back(&(it->second));
+						} else {
+							other_descriptors.push_back(&(it->second));
+						}
 						break;
 					}
-					cache_entries.push_back("Unknown cache type: {:#2x}"_format(value));
+					non_conformant_descriptors.push_back("Unknown cache type: {:#2x}"_format(value));
 				}
 				break;
 			}
 		}
 	}
 
+	auto cmp = [](const cache_descriptor_t* lhs, const cache_descriptor_t* rhs) {
+		return lhs->type  != rhs->type  ? lhs->type    < rhs->type
+		     : lhs->level != rhs->level ? lhs->level   < rhs->level
+		     : lhs->size  != rhs->size  ? lhs->size    > rhs->size     // sic; I want bigger caches at a given level listed first
+		     :                            lhs->entries > rhs->entries; // sic
+	};
+
+	std::sort(std::begin(tlb_descriptors  ), std::end(tlb_descriptors  ), cmp);
+	std::sort(std::begin(cache_descriptors), std::end(cache_descriptors), cmp);
+	std::sort(std::begin(other_descriptors), std::end(other_descriptors), cmp);
+
 	std::cout << "Cache and TLB\n";
-	for(const std::string& s : cache_entries) {
-		std::cout << s << std::endl;
+	for(const cache_descriptor_t* d : tlb_descriptors) {
+		std::cout << "\t" << to_string(*d) << "\n";
+	}
+	for(const cache_descriptor_t* d : cache_descriptors) {
+		std::cout << "\t" << to_string(*d) << "\n";
+	}
+	for(const cache_descriptor_t* d : other_descriptors) {
+		std::cout << "\t" << to_string(*d) << "\n";
+	}
+	for(const std::string& s : non_conformant_descriptors) {
+		std::cout << "\t" << s << std::endl;
 	}
 	std::cout << std::endl;
 }
