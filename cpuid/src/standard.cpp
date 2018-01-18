@@ -853,3 +853,41 @@ void print_brand_string(const cpu_t& cpu) {
 	std::cout << "\n";
 	std::cout << std::endl;
 }
+
+void print_ras_advanced_power_management(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.features.at(leaf_t::ras_advanced_power_management).at(subleaf_t::main);
+
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t number_of_monitors : 8;
+			std::uint32_t version            : 8;
+			std::uint32_t max_wrap_time      : 16;
+		} split;
+	} a = { regs[eax] };
+
+	switch(cpu.vendor) {
+	case amd:
+		std::cout << "Processor feedback capabilities\n";
+		std::cout << "\tNumber of monitors: " << std::dec << a.split.number_of_monitors << "\n";
+		std::cout << "\tVersion: " << std::dec << a.split.version << "\n";
+		std::cout << "\tMaximum seconds between readings to avoid wraps: " << a.split.max_wrap_time << "\n";
+		std::cout << std::endl;
+		std::cout << "RAS capabilities\n";
+		print_features(leaf_t::ras_advanced_power_management, subleaf_t::main, ebx, cpu);
+		std::cout << std::endl;
+		std::cout << "Advanced Power Management information\n";
+		std::cout << "\tCompute unit power sample time period: " << std::dec << regs[ecx] << "\n";
+		print_features(leaf_t::ras_advanced_power_management, subleaf_t::main, edx, cpu);
+		std::cout << std::endl;
+		break;
+	case intel:
+		std::cout << "Advanced Power Management information\n";
+		print_features(leaf_t::ras_advanced_power_management, subleaf_t::main, edx, cpu);
+		std::cout << std::endl;
+		break;
+	}
+}
+

@@ -38,4 +38,6 @@ void print_extended_signature_and_features(const cpu_t& cpu);
 
 void print_brand_string(const cpu_t& cpu);
 
+void print_ras_advanced_power_management(const cpu_t& cpu);
+
 #endif

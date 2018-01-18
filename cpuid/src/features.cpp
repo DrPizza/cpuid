@@ -30,7 +30,6 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x0000'2000ui32, "CMPXCHG16B"        , "CMPXCHG16B instruction" },
 				{ intel                  , 0x0000'4000ui32, "xTPR"              , "xTPR update control" },
 				{ intel                  , 0x0000'8000ui32, "PDCM"              , "Perfmon and Debug Capability" },
-				//{ intel | amd            , 0x0001'0000ui32, ""                  , "Reserved"},
 				{ intel | amd            , 0x0002'0000ui32, "PCID"              , "Process-context identifiers" },
 				{ intel                  , 0x0004'0000ui32, "DCA"               , "Direct Cache Access" },
 				{ intel | amd            , 0x0008'0000ui32, "SSE4.1"            , "SSE4.1 Extensions" },
@@ -45,7 +44,7 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x1000'0000ui32, "AVX"               , "AVX instructions" },
 				{ intel | amd            , 0x2000'0000ui32, "F16C"              , "16-bit floating-point conversion instructions" },
 				{ intel | amd            , 0x4000'0000ui32, "RDRAND"            , "RDRAND instruction" },
-				{ any                    , 0x8000'0000ui32, "(hypervisor)"      , "Hypervisor guest" }
+				{ any                    , 0x8000'0000ui32, "(hypervisor)"      , "Hypervisor guest" },
 			}},
 			{ edx, {
 				{ intel | amd | transmeta, 0x0000'0001ui32, "FPU"               , "x87 FPU on chip"},
@@ -58,7 +57,6 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x0000'0080ui32, "MCE"               , "Machine Check Exception"},
 				{ intel | amd | transmeta, 0x0000'0100ui32, "CX8"               , "CMPXCHG8B Instruction"},
 				{ intel | amd            , 0x0000'0200ui32, "APIC"              , "APIC On-Chip"},
-				//{ intel | amd            , 0x0000'0400ui32, ""                 , "Reserved"},
 				{ intel | amd | transmeta, 0x0000'0800ui32, "SEP"               , "SYSENTER and SYSEXIT Instructions"},
 				{ intel | amd            , 0x0000'1000ui32, "MTRR"              , "Memory Type Range Registers"},
 				{ intel | amd            , 0x0000'2000ui32, "PGE"               , "Page Global Bit"},
@@ -68,7 +66,6 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x0002'0000ui32, "PSE-36"            , "36-bit Page Size Extension"},
 				{ intel       | transmeta, 0x0004'0000ui32, "PSN"               , "Processor Serial Number"},
 				{ intel | amd            , 0x0008'0000ui32, "CLFSH"             , "CLFLUSH Instruction"},
-				//{ intel | amd            , 0x0010'0000ui32, ""                 , "Reserved"},
 				{ intel                  , 0x0020'0000ui32, "DS"                , "Debug Store"},
 				{ intel                  , 0x0040'0000ui32, "ACPI"              , "Thermal Monitoring and Software Controlled Clock Facilities"},
 				{ intel | amd | transmeta, 0x0080'0000ui32, "MMX"               , "Intel MMX Technology"},
@@ -79,7 +76,7 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x1000'0000ui32, "HTT"               , "Max APIC IDs reserved field is Valid"},
 				{ intel                  , 0x2000'0000ui32, "TM"                , "Thermal Monitor"},
 				{ intel                  , 0x4000'0000ui32, "IA64"              , "IA64 emulating x86"},
-				{ intel                  , 0x8000'0000ui32, "PBE"               , "Pending Break Enable"}
+				{ intel                  , 0x8000'0000ui32, "PBE"               , "Pending Break Enable"},
 			}}
 		}}
 	}},
@@ -89,7 +86,6 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'0001ui32, "DTS"               , "Digital temperature sensor" },
 				{ intel                  , 0x0000'0002ui32, "TBT"               , "Intel Turbo Boost Technology" },
 				{ intel | amd            , 0x0000'0004ui32, "ARAT"              , "APIC-Timer-always-running" },
-				//{ intel                  , 0x0000'0008ui32, ""                 , "Reserved" },
 				{ intel                  , 0x0000'0010ui32, "PLN"               , "Power limit notification controls" },
 				{ intel                  , 0x0000'0020ui32, "ECMD"              , "Clock modulation duty cycle extension" },
 				{ intel                  , 0x0000'0040ui32, "PTM"               , "Package thermal management" },
@@ -98,13 +94,12 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'0200ui32, "HWP_AW"            , "HWP_Activity_Window                : HWP_REQUEST[41:32]" },
 				{ intel                  , 0x0000'0400ui32, "HWP_EPP"           , "HWP_Energy_Performance_Preference  : HWP_REQUEST[31:24]" },
 				{ intel                  , 0x0000'0800ui32, "HWP_PLR"           , "HWP_Package_Level_Request          : HWP_REQUEST_PKG" },
-				//{ intel                  , 0x0000'1000ui32, ""                 , "Reserved" },
 				{ intel                  , 0x0000'2000ui32, "HDC"               , "HDC_CTL, HDC_CTL1, THREAD_STALL" },
-				{ intel                  , 0x0000'4000ui32, "TBT3"              , "Intel Turbo Boost Max Technology 3.0" }
+				{ intel                  , 0x0000'4000ui32, "TBT3"              , "Intel Turbo Boost Max Technology 3.0" },
 			}},
 			{ ecx, {
 				{ intel                  , 0x0000'0001ui32, "HCF"               , "Hardware Coordination Feedback Capability: MPERF, APERF"},
-				{ intel                  , 0x0000'0008ui32, "PERF_BIAS"         , "Performance-energy bias preference       : ENERGY_PERF_BIAS" }
+				{ intel                  , 0x0000'0008ui32, "PERF_BIAS"         , "Performance-energy bias preference       : ENERGY_PERF_BIAS" },
 			}}
 		}}
 	}},
@@ -181,7 +176,6 @@ const feature_map_t all_features = {
 				{         amd            , 0x0000'0800ui32, "XOP"                    , "Extended Operation support"           },
 				{         amd            , 0x0000'1000ui32, "SKINIT"                 , "SKINIT/STGI instructions"             },
 				{         amd            , 0x0000'2000ui32, "WDT"                    , "Watchdog Timer Support"               },
-				//{         amd            , 0x0000'4000ui32, ""                       , "Reserved"                             },
 				{         amd            , 0x0000'8000ui32, "LWP"                    , "Lightweight Profiling Support"        },
 				{         amd            , 0x0001'0000ui32, "FMA4"                   , "4-operand FMA instruction"            },
 				{         amd            , 0x0002'0000ui32, "TCE"                    , "Translation Cache Extension"          },
@@ -189,7 +183,6 @@ const feature_map_t all_features = {
 				{         amd            , 0x0040'0000ui32, "TopologyExtensions"     , "Topology Extensions"                  },
 				{         amd            , 0x0080'0000ui32, "PerfCtrExtCore"         , "Core Performance Counter Extensions"  },
 				{         amd            , 0x0100'0000ui32, "PerfCtrExtNB"           , "NB Performance Counter Extensions"    },
-				//{         amd            , 0x0200'0000ui32, ""                  , "Reserved"                                  },
 				{         amd            , 0x0400'0000ui32, "DataBreakpointExtension", "Data Breakpoint support"              },
 				{         amd            , 0x0400'0000ui32, "PerfTsc"                , "Performance Time Stamp Counter"       },
 				{         amd            , 0x1000'0000ui32, "PerfCtrExtL3"           , "L3 performance counter extensions"    },
@@ -206,7 +199,6 @@ const feature_map_t all_features = {
 				{         amd            , 0x0000'0080ui32, "MCE"                    , "Machine Check Exception"              },
 				{         amd            , 0x0000'0100ui32, "CX8"                    , "CMPXCHG8B Instruction"                },
 				{         amd            , 0x0000'0200ui32, "APIC"                   , "APIC On-Chip"                         },
-				//{ intel | amd            , 0x0000'0400ui32, ""                      , "Reserved"                              },
 				{ intel | amd            , 0x0000'0800ui32, "SysCallSysRet"          , "SYSENTER and SYSEXIT Instructions"    },
 				{         amd            , 0x0000'1000ui32, "MTRR"                   , "Memory Type Range Registers"          },
 				{         amd            , 0x0000'2000ui32, "PGE"                    , "Page Global Bit"                      },
@@ -216,18 +208,43 @@ const feature_map_t all_features = {
 				{         amd            , 0x0002'0000ui32, "PSE36"                  , "36-bit Page Size Extension"           },
 				{ intel                  , 0x0010'0000ui32, "XD"                     , "Execute Disable Bit available"        },
 				{         amd            , 0x0010'0000ui32, "NX"                     , "No-Execute page protection"           },
-				//{ intel | amd            , 0x0020'0000ui32, ""                      , "Reserved"                              },
 				{         amd            , 0x0040'0000ui32, "MmxExt"                 , "AMD extensions to MMX instructions"   },
 				{         amd            , 0x0080'0000ui32, "MMX"                    , "MMX instructions"                     },
 				{         amd            , 0x0100'0000ui32, "FXSR"                   , "FXSAVE and FXRSTOR instructions"      },
 				{         amd            , 0x0200'0000ui32, "FFXSR"                  , "Fast FXSAVE and FXRSTOR"              },
 				{ intel | amd            , 0x0400'0000ui32, "Page1GB"                , "1 GB large page support"              },
 				{ intel | amd            , 0x0800'0000ui32, "RDTSCP"                 , "RDTSCP instruction"                   },
-				//{ intel | amd            , 0x1000'0000ui32, ""                      , "Reserved"                              },
 				{ intel                  , 0x2000'0000ui32, "EM64T"                  , "Intel 64 Architecture (Long Mode)"    },
 				{         amd            , 0x2000'0000ui32, "LM"                     , "Long mode"                            },
 				{         amd            , 0x4000'0000ui32, "ThreeDNowExt"           , "AMD extensions to 3DNow! instructions"},
 				{         amd            , 0x8000'0000ui32, "ThreeDNow"              , "3DNow! instructions"                  },
+			}}
+		}}
+	}},
+	{ leaf_t::ras_advanced_power_management, {
+		{ subleaf_t::main, {
+			{ ebx, {
+				{         amd            , 0x0000'0001ui32, "McaOverflowRecov"       , "MCA overflow recovery support"        },
+				{         amd            , 0x0000'0002ui32, "SUCCOR"                 , "Software Uncorrectable Error Containment and Recovery"},
+				{         amd            , 0x0000'0004ui32, "HWA"                    , "Hardware Assert supported"            },
+				{         amd            , 0x0000'0008ui32, "ScalableMca"            , "Scalable MCA supported"               },
+
+			}},
+			{ edx, {
+				{         amd            , 0x0000'0001ui32, "TS"                     , "Temperature Sensor"                   },
+				{         amd            , 0x0000'0002ui32, "FID"                    , "Frequency ID control"                 },
+				{         amd            , 0x0000'0004ui32, "VID"                    , "Voltage ID control"                   },
+				{         amd            , 0x0000'0008ui32, "TTP"                    , "THERMTRIP"                            },
+				{         amd            , 0x0000'0010ui32, "TM"                     , "Hardware thermal control (HTC)"       },
+				{         amd            , 0x0000'0040ui32, "100MHzSteps"            , "100 MHz multiplier control"           },
+				{         amd            , 0x0000'0080ui32, "HwPstate"               , "Hardware P-state control"             },
+				{ intel | amd            , 0x0000'0100ui32, "TscInvariant"           , "100 MHz multiplier control"           },
+				{         amd            , 0x0000'0200ui32, "CPB"                    , "Core performance boost"               },
+				{         amd            , 0x0000'0400ui32, "EffFreqRO"              , "Read-only effective frequency interface" },
+				{         amd            , 0x0000'0800ui32, "ProcFeedbackInterface"  , "Processor feedback interface"         },
+				{         amd            , 0x0000'1000ui32, "ApmPwrReporting"        , "APM power reporting"                  },
+				{         amd            , 0x0000'2000ui32, "ConnectedStandby"       , "Connected Standby"                    },
+				{         amd            , 0x0000'4000ui32, "RAPL"                   , "Running average power limit"          },
 			}}
 		}}
 	}}

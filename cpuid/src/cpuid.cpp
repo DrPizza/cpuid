@@ -150,7 +150,7 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::brand_string_2                    , { any                    , nullptr                      , nullptr                              , {} } },
 	{ leaf_t::l1_cache_identifiers              , {         amd            , nullptr                      , print_l1_cache_tlb                   , {} } },
 	{ leaf_t::l2_cache_identifiers              , { intel | amd            , nullptr                      , print_l2_cache_tlb                   , {} } },
-	{ leaf_t::advanced_power_management         , { intel | amd            , nullptr                      , nullptr                              , {} } },
+	{ leaf_t::ras_advanced_power_management     , { intel | amd            , nullptr                      , print_ras_advanced_power_management  , {} } },
 	{ leaf_t::address_limits                    , { intel | amd            , nullptr                      , nullptr                              , {} } },
 	{ leaf_t::secure_virtual_machine            , {         amd            , nullptr                      , nullptr                              , {} } },
 	{ leaf_t::tlb_1g_identifiers                , {         amd            , nullptr                      , nullptr                              , {} } },

@@ -41,7 +41,7 @@ enum struct leaf_t : std::uint32_t
 	brand_string_2                    = 0x8000'0004ui32,
 	l1_cache_identifiers              = 0x8000'0005ui32,
 	l2_cache_identifiers              = 0x8000'0006ui32,
-	advanced_power_management         = 0x8000'0007ui32,
+	ras_advanced_power_management     = 0x8000'0007ui32,
 	address_limits                    = 0x8000'0008ui32,
 	secure_virtual_machine            = 0x8000'000aui32,
 	tlb_1g_identifiers                = 0x8000'0019ui32,
