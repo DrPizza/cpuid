@@ -124,7 +124,7 @@ void print_version_info(const cpu_t& cpu) {
 	          << "\tlocal APIC ID: " << gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id) << "\n";
 	std::cout << std::endl;
 
-	std::cout << "Feature identifiers\n";
+	std::cout << "\tFeature identifiers\n";
 	print_features(leaf_t::version_info, subleaf_t::main, edx, cpu);
 	std::cout << "\n";
 	print_features(leaf_t::version_info, subleaf_t::main, ecx, cpu);
@@ -218,8 +218,8 @@ void print_mwait_parameters(const cpu_t& cpu) {
 }
 
 void print_thermal_and_power(const cpu_t& cpu) {
-	std::cout << "Thermal and Power Management\n";
 	const register_set_t& regs = cpu.features.at(leaf_t::thermal_and_power).at(subleaf_t::main);
+	std::cout << "Thermal and Power Management\n";
 	print_features(leaf_t::thermal_and_power, subleaf_t::main, eax, cpu);
 	std::cout << std::endl;
 
@@ -309,10 +309,6 @@ void print_direct_cache_access(const cpu_t& cpu) {
 }
 
 void print_performance_monitoring(const cpu_t& cpu) {
-	if(0 == (cpu.features.at(leaf_t::version_info).at(subleaf_t::main).at(ecx) & 0x0000'8000ui32)) {
-		return;
-	}
-
 	const register_set_t& regs = cpu.features.at(leaf_t::performance_monitoring).at(subleaf_t::main);
 
 	const union
@@ -521,10 +517,6 @@ void enumerate_rdt_monitoring(cpu_t& cpu) {
 }
 
 void print_rdt_monitoring(const cpu_t& cpu) {
-	if(0 == (cpu.features.at(leaf_t::extended_features).at(subleaf_t::main).at(ebx) & 0x0000'1000ui32)) {
-		return;
-	}
-
 	static const std::vector<feature_t> monitorables = {
 		{ intel , 0x0000'0001ui32, "O", "Occupancy"       },
 		{ intel , 0x0000'0002ui32, "T", "Total Bandwidth" },
@@ -579,10 +571,6 @@ void enumerate_rdt_allocation(cpu_t& cpu) {
 }
 
 void print_rdt_allocation(const cpu_t& cpu) {
-	if(0 == (cpu.features.at(leaf_t::extended_features).at(subleaf_t::main).at(ebx) & 0x0000'8000ui32)) {
-		return;
-	}
-
 	for(const auto& sub : cpu.features.at(leaf_t::rdt_allocation)) {
 		const register_set_t& regs = sub.second;
 
@@ -690,10 +678,6 @@ void enumerate_sgx_info(cpu_t& cpu) {
 }
 
 void print_sgx_info(const cpu_t& cpu) {
-	if(0 == (cpu.features.at(leaf_t::extended_features).at(subleaf_t::main).at(ebx) & 0x0000'0004ui32)) {
-		return;
-	}
-
 	static const std::vector<feature_t> sgx_features = {
 		{ intel, 0x0000'0001ui32, "SGX1" , "SGX1 functions available"                      },
 		{ intel, 0x0000'0002ui32, "SGX2" , "SGX2 functions available"                      },
@@ -797,4 +781,59 @@ void print_sgx_info(const cpu_t& cpu) {
 			break;
 		}
 	}
+}
+
+void print_extended_limit(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.features.at(leaf_t::extended_limit).at(subleaf_t::main);
+	std::cout << "Extended limit\n";
+	std::cout << "\tMaximum extended cpuid leaf: 0x" << std::setw(2) << std::setfill('0') << std::hex << regs[eax] << "\n";
+	std::cout << std::endl;
+}
+
+void print_extended_signature_and_features(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.features.at(leaf_t::extended_signature_and_features).at(subleaf_t::main);
+	std::cout << "Extended signature and features\n";
+	
+	if(cpu.vendor & amd) {
+		const union
+		{
+			std::uint32_t full;
+			struct
+			{
+				std::uint32_t reserved_1   : 28;
+				std::uint32_t package_type : 4;
+			} split;
+		} b = { regs[ebx] };
+
+		std::cout << "\tPackage: ";
+		switch(b.split.package_type) {
+		case 0x0:
+			std::cout << "FP4 (BGA)/FT3 (BGA)/FT3b (BGA)\n";
+			break;
+		case 0x1:
+			std::cout << "AM3r2/FS1b\n";
+			break;
+		case 0x2:
+			std::cout << "AM4 (\u00b5PGA)\n";
+			break;
+		case 0x3:
+			std::cout << "G34r1/FP4\n";
+			break;
+		case 0x4:
+			std::cout << "FT4 (BGA)\n";
+			break;
+		case 0x5:
+			std::cout << "C32r1\n";
+			break;
+		default:
+			std::cout << "Unknown\n";
+			break;
+		}
+		std::cout << std::endl;
+	}
+	std::cout << "\tFeature identifiers\n";
+	print_features(leaf_t::extended_signature_and_features, subleaf_t::main, ecx, cpu);
+	std::cout << std::endl;
+	print_features(leaf_t::extended_signature_and_features, subleaf_t::main, edx, cpu);
+	std::cout << std::endl;
 }
