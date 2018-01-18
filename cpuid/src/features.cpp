@@ -261,7 +261,7 @@ const feature_map_t all_features = {
 
 void print_features(leaf_t leaf, subleaf_t sub, register_t reg, const cpu_t& cpu) {
 	const std::vector<feature_t>& features = all_features.at(leaf).at(sub).at(reg);
-	const std::uint32_t value              = cpu.features.at(leaf).at(sub).at(reg);
+	const std::uint32_t value              = cpu.leaves.at(leaf).at(sub).at(reg);
 
 	for(const feature_t& f : features) {
 		if(0 != (cpu.vendor & f.vendor)) {

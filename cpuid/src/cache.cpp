@@ -328,7 +328,7 @@ std::string to_string(cache_descriptor_t desc) {
 void print_cache_tlb_info(const cpu_t& cpu) {
 	using namespace fmt::literals;
 
-	const register_set_t& regs = cpu.features.at(leaf_t::cache_and_tlb).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_t::cache_and_tlb).at(subleaf_t::main);
 
 	if((regs[eax] & 0xff) != 0x01) {
 		return;
@@ -434,7 +434,7 @@ void enumerate_deterministic_cache(cpu_t& cpu) {
 		if((regs[eax] & 0x1fui32) == 0) {
 			break;
 		}
-		cpu.features[leaf_t::deterministic_cache][subleaf_t{ sub }] = regs;
+		cpu.leaves[leaf_t::deterministic_cache][subleaf_t{ sub }] = regs;
 		++sub;
 	}
 }
@@ -444,7 +444,7 @@ void print_deterministic_cache(const cpu_t& cpu) {
 
 	std::cout << "Deterministic cache\n";
 
-	for(const auto& sub : cpu.features.at(leaf_t::deterministic_cache)) {
+	for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_cache)) {
 		const register_set_t& regs = sub.second;
 
 		const union
@@ -541,7 +541,7 @@ void print_deterministic_cache(const cpu_t& cpu) {
 }
 
 void print_l1_cache_tlb(const cpu_t & cpu) {
-	const register_set_t& regs = cpu.features.at(leaf_t::l1_cache_identifiers).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_t::l1_cache_identifiers).at(subleaf_t::main);
 
 	struct tlb_element
 	{
@@ -632,7 +632,7 @@ void print_l1_cache_tlb(const cpu_t & cpu) {
 void print_l2_cache_tlb(const cpu_t & cpu) {
 	using namespace fmt::literals;
 
-	const register_set_t& regs = cpu.features.at(leaf_t::l2_cache_identifiers).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_t::l2_cache_identifiers).at(subleaf_t::main);
 
 	struct tlb_element
 	{

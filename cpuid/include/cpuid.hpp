@@ -134,7 +134,7 @@ constexpr inline vendor_t operator|(const vendor_t& lhs, const vendor_t& rhs) {
 }
 
 using register_set_t = std::array<std::uint32_t, 4>;
-using features_t = std::map<leaf_t, std::map<subleaf_t, register_set_t>>;
+using leaves_t = std::map<leaf_t, std::map<subleaf_t, register_set_t>>;
 
 
 struct split_model_t
@@ -162,7 +162,7 @@ struct cpu_t
 	leaf_t highest_extended_leaf;
 	vendor_t vendor;
 	model_t model;
-	features_t features;
+	leaves_t leaves;
 };
 
 inline void cpuid(register_set_t& regs, leaf_t leaf, subleaf_t subleaf) noexcept {

@@ -166,7 +166,7 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 
 void print_generic(const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
 	using namespace fmt::literals;
-	const register_set_t& regs = cpu.features.at(leaf).at(subleaf);
+	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf);
 	std::cout << "{:#010x} {:#010x}: {:#010x} {:#010x} {:#010x} {:#010x}"_format(static_cast<std::uint32_t>(leaf),
 	                                                                             static_cast<std::uint32_t>(subleaf),
 	                                                                             regs[eax],
@@ -176,14 +176,33 @@ void print_generic(const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
 }
 
 void print_generic(const cpu_t& cpu, leaf_t leaf) {
-	for(const auto& sub : cpu.features.at(leaf)) {
+	for(const auto& sub : cpu.leaves.at(leaf)) {
 		print_generic(cpu, leaf, sub.first);
 	}
 }
 
 void print_generic(const cpu_t& cpu) {
-	for(const auto& leaf : cpu.features) {
+	for(const auto& leaf : cpu.leaves) {
 		print_generic(cpu, leaf.first);
+	}
+}
+
+void enumerate_leaf(cpu_t& cpu, leaf_t leaf) {
+	register_set_t regs = { 0 };
+	auto it = descriptors.find(leaf);
+	if(it != descriptors.end()) {
+		if(it->second.vendor & cpu.vendor) {
+			const filter_t filter = it->second.filter;
+			if(filter == no_filter
+			|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
+				if(it->second.enumerator) {
+					it->second.enumerator(cpu);
+				} else {
+					cpuid(regs, leaf, subleaf_t::main);
+					cpu.leaves[leaf][subleaf_t::main] = regs;
+				}
+			}
+		}
 	}
 }
 
@@ -197,7 +216,8 @@ int main(int, char*[]) {
 	::SetConsoleOutputCP(CP_UTF8);
 	std::cout.rdbuf()->pubsetbuf(nullptr, 1024);
 
-	::SetThreadAffinityMask(::GetCurrentThread(), 0x8);
+	DWORD_PTR mask = ::SetThreadAffinityMask(::GetCurrentThread(), 0x1);
+	::SetThreadAffinityMask(::GetCurrentThread(), mask);
 
 	cpu_t cpu = {};
 	register_set_t regs = { 0 };
@@ -210,45 +230,23 @@ int main(int, char*[]) {
 	cpu.model = get_model(cpu.vendor, regs);
 
 	for(leaf_t lf = leaf_t::basic_info; lf <= cpu.highest_leaf; ++lf) {
-		auto it = descriptors.find(lf);
-		if(it != descriptors.end()) {
-			if(it->second.enumerator) {
-				it->second.enumerator(cpu);
-			} else {
-				cpuid(regs, lf, subleaf_t::main);
-				cpu.features[lf][subleaf_t::main] = regs;
-			}
-		}
+		enumerate_leaf(cpu, lf);
 	}
 
 	cpuid(regs, leaf_t::extended_limit, subleaf_t::main);
 	cpu.highest_extended_leaf = leaf_t{ regs[eax] };
 
 	for(leaf_t lf = leaf_t::extended_limit; lf <= cpu.highest_extended_leaf; ++lf) {
-		auto it = descriptors.find(lf);
-		if(it != descriptors.end()) {
-			if(it->second.vendor & cpu.vendor) {
-				const filter_t filter = it->second.filter;
-				if(filter      == no_filter
-				|| filter.mask == (filter.mask & cpu.features.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
-					if(it->second.enumerator) {
-						it->second.enumerator(cpu);
-					} else {
-						cpuid(regs, lf, subleaf_t::main);
-						cpu.features[lf][subleaf_t::main] = regs;
-					}
-				}
-			}
-		}
+		enumerate_leaf(cpu, lf);
 	}
 
-	for(const auto& lf : cpu.features) {
+	for(const auto& lf : cpu.leaves) {
 		auto it = descriptors.find(lf.first);
 		if(it != descriptors.end()) {
 			if(it->second.vendor & cpu.vendor) {
 				const filter_t filter = it->second.filter;
 				if(filter      == no_filter
-				|| filter.mask == (filter.mask & cpu.features.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
+				|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
 					if(it->second.printer) {
 						it->second.printer(cpu);
 					} else {
