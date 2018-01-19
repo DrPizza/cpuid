@@ -292,6 +292,7 @@ namespace docopt {
 			}
 		}
 
+		Option() = default;
 		Option(const Option&) = default;
 		Option(Option&&) = default;
 		Option& operator=(const Option&) = default;

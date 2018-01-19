@@ -21,9 +21,7 @@ void print_basic_info(const cpu_t& cpu) {
 		std::array<char, 12> vndr;
 	} data = { regs[ebx], regs[edx], regs[ecx] };
 
-	std::cout << "\t   vendor: ";
-	std::cout.write(data.vndr.data(), data.vndr.size());
-	std::cout << "\n";
+	std::cout << "\t   vendor: " << data.vndr.data() << "\n";
 	std::cout << std::endl;
 }
 
@@ -142,6 +140,8 @@ void print_serial_number(const cpu_t& cpu) {
 	case transmeta:
 		std::cout << "{:08x}-{:08x}-{:08x}-{:08x}"_format(regs[eax], regs[ebx], regs[ecx], regs[edx]) << std::endl;
 		break;
+	default:
+		throw std::runtime_error("unexpected vendor");
 	}
 	std::cout << std::endl;
 }
@@ -1040,6 +1040,8 @@ void print_ras_advanced_power_management(const cpu_t& cpu) {
 		print_features(cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, edx);
 		std::cout << std::endl;
 		break;
+	default:
+		throw std::runtime_error("unexpected vendor");
 	}
 }
 
@@ -1116,6 +1118,8 @@ void print_address_limits(const cpu_t& cpu) {
 		std::cout << "\tVirtual address size/bits: " << std::dec << a.split.virtual_address_size << "\n";
 		std::cout << std::endl;
 		break;
+	default:
+		throw std::runtime_error("unexpected vendor");
 	}
 }
 

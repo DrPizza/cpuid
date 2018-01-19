@@ -81,7 +81,7 @@ constexpr cache_attributes_t operator|(const cache_attributes_t& lhs, const cach
 
 std::string to_string(cache_attributes_t attrs) {
 	fmt::MemoryWriter m;
-	const std::uint8_t page = attrs & all_page_sizes;
+	const std::uint8_t page = gsl::narrow_cast<std::uint8_t>(attrs & all_page_sizes);
 	std::uint8_t mask = 1ui8;
 	bool needs_separator = false;
 	do {
@@ -895,6 +895,8 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 		std::cout << "\n";
 		std::cout << std::endl;
 		break;
+	default:
+		throw std::runtime_error("unexpected vendor");
 	}
 }
 

@@ -39,6 +39,7 @@
 #pragma warning(pop)
 
 // disable for everything
+#pragma warning(disable: 4061) // warning C4061: enumerator '%s' in switch of enum '%s' is not explicitly handled by a case label
 #pragma warning(disable: 4324) // warning C4234: structure was padded due to alignment specifier
 #pragma warning(disable: 4514) // warning C4514: '%s': unreferenced inline function has been removed
 #pragma warning(disable: 4623) // warning C4623: '%s': default constructor was implicitly defined as deleted
@@ -95,6 +96,7 @@
 
 // disable additionally for third-party libraries
 #pragma warning(push)
+#pragma warning(disable: 4365) // warning C4365: '%s': conversion from '%s' to '%s', signed/unsigned mismatch
 #pragma warning(disable: 4371) // warning C4371: '%s': layout of class may have changed from a previous version of the compiler due to better packing of member '%s'
 #pragma warning(disable: 4619) // warning C4619: #pragma warning: there is no warning number '%d'
 #pragma warning(disable: 5031) // warning C5031: #pragma warning(pop): likely mismatch, popping warning state pushed in different file
@@ -111,7 +113,6 @@
 
 #include <gsl/gsl>
 
-#define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
 #pragma warning(pop)
