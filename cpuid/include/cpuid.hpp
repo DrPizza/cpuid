@@ -33,7 +33,7 @@ enum struct leaf_t : std::uint32_t
 	time_stamp_counter                = 0x0000'0015ui32,
 	processor_frequency               = 0x0000'0016ui32,
 	system_on_chip_vendor             = 0x0000'0017ui32,
-	deterministic_address_translation = 0x0000'0018ui32,
+	deterministic_tlb                 = 0x0000'0018ui32,
 	extended_limit                    = 0x8000'0000ui32,
 	extended_signature_and_features   = 0x8000'0001ui32,
 	brand_string_0                    = 0x8000'0002ui32,

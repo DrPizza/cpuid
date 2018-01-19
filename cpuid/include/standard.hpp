@@ -32,6 +32,16 @@ void print_rdt_allocation(const cpu_t& cpu);
 void enumerate_sgx_info(cpu_t& cpu);
 void print_sgx_info(const cpu_t& cpu);
 
+void enumerate_processor_trace(cpu_t& cpu);
+void print_processor_trace(const cpu_t& cpu);
+
+void print_time_stamp_counter(const cpu_t& cpu);
+
+void print_processor_frequency(const cpu_t& cpu);
+
+void enumerate_system_on_chip_vendor(cpu_t& cpu);
+void print_system_on_chip_vendor(const cpu_t& cpu);
+
 void print_extended_limit(const cpu_t& cpu);
 
 void print_extended_signature_and_features(const cpu_t& cpu);

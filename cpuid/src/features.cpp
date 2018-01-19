@@ -157,6 +157,25 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
+	{ leaf_t::processor_trace, {
+		{ subleaf_t::main, {
+			{ ebx, {
+				{ intel                  , 0x0000'0001ui32, "CR3Filter"         , "CR3Filter can be set to 1" },
+				{ intel                  , 0x0000'0002ui32, "PSB"               , "Configurable PSB and Cycle-Accurate Mode" },
+				{ intel                  , 0x0000'0004ui32, "IPFilter"          , "IP Filtering, TraceStop filtering" },
+				{ intel                  , 0x0000'0008ui32, "MTC"               , "MTC timing packet supported" },
+				{ intel                  , 0x0000'0010ui32, "PTWRITE"           , "PTWRITE supported" },
+				{ intel                  , 0x0000'0020ui32, "PET"               , "Power Event Trace" },
+			}},
+			{ ecx, {
+				{ intel                  , 0x0000'0001ui32, "TOPA"              , "ToPA output supported" },
+				{ intel                  , 0x0000'0002ui32, "TOPAEntries"       , "ToPA tables can hold any number of entries" },
+				{ intel                  , 0x0000'0004ui32, "SRO"               , "Single-Range Output" },
+				{ intel                  , 0x0000'0008ui32, "TT"                , "Trace Transport output" },
+				{ intel                  , 0x8000'0000ui32, "IPLIP"             , "IP payloads have LIP values" },
+			}}
+		}}
+	}},
 	{ leaf_t::extended_signature_and_features, {
 		{ subleaf_t::main, {
 			{ ecx, {

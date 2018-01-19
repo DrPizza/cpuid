@@ -540,6 +540,116 @@ void print_deterministic_cache(const cpu_t& cpu) {
 	}
 }
 
+void enumerate_deterministic_tlb(cpu_t& cpu) {
+	register_set_t regs = { 0 };
+	cpuid(regs, leaf_t::deterministic_tlb, subleaf_t::main);
+	cpu.leaves[leaf_t::deterministic_tlb][subleaf_t::main] = regs;
+
+	const subleaf_t limit = subleaf_t{ regs[eax] };
+	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
+		cpuid(regs, leaf_t::deterministic_tlb, sub);
+		cpu.leaves[leaf_t::deterministic_tlb][sub] = regs;
+	}
+}
+
+void print_deterministic_tlb(const cpu_t& cpu) {
+	using namespace fmt::literals;
+
+	for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_tlb)) {
+		const register_set_t& regs = sub.second;
+		switch(sub.first) {
+		case subleaf_t::main:
+			std::cout << "Deterministic Address Translation\n";
+			[[fallthrough]];
+		default:
+			{
+				const union
+				{
+					std::uint32_t full;
+					struct
+					{
+						std::uint32_t page_4k               : 1;
+						std::uint32_t page_2m               : 1;
+						std::uint32_t page_4m               : 1;
+						std::uint32_t page_1g               : 1;
+						std::uint32_t reserved_1            : 4;
+						std::uint32_t partitioning          : 3;
+						std::uint32_t reserved_2            : 5;
+						std::uint32_t ways_of_associativity : 16;
+					} split;
+				} b = { regs[ebx] };
+
+				const union
+				{
+					std::uint32_t full;
+					struct
+					{
+						std::uint32_t type                           : 5;
+						std::uint32_t level                          : 3;
+						std::uint32_t fully_associative              : 1;
+						std::uint32_t reserved_1                     : 5;
+						std::uint32_t maximum_addressable_thread_ids : 12;
+						std::uint32_t reserved_2                     : 6;
+					} split;
+				} d = { regs[edx] };
+
+				const std::uint32_t entries = b.split.ways_of_associativity * regs[ecx];
+
+				auto print_associativity = [](std::uint32_t fully_associative, std::uint32_t ways) {
+					return fully_associative ? std::string("fully") : "{:d}-way"_format(ways);
+				};
+
+				auto print_type = [](std::uint32_t type) {
+					switch(type) {
+					case 0b0001:
+						return "data";
+					case 0b0010:
+						return "instruction";
+					case 0b0011:
+						return "unified";
+					}
+					return "";
+				};
+
+				auto print_pages = [](std::uint32_t page_4k, std::uint32_t page_2m, std::uint32_t page_4m, std::uint32_t page_1g) {
+					fmt::MemoryWriter w;
+					if(page_4k) {
+						w << "4K";
+					}
+					if(page_2m) {
+						if(w.size()) {
+							w << " | ";
+						}
+						w << "2M";
+					}
+					if(page_4m) {
+						if(w.size()) {
+							w << " | ";
+						}
+						w << "4M";
+					}
+					if(page_1g) {
+						if(w.size()) {
+							w << " | ";
+						}
+						w << "1G";
+					}
+					return w.str();
+				};
+
+				std::cout << "{:d}-entry {:s} associative L{:d} {:s} TLB for {:s}, shared by {:d} threads\n"_format(entries,
+				                                                                                                    print_associativity(d.split.fully_associative, b.split.ways_of_associativity),
+				                                                                                                    d.split.level,
+				                                                                                                    print_type(d.split.type),
+				                                                                                                    print_pages(b.split.page_4k, b.split.page_2m, b.split.page_4m, b.split.page_1g),
+				                                                                                                    d.split.maximum_addressable_thread_ids + 1ui32);
+
+				std::cout << std::endl;
+			}
+		}
+	}
+}
+
 void print_l1_cache_tlb(const cpu_t & cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::l1_cache_identifiers).at(subleaf_t::main);
 
@@ -840,13 +950,13 @@ void print_cache_properties(const cpu_t& cpu) {
 			std::uint32_t full;
 			struct
 			{
-				std::uint32_t type                         : 5;
-				std::uint32_t level                        : 3;
-				std::uint32_t self_initializing            : 1;
-				std::uint32_t fully_associative            : 1;
-				std::uint32_t reserved_1                   : 4;
-				std::uint32_t maximum_addressable_core_ids : 12;
-				std::uint32_t reserved_2                   : 6;
+				std::uint32_t type                           : 5;
+				std::uint32_t level                          : 3;
+				std::uint32_t self_initializing              : 1;
+				std::uint32_t fully_associative              : 1;
+				std::uint32_t reserved_1                     : 4;
+				std::uint32_t maximum_addressable_thread_ids : 12;
+				std::uint32_t reserved_2                     : 6;
 			} split;
 		} a = { regs[eax] };
 
@@ -919,7 +1029,7 @@ void print_cache_properties(const cpu_t& cpu) {
 			w << "\t\tWBINVD/INVD invalidate lower level caches for all threads.\n";
 		}
 		w << "\t\tCache is {:s} of lower cache levels.\n"_format(d.split.cache_inclusive != 0 ? "inclusive" : "exclusive");
-		w << "\t\tCache is shared by up to {:d} threads in the package.\n"_format(a.split.maximum_addressable_core_ids + 1);
+		w << "\t\tCache is shared by up to {:d} threads in the package.\n"_format(a.split.maximum_addressable_thread_ids + 1);
 		std::cout << w.str() << std::endl;
 	}
 	std::cout << std::endl;

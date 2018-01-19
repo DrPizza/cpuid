@@ -775,6 +775,176 @@ void print_sgx_info(const cpu_t& cpu) {
 	}
 }
 
+void enumerate_processor_trace(cpu_t& cpu) {
+	register_set_t regs = { 0 };
+	cpuid(regs, leaf_t::processor_trace, subleaf_t::main);
+	cpu.leaves[leaf_t::processor_trace][subleaf_t::main] = regs;
+
+	const subleaf_t limit = subleaf_t{ regs[eax] };
+	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
+		cpuid(regs, leaf_t::processor_trace, sub);
+		cpu.leaves[leaf_t::processor_trace][sub] = regs;
+	}
+}
+
+void print_processor_trace(const cpu_t& cpu) {
+	for(const auto& sub : cpu.leaves.at(leaf_t::processor_trace)) {
+		const register_set_t& regs = sub.second;
+		switch(sub.first) {
+		case subleaf_t::main:
+			std::cout << "Processor Trace\n";
+			print_features(leaf_t::processor_trace, subleaf_t::main, ebx, cpu);
+			std::cout << std::endl;
+			print_features(leaf_t::processor_trace, subleaf_t::main, ecx, cpu);
+			std::cout << std::endl;
+			break;
+		default:
+			{
+				const union
+				{
+					std::uint32_t full;
+					struct
+					{
+						std::uint32_t number_of_ranges  : 3;
+						std::uint32_t reserved_1        : 13;
+						std::uint32_t mtc_period_bitmap : 16;
+					} split;
+				} a = { regs[eax] };
+
+				const union
+				{
+					std::uint32_t full;
+					struct
+					{
+						std::uint32_t cycle_threshold_bitmap : 16;
+						std::uint32_t supported_psb_bitmap : 16;
+					} split;
+				} b = { regs[ebx] };
+				std::cout << "\tNumber of configurable address ranges for filtering: " << std::dec << a.split.number_of_ranges << "\n";
+				std::cout << "\tBitmap of supported MTC period encodings: " << std::setw(8) << std::setfill('0') << std::hex << a.split.mtc_period_bitmap << "\n";
+				std::cout << "\tBitmap of supported Cycle Treshold value encodings: " << std::setw(8) << std::setfill('0') << std::hex << b.split.cycle_threshold_bitmap << "\n";
+				std::cout << "\tBitmap of supported Configurable PSB frequency encodings: " << std::setw(8) << std::setfill('0') << std::hex << b.split.supported_psb_bitmap << "\n";
+				std::cout << std::endl;
+			}
+			break;
+		}
+	}
+}
+
+void print_time_stamp_counter(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.leaves.at(leaf_t::time_stamp_counter).at(subleaf_t::main);
+	std::cout << "Time Stamp Counter and Nominal Core Crystal Clock\n";
+	std::cout << "\tTSC:core crystal clock ratio: " << std::dec << regs[ebx] << ":" << regs[eax] << std::endl;
+	std::cout << "\tNominal core crystal clock/Hz: " << std::dec << regs[ecx] << "\n";
+	std::cout << "\tTSC frequency/Hz: " << gsl::narrow_cast<std::uint64_t>(regs[ecx] * regs[ebx]) / regs[eax] << "\n";
+	std::cout << std::endl;
+}
+
+void print_processor_frequency(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.leaves.at(leaf_t::processor_frequency).at(subleaf_t::main);
+
+	struct frequency_t
+	{
+		std::uint32_t frequency : 16;
+		std::uint32_t reserved_1 : 16;
+	};
+
+	const union
+	{
+		std::uint32_t full;
+		frequency_t split;
+	} a = { regs[eax] };
+
+	const union
+	{
+		std::uint32_t full;
+		frequency_t split;
+	} b = { regs[ebx] };
+
+	const union
+	{
+		std::uint32_t full;
+		frequency_t split;
+	} c = { regs[ecx] };
+
+	std::cout << "Processor frequency\n";
+	std::cout << "\tBase frequency/MHz: " << std::dec << a.split.frequency << "\n";
+	std::cout << "\tMaximum frequency/MHz: " << std::dec << b.split.frequency << "\n";
+	std::cout << "\tBus (reference) frequency/MHz: " << std::dec << c.split.frequency << "\n";
+	std::cout << std::endl;
+}
+
+void enumerate_system_on_chip_vendor(cpu_t& cpu) {
+	register_set_t regs = { 0 };
+	cpuid(regs, leaf_t::system_on_chip_vendor, subleaf_t::main);
+	cpu.leaves[leaf_t::system_on_chip_vendor][subleaf_t::main] = regs;
+
+	const subleaf_t limit = subleaf_t{ regs[eax] };
+	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
+		cpuid(regs, leaf_t::system_on_chip_vendor, sub);
+		cpu.leaves[leaf_t::system_on_chip_vendor][sub] = regs;
+	}
+}
+
+void print_system_on_chip_vendor(const cpu_t& cpu) {
+	for(const auto& sub : cpu.leaves.at(leaf_t::system_on_chip_vendor)) {
+		const register_set_t& regs = sub.second;
+		switch(sub.first) {
+		case subleaf_t::main:
+			{
+				const union
+				{
+					std::uint32_t full;
+					struct
+					{
+						std::uint32_t vendor_id                   : 16;
+						std::uint32_t is_industry_standard_vendor : 1;
+						std::uint32_t reserved_1                  : 15;
+					} split;
+				} b = { regs[ebx] };
+
+				std::cout << "System-on-chip\n";
+				std::cout << "\tVendor ID: " << std::setw(4) << std::setfill('0') << std::hex << b.split.vendor_id << "\n";
+				if(b.split.is_industry_standard_vendor) {
+					std::cout << "\tVendor ID is assigned by an industry standard scheme\n";
+				} else {
+					std::cout << "\tVendor ID is assigned by Intel\n";
+				}
+				std::cout << "\tProject ID: " << std::setw(8) << std::setfill('0') << std::hex << regs[ecx] << "\n";
+				std::cout << "\tStepping: " << std::setw(8) << std::setfill('0') << std::hex << regs[edx] << "\n";
+				std::cout << std::endl;
+			}
+			break;
+		case subleaf_t{ 1 }:
+			{
+				const union
+				{
+					std::array<register_set_t, 3> split;
+					std::array<char, 48> full;
+				} brand = {
+					cpu.leaves.at(leaf_t::system_on_chip_vendor).at(subleaf_t{ 1 }),
+					cpu.leaves.at(leaf_t::system_on_chip_vendor).at(subleaf_t{ 2 }),
+					cpu.leaves.at(leaf_t::system_on_chip_vendor).at(subleaf_t{ 3 })
+				};
+				std::cout << "\tSoC brand: " << brand.full.data() << "\n";
+				std::cout << std::endl;
+			}
+			break;
+		case subleaf_t{ 2 }:
+		case subleaf_t{ 3 }:
+			break;
+		default:
+			std::cout << "\tVendor data:\n";
+			std::cout << "\t\t" << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n";
+			std::cout << "\t\t" << std::setw(8) << std::setfill('0') << std::hex << regs[ebx] << "\n";
+			std::cout << "\t\t" << std::setw(8) << std::setfill('0') << std::hex << regs[ecx] << "\n";
+			std::cout << "\t\t" << std::setw(8) << std::setfill('0') << std::hex << regs[edx] << "\n";
+			std::cout << std::endl;
+			break;
+		}
+	}
+}
+
 void print_extended_limit(const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_limit).at(subleaf_t::main);
 	std::cout << "Extended limit\n";
