@@ -76,6 +76,7 @@
   <ItemGroup>
     <ClCompile Include="src\cache.cpp" />
     <ClCompile Include="src\cpuid.cpp" />
+    <ClCompile Include="src\docopt.cpp" />
     <ClCompile Include="src\features.cpp" />
     <ClCompile Include="src\standard.cpp" />
     <ClCompile Include="src\stdafx.cpp">
@@ -87,6 +88,9 @@
   <ItemGroup>
     <ClInclude Include="include\cache.hpp" />
     <ClInclude Include="include\cpuid.hpp" />
+    <ClInclude Include="include\docopt.h" />
+    <ClInclude Include="include\docopt_private.h" />
+    <ClInclude Include="include\docopt_util.h" />
     <ClInclude Include="include\features.hpp" />
     <ClInclude Include="include\standard.hpp" />
     <ClInclude Include="include\stdafx.h" />

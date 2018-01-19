@@ -356,7 +356,7 @@ void print_cache_tlb_info(const cpu_t& cpu) {
 				break;
 			case 0x49ui8:
 				{
-					auto it = dual_cache_descriptors.find(value);
+					const auto it = dual_cache_descriptors.find(value);
 					if(cpu.model.family == 0x0f && cpu.model.model == 0x06) {
 						cache_descriptors.push_back(&(it->second.first));
 					} else {
@@ -375,13 +375,13 @@ void print_cache_tlb_info(const cpu_t& cpu) {
 				break;
 			default:
 				{
-					auto dual = dual_cache_descriptors.find(value);
+					const auto dual = dual_cache_descriptors.find(value);
 					if(dual != dual_cache_descriptors.end()) {
 						tlb_descriptors.push_back(&(dual->second.first));
 						tlb_descriptors.push_back(&(dual->second.second));
 						break;
 					}
-					auto it = standard_cache_descriptors.find(value);
+					const auto it = standard_cache_descriptors.find(value);
 					if(it != standard_cache_descriptors.end()) {
 						if(it->second.type & all_tlb) {
 							tlb_descriptors.push_back(&(it->second));
@@ -711,12 +711,12 @@ void print_l1_cache_tlb(const cpu_t & cpu) {
 		}
 	};
 
-	auto print_tlb = [&print_associativity](const tlb_element& tlb, const std::string& type, const std::string& page_size) {
+	const auto print_tlb = [&print_associativity](const tlb_element& tlb, const std::string& type, const std::string& page_size) {
 		using namespace fmt::literals;
 		return "{:d}-entry {:s} L1 {:s} TLB for {:s} pages"_format(tlb.entries, print_associativity(tlb.associativity), type, page_size);
 	};
 
-	auto print_cache = [&print_associativity](const cache_info& cache, const std::string& type) {
+	const auto print_cache = [&print_associativity](const cache_info& cache, const std::string& type) {
 		using namespace fmt::literals;
 		return "{:d} Kbyte {:s} L1 {:s} cache with {:d} bytes per line and {:d} lines per tag"_format(cache.size_kb,
 		                                                                                              print_associativity(cache.associativity),
@@ -851,11 +851,11 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 		return "{:g} {:c}byte"_format(printable_cache_size, cache_scale);
 	};
 
-	auto print_l2_size = [&print_size](std::uint32_t cache_size) {
+	const auto print_l2_size = [&print_size](std::uint32_t cache_size) {
 		return print_size(cache_size * 1024);
 	};
 
-	auto print_l3_size = [&print_size](std::uint32_t cache_size) {
+	const auto print_l3_size = [&print_size](std::uint32_t cache_size) {
 		return print_size(cache_size * 1024 * 512);
 	};
 

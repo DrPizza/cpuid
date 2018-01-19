@@ -14,6 +14,8 @@
 
 #include <fmt/format.h>
 
+#include "docopt.h"
+
 template<std::size_t N, std::size_t... Is>
 constexpr std::array<char, N - 1> to_array(const char(&str)[N], std::index_sequence<Is...>) {
 	return { str[Is]... };
@@ -54,7 +56,7 @@ vendor_t get_vendor_from_name(const register_set_t& regs) {
 		std::array<char, 12> vndr;
 	} data = { regs[ebx], regs[edx], regs[ecx] };
 
-	auto it = vendors.find(data.vndr);
+	const auto it = vendors.find(data.vndr);
 	return it != vendors.end() ? it->second : unknown;
 }
 
@@ -129,7 +131,7 @@ struct leaf_descriptor_t
 	filter_t filter;
 };
 
-void print_null(const cpu_t&) {
+void print_null(const cpu_t&) noexcept {
 }
 
 const std::map<leaf_t, leaf_descriptor_t> descriptors = {
@@ -196,9 +198,31 @@ void print_generic(const cpu_t& cpu) {
 	}
 }
 
+void enumerate_leaf_brute_force(cpu_t& cpu, leaf_t leaf) {
+	register_set_t previous = { 0 };
+	for(subleaf_t subleaf = subleaf_t::main; ; ++subleaf) {
+		register_set_t regs = { 0 };
+		cpuid(regs, leaf, subleaf);
+		if(regs[eax] == 0ui32
+			&& regs[ebx] == 0ui32
+			&& (regs[ecx] == 0ui32 || regs[ecx] == static_cast<std::uint32_t>(subleaf))
+			&& regs[edx] == 0ui32) {
+			break;
+		}
+		if(regs[eax] == previous[eax]
+			&& regs[ebx] == previous[ebx]
+			&& regs[ecx] == previous[ecx]
+			&& regs[edx] == previous[edx]) {
+			break;
+		}
+		cpu.leaves[leaf][subleaf] = regs;
+		previous = regs;
+	}
+}
+
 void enumerate_leaf(cpu_t& cpu, leaf_t leaf) {
 	register_set_t regs = { 0 };
-	auto it = descriptors.find(leaf);
+	const auto it = descriptors.find(leaf);
 	if(it != descriptors.end()) {
 		if(it->second.vendor & cpu.vendor) {
 			const filter_t filter = it->second.filter;
@@ -212,32 +236,27 @@ void enumerate_leaf(cpu_t& cpu, leaf_t leaf) {
 				}
 			}
 		}
+	} else {
+		enumerate_leaf_brute_force(cpu, leaf);
 	}
 }
 
-void enumerate_leaf_brute_force(cpu_t& cpu, leaf_t leaf) {
-	register_set_t previous = { 0 };
-	for(subleaf_t subleaf = subleaf_t::main; ; ++subleaf) {
-		register_set_t regs = { 0 };
-		cpuid(regs, leaf, subleaf);
-		if(regs[eax] == 0ui32
-		&& regs[ebx] == 0ui32
-		&& regs[ecx] == 0ui32
-		&& regs[edx] == 0ui32) {
-			break;
-		}
-		if(regs[eax] == previous[eax]
-		&& regs[ebx] == previous[ebx]
-		&& regs[ecx] == previous[ecx]
-		&& regs[edx] == previous[edx]) {
-			break;
-		}
-		cpu.leaves[leaf][subleaf] = regs;
-		previous = regs;
-	}
-}
+static const char usage_message[] =
+R"(cpuid.
 
-int main(int, char*[]) {
+	Usage:
+		cpuid [--cpu <index>] [--dump]
+		cpuid --help
+		cpuid --version
+
+	Options:
+		--cpu <index>         Index of logical core to get info from
+		--dump                Print unparsed output
+		--help                Show this text
+		--version             Show the version
+)";
+
+int main(int argc, char* argv[]) {
 	HANDLE output = ::GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD mode = 0;
 	::GetConsoleMode(output, &mode);
@@ -247,9 +266,11 @@ int main(int, char*[]) {
 	::SetConsoleOutputCP(CP_UTF8);
 	std::cout.rdbuf()->pubsetbuf(nullptr, 1024);
 
+	const std::map<std::string, docopt::value> args = docopt::docopt(usage_message, { argv + 1, argv + argc }, true, "cpuid 0.1");
+
 	// I don't care which thread I run on, just as long as I'm not bouncing between cores.
-	DWORD current_processor = ::GetCurrentProcessorNumber();
-	DWORD_PTR mask = 1ui64 << current_processor;
+	const DWORD current_processor = ::GetCurrentProcessorNumber();
+	const DWORD_PTR mask = 1ui64 << current_processor;
 	::SetThreadAffinityMask(::GetCurrentThread(), mask);
 
 	cpu_t cpu = {};
@@ -265,7 +286,6 @@ int main(int, char*[]) {
 
 	for(leaf_t lf = leaf_t::basic_info; lf <= cpu.highest_leaf; ++lf) {
 		enumerate_leaf(cpu, lf);
-		enumerate_leaf_brute_force(cpu, lf);
 	}
 
 	cpuid(regs, leaf_t::extended_limit, subleaf_t::main);
@@ -273,11 +293,10 @@ int main(int, char*[]) {
 
 	for(leaf_t lf = leaf_t::extended_limit; lf <= cpu.highest_extended_leaf; ++lf) {
 		enumerate_leaf(cpu, lf);
-		//enumerate_leaf_brute_force(cpu, lf);
 	}
 
 	for(const auto& lf : cpu.leaves) {
-		auto it = descriptors.find(lf.first);
+		const auto it = descriptors.find(lf.first);
 		if(it != descriptors.end()) {
 			if(it->second.vendor & cpu.vendor) {
 				const filter_t filter = it->second.filter;

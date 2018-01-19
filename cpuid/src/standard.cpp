@@ -225,7 +225,7 @@ void print_thermal_and_power(const cpu_t& cpu) {
 		} b = { regs[ebx] };
 
 		if(b.split.interrupt_thresholds) {
-			std::cout << b.split.interrupt_thresholds << " interrupt thresholds in Digital Thermal Sensor\n";
+			std::cout << "\t" << b.split.interrupt_thresholds << " interrupt thresholds in Digital Thermal Sensor\n";
 		}
 		print_features(cpu, leaf_t::thermal_and_power, subleaf_t::main, ecx);
 		std::cout << std::endl;
