@@ -136,6 +136,14 @@ constexpr inline vendor_t operator|(const vendor_t& lhs, const vendor_t& rhs) {
 using register_set_t = std::array<std::uint32_t, 4>;
 using leaves_t = std::map<leaf_t, std::map<subleaf_t, register_set_t>>;
 
+struct id_info_t
+{
+	std::uint32_t brand_id                : 8;
+	std::uint32_t cache_line_size         : 8;
+	std::uint32_t maximum_addressable_ids : 8;
+	std::uint32_t local_apic_id           : 8;
+};
+
 
 struct split_model_t
 {
@@ -158,6 +166,7 @@ struct model_t
 
 struct cpu_t
 {
+	std::uint32_t local_apic_id;
 	leaf_t highest_leaf;
 	leaf_t highest_extended_leaf;
 	vendor_t vendor;

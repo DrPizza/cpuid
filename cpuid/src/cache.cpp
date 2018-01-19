@@ -339,7 +339,7 @@ void print_cache_tlb_info(const cpu_t& cpu) {
 	std::vector<gsl::not_null<const cache_descriptor_t*>> tlb_descriptors;
 	std::vector<gsl::not_null<const cache_descriptor_t*>> cache_descriptors;
 	std::vector<gsl::not_null<const cache_descriptor_t*>> other_descriptors;
-	std::vector<std::string>               non_conformant_descriptors;
+	std::vector<std::string>                              non_conformant_descriptors;
 
 	std::ptrdiff_t idx = 0;
 	for(register_t r = eax; r <= edx; ++r, idx += sizeof(std::uint32_t)) {
@@ -629,22 +629,63 @@ void print_l1_cache_tlb(const cpu_t & cpu) {
 	std::cout << std::endl;
 }
 
+struct tlb_element
+{
+	std::uint16_t entries       : 12;
+	std::uint16_t associativity : 4;
+};
+
+struct tlb_info
+{
+	tlb_element i;
+	tlb_element d;
+};
+
+std::string print_associativity(std::uint32_t assoc) {
+	switch(assoc) {
+	case 0x0ui32:
+		return "disabled";
+	case 0x1ui32:
+		return "direct-mapped";
+	case 0x2ui32:
+		return "2-way associative";
+	case 0x3ui32:
+		return "3-way associative";
+	case 0x4ui32:
+		return "4-way associative";
+	case 0x5ui32:
+		return "6-way associative";
+	case 0x6ui32:
+		return "8-way associative";
+	case 0x8ui32:
+		return "16-way associative";
+	case 0xaui32:
+		return "32-way associative";
+	case 0xbui32:
+		return "48-way associative";
+	case 0xcui32:
+		return "64-way associative";
+	case 0xdui32:
+		return "96-way associative";
+	case 0xeui32:
+		return "128-way associative";
+	case 0xfui32:
+		return "fully associative";
+	default:
+		return std::to_string(assoc) + "-way associative";
+	}
+};
+
+std::string print_tlb(const tlb_element& tlb, const std::string& type, const std::string& page_size) {
+	using namespace fmt::literals;
+	return "{:d}-entry {:s} L2 {:s} TLB for {:s} pages"_format(tlb.entries, print_associativity(tlb.associativity), type, page_size);
+};
+
 void print_l2_cache_tlb(const cpu_t & cpu) {
 	using namespace fmt::literals;
 
 	const register_set_t& regs = cpu.leaves.at(leaf_t::l2_cache_identifiers).at(subleaf_t::main);
 
-	struct tlb_element
-	{
-		std::uint16_t entries       : 12;
-		std::uint16_t associativity : 4;
-	};
-
-	struct tlb_info
-	{
-		tlb_element i;
-		tlb_element d;
-	};
 
 	struct l2_cache_info
 	{
@@ -688,41 +729,6 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 		l3_cache_info split;
 	} d = { regs[edx] };
 
-	auto print_associativity = [](std::uint32_t assoc) -> std::string {
-		switch(assoc) {
-		case 0x0ui32:
-			return "disabled";
-		case 0x1ui32:
-			return "direct-mapped";
-		case 0x2ui32:
-			return "2-way associative";
-		case 0x3ui32:
-			return "3-way associative";
-		case 0x4ui32:
-			return "4-way associative";
-		case 0x5ui32:
-			return "6-way associative";
-		case 0x6ui32:
-			return "8-way associative";
-		case 0x8ui32:
-			return "16-way associative";
-		case 0xaui32:
-			return "32-way associative";
-		case 0xbui32:
-			return "48-way associative";
-		case 0xcui32:
-			return "64-way associative";
-		case 0xdui32:
-			return "96-way associative";
-		case 0xeui32:
-			return "128-way associative";
-		case 0xfui32:
-			return "fully associative";
-		default:
-			return std::to_string(assoc) + "-way associative";
-		}
-	};
-
 	auto print_size = [](std::uint32_t cache_bytes) {
 		using namespace fmt::literals;
 
@@ -741,11 +747,6 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 
 	auto print_l3_size = [&print_size](std::uint32_t cache_size) {
 		return print_size(cache_size * 1024 * 512);
-	};
-
-	auto print_tlb = [&print_associativity](const tlb_element& tlb, const std::string& type, const std::string& page_size) {
-		using namespace fmt::literals;
-		return "{:d}-entry {:s} L2 {:s} TLB for {:s} pages"_format(tlb.entries, print_associativity(tlb.associativity), type, page_size);
 	};
 
 	switch(cpu.vendor) {
@@ -785,4 +786,141 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 		std::cout << std::endl;
 		break;
 	}
+}
+
+void print_1g_tlb(const cpu_t& cpu) {
+	using namespace fmt::literals;
+
+	const register_set_t& regs = cpu.leaves.at(leaf_t::tlb_1g_identifiers).at(subleaf_t::main);
+	
+	const union
+	{
+		std::uint32_t full;
+		tlb_info split; // l1
+	} a = { regs[eax] };
+
+	const union
+	{
+		std::uint32_t full;
+		tlb_info split; // l2
+	} b = { regs[eax] };
+
+	std::cout << "Level 1 1GB page TLB\n";
+	std::cout << "\t" << print_tlb(a.split.d, "data", "1G") << "\n";
+	std::cout << "\t" << print_tlb(a.split.i, "instruction", "1G") << "\n";
+	std::cout << "\t" << print_tlb(b.split.d, "data", "1G") << "\n";
+	std::cout << "\t" << print_tlb(b.split.i, "instruction", "1G") << "\n";
+	std::cout << std::endl;
+}
+
+void enumerate_cache_properties(cpu_t& cpu) {
+	register_set_t regs = { 0 };
+	subleaf_t sub = subleaf_t::main;
+	while(true) {
+		cpuid(regs, leaf_t::cache_properties, sub);
+		if((regs[eax] & 0xfui32) == 0) {
+			break;
+		}
+		cpu.leaves[leaf_t::cache_properties][subleaf_t{ sub }] = regs;
+		++sub;
+	}
+
+}
+
+void print_cache_properties(const cpu_t& cpu) {
+	using namespace fmt::literals;
+	
+	std::cout << "Cache properties\n";
+
+	for(const auto& sub : cpu.leaves.at(leaf_t::cache_properties)) {
+		const register_set_t& regs = sub.second;
+
+		const union
+		{
+			std::uint32_t full;
+			struct
+			{
+				std::uint32_t type                         : 5;
+				std::uint32_t level                        : 3;
+				std::uint32_t self_initializing            : 1;
+				std::uint32_t fully_associative            : 1;
+				std::uint32_t reserved_1                   : 4;
+				std::uint32_t maximum_addressable_core_ids : 12;
+				std::uint32_t reserved_2                   : 6;
+			} split;
+		} a = { regs[eax] };
+
+		const union
+		{
+			std::uint32_t full;
+			struct
+			{
+				std::uint32_t coherency_line_size : 12;
+				std::uint32_t partitions          : 10;
+				std::uint32_t associativity_ways  : 10;
+			} split;
+		} b = { regs[ebx] };
+
+		const union
+		{
+			std::uint32_t full;
+			struct
+			{
+				std::uint32_t writeback_invalidates : 1;
+				std::uint32_t cache_inclusive       : 1;
+				std::uint32_t reserved_1            : 30;
+			} split;
+		} d = { regs[edx] };
+
+		const std::size_t sets = regs[ecx];
+		const std::size_t cache_size = (b.split.associativity_ways       + 1ui32)
+		                             * (b.split.coherency_line_size      + 1ui32)
+		                             * (sets                             + 1ui32);
+		double printable_cache_size = cache_size / 1'024.0;
+		char   cache_scale = 'K';
+		if(printable_cache_size > 1'024.0) {
+			printable_cache_size /= 1'024.0;
+			cache_scale = 'M';
+		}
+
+		fmt::MemoryWriter w;
+		w << "\t";
+		w << "{:g} {:c}byte "_format(printable_cache_size, cache_scale);
+		w << "L" << a.split.level << " ";
+		switch(a.split.type) {
+		case 1:
+			w << "data";
+			break;
+		case 2:
+			w << "instruction";
+			break;
+		case 3:
+			w << "unified";
+			break;
+		}
+		w << "\n";
+		w << "\t\t";
+		w << "{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} sets = {:g} {:c}bytes.\n"_format(b.split.coherency_line_size + 1ui32,
+		                                                                                        b.split.associativity_ways  + 1ui32,
+		                                                                                        sets                        + 1ui32,
+		                                                                                        printable_cache_size,
+		                                                                                        cache_scale);
+		if(a.split.self_initializing) {
+			w << "\t\tSelf-initializing.\n";
+		}
+		if(a.split.fully_associative) {
+			w << "\t\tFully associative.\n";
+		} else {
+			w << "\t\t{:d}-way set associative.\n"_format(b.split.associativity_ways + 1ui32);
+		}
+		if(d.split.writeback_invalidates) {
+			w << "\t\tWBINVD/INVD does not invalidate lower level caches for other threads.\n";
+		} else {
+			w << "\t\tWBINVD/INVD invalidate lower level caches for all threads.\n";
+		}
+		w << "\t\tCache is {:s} of lower cache levels.\n"_format(d.split.cache_inclusive != 0 ? "inclusive" : "exclusive");
+		w << "\t\tCache is shared by up to {:d} threads in the package.\n"_format(a.split.maximum_addressable_core_ids + 1);
+		std::cout << w.str() << std::endl;
+	}
+	std::cout << std::endl;
 }

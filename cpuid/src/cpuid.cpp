@@ -59,39 +59,46 @@ vendor_t get_vendor_from_name(const register_set_t& regs) {
 }
 
 model_t get_model(vendor_t vendor, const register_set_t& regs) noexcept {
-	union
+	const union
 	{
-		std::uint32_t raw;
-		split_model_t m;
-	} split_model;
-
-	split_model.raw = regs[eax];
+		std::uint32_t full;
+		split_model_t split;
+	} a = { regs[eax] };
 
 	model_t model = {};
-	model.family = split_model.m.family;
-	model.model = split_model.m.model;
-	model.stepping = split_model.m.stepping;
+	model.family = a.split.family;
+	model.model = a.split.model;
+	model.stepping = a.split.stepping;
 	switch(vendor) {
 	case intel:
 		{
-			if(split_model.m.family == 0xf) {
-				model.family += split_model.m.extended_family;
+			if(a.split.family == 0xf) {
+				model.family += a.split.extended_family;
 			}
-			if(split_model.m.family == 0x6 || split_model.m.family == 0xf) {
-				model.model += (split_model.m.extended_model << 4ui32);
+			if(a.split.family == 0x6 || a.split.family == 0xf) {
+				model.model += (a.split.extended_model << 4ui32);
 			}
 		}
 		break;
 	case amd:
 		{
-			model.family += split_model.m.extended_family;
-			model.model += split_model.m.extended_model << 4ui32;
+			model.family += a.split.extended_family;
+			model.model += a.split.extended_model << 4ui32;
 		}
 		break;
 	default:
 		break;
 	}
 	return model;
+}
+
+uint8_t get_local_apic_id(const register_set_t& regs) noexcept {
+	const union
+	{
+		std::uint32_t full;
+		id_info_t split;
+	} b = { regs[ebx] };
+	return b.split.local_apic_id;
 }
 
 using leaf_print = void(*)(const cpu_t& cpu);
@@ -129,19 +136,19 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::basic_info                        , { any                    , nullptr                      , print_basic_info                     , {} } },
 	{ leaf_t::version_info                      , { any                    , nullptr                      , print_version_info                   , {} } },
 	{ leaf_t::cache_and_tlb                     , { intel                  , nullptr                      , print_cache_tlb_info                 , {} } },
-	{ leaf_t::serial_number                     , { intel       | transmeta, nullptr                      , print_serial_number                  , { leaf_t::version_info     , subleaf_t::main, edx, 0x0004'0000ui32 } } },
+	{ leaf_t::serial_number                     , { intel       | transmeta, nullptr                      , print_serial_number                  , { leaf_t::version_info                   , subleaf_t::main, edx, 0x0004'0000ui32 } } },
 	{ leaf_t::deterministic_cache               , { intel                  , enumerate_deterministic_cache, print_deterministic_cache            , {} } },
-	{ leaf_t::monitor_mwait                     , { intel | amd            , nullptr                      , print_mwait_parameters               , { leaf_t::version_info     , subleaf_t::main, ecx, 0x0000'0008ui32 } } },
+	{ leaf_t::monitor_mwait                     , { intel | amd            , nullptr                      , print_mwait_parameters               , { leaf_t::version_info                   , subleaf_t::main, ecx, 0x0000'0008ui32 } } },
 	{ leaf_t::thermal_and_power                 , { intel | amd            , nullptr                      , print_thermal_and_power              , {} } },
 	{ leaf_t::extended_features                 , { any                    , enumerate_extended_features  , print_extended_features              , {} } },
-	{ leaf_t::direct_cache_access               , { intel                  , nullptr                      , print_direct_cache_access            , { leaf_t::version_info     , subleaf_t::main, ecx, 0x0004'0000ui32 } } },
-	{ leaf_t::performance_monitoring            , { intel                  , nullptr                      , print_performance_monitoring         , { leaf_t::version_info     , subleaf_t::main, ecx, 0x0000'8000ui32 } } },
+	{ leaf_t::direct_cache_access               , { intel                  , nullptr                      , print_direct_cache_access            , { leaf_t::version_info                   , subleaf_t::main, ecx, 0x0004'0000ui32 } } },
+	{ leaf_t::performance_monitoring            , { intel                  , nullptr                      , print_performance_monitoring         , { leaf_t::version_info                   , subleaf_t::main, ecx, 0x0000'8000ui32 } } },
 	{ leaf_t::extended_topology                 , { intel                  , enumerate_extended_topology  , print_extended_topology              , {} } },
-	{ leaf_t::extended_state                    , { intel | amd            , enumerate_extended_state     , print_extended_state                 , { leaf_t::version_info     , subleaf_t::main, ecx, 0x0400'0000ui32 } } },
-	{ leaf_t::rdt_monitoring                    , { intel                  , enumerate_rdt_monitoring     , print_rdt_monitoring                 , { leaf_t::extended_features, subleaf_t::main, ebx, 0x0000'1000ui32 } } },
-	{ leaf_t::rdt_allocation                    , { intel                  , enumerate_rdt_allocation     , print_rdt_allocation                 , { leaf_t::extended_features, subleaf_t::main, ebx, 0x0000'8000ui32 } } },
-	{ leaf_t::sgx_info                          , { intel                  , enumerate_sgx_info           , print_sgx_info                       , { leaf_t::extended_features, subleaf_t::main, ebx, 0x0000'0004ui32 } } },
-	{ leaf_t::processor_trace                   , { intel                  , nullptr                      , nullptr                              , { leaf_t::extended_features, subleaf_t::main, ebx, 0x0200'0000ui32 } } },
+	{ leaf_t::extended_state                    , { intel | amd            , enumerate_extended_state     , print_extended_state                 , { leaf_t::version_info                   , subleaf_t::main, ecx, 0x0400'0000ui32 } } },
+	{ leaf_t::rdt_monitoring                    , { intel                  , enumerate_rdt_monitoring     , print_rdt_monitoring                 , { leaf_t::extended_features              , subleaf_t::main, ebx, 0x0000'1000ui32 } } },
+	{ leaf_t::rdt_allocation                    , { intel                  , enumerate_rdt_allocation     , print_rdt_allocation                 , { leaf_t::extended_features              , subleaf_t::main, ebx, 0x0000'8000ui32 } } },
+	{ leaf_t::sgx_info                          , { intel                  , enumerate_sgx_info           , print_sgx_info                       , { leaf_t::extended_features              , subleaf_t::main, ebx, 0x0000'0004ui32 } } },
+	{ leaf_t::processor_trace                   , { intel                  , nullptr                      , nullptr                              , { leaf_t::extended_features              , subleaf_t::main, ebx, 0x0200'0000ui32 } } },
 	{ leaf_t::time_stamp_counter                , { intel                  , nullptr                      , nullptr                              , {} } },
 	{ leaf_t::processor_frequency               , { intel                  , nullptr                      , nullptr                              , {} } },
 	{ leaf_t::system_on_chip_vendor             , { intel                  , nullptr                      , nullptr                              , {} } },
@@ -155,11 +162,11 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::l2_cache_identifiers              , { intel | amd            , nullptr                      , print_l2_cache_tlb                   , {} } },
 	{ leaf_t::ras_advanced_power_management     , { intel | amd            , nullptr                      , print_ras_advanced_power_management  , {} } },
 	{ leaf_t::address_limits                    , { intel | amd            , nullptr                      , print_address_limits                 , {} } },
-	{ leaf_t::secure_virtual_machine            , {         amd            , nullptr                      , nullptr                              , {} } },
-	{ leaf_t::tlb_1g_identifiers                , {         amd            , nullptr                      , nullptr                              , {} } },
-	{ leaf_t::performance_optimization          , {         amd            , nullptr                      , nullptr                              , {} } },
-	{ leaf_t::instruction_based_sampling        , {         amd            , nullptr                      , nullptr                              , {} } },
-	{ leaf_t::cache_properties                  , {         amd            , nullptr                      , nullptr                              , {} } },
+	{ leaf_t::secure_virtual_machine            , {         amd            , nullptr                      , print_secure_virtual_machine         , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0000'0004ui32 } } },
+	{ leaf_t::tlb_1g_identifiers                , {         amd            , nullptr                      , print_1g_tlb                         , {} } },
+	{ leaf_t::performance_optimization          , {         amd            , nullptr                      , print_performance_optimization       , {} } },
+	{ leaf_t::instruction_based_sampling        , {         amd            , nullptr                      , print_instruction_based_sampling     , {} } },
+	{ leaf_t::cache_properties                  , {         amd            , enumerate_cache_properties   , print_cache_properties               , {} } },
 	{ leaf_t::extended_apic                     , {         amd            , nullptr                      , nullptr                              , {} } },
 	{ leaf_t::secure_memory_encryption          , {         amd            , nullptr                      , nullptr                              , {} } }
 };
@@ -167,12 +174,13 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 void print_generic(const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
 	using namespace fmt::literals;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf);
-	std::cout << "{:#010x} {:#010x}: {:#010x} {:#010x} {:#010x} {:#010x}"_format(static_cast<std::uint32_t>(leaf),
-	                                                                             static_cast<std::uint32_t>(subleaf),
-	                                                                             regs[eax],
-	                                                                             regs[ebx],
-	                                                                             regs[ecx],
-	                                                                             regs[edx]) << std::endl;
+	std::cout << "{:#010x} {:#010x} {:#010x}: {:#010x} {:#010x} {:#010x} {:#010x}"_format(cpu.local_apic_id,
+	                                                                                      static_cast<std::uint32_t>(leaf),
+	                                                                                      static_cast<std::uint32_t>(subleaf),
+	                                                                                      regs[eax],
+	                                                                                      regs[ebx],
+	                                                                                      regs[ecx],
+	                                                                                      regs[edx]) << std::endl;
 }
 
 void print_generic(const cpu_t& cpu, leaf_t leaf) {
@@ -216,7 +224,9 @@ int main(int, char*[]) {
 	::SetConsoleOutputCP(CP_UTF8);
 	std::cout.rdbuf()->pubsetbuf(nullptr, 1024);
 
-	DWORD_PTR mask = ::SetThreadAffinityMask(::GetCurrentThread(), 0x1);
+	// I don't care which thread I run on, just as long as I'm not bouncing between cores.
+	DWORD current_processor = ::GetCurrentProcessorNumber();
+	DWORD_PTR mask = 1ui64 << current_processor;
 	::SetThreadAffinityMask(::GetCurrentThread(), mask);
 
 	cpu_t cpu = {};
@@ -228,6 +238,7 @@ int main(int, char*[]) {
 
 	cpuid(regs, leaf_t::version_info, subleaf_t::main);
 	cpu.model = get_model(cpu.vendor, regs);
+	cpu.local_apic_id = get_local_apic_id(regs);
 
 	for(leaf_t lf = leaf_t::basic_info; lf <= cpu.highest_leaf; ++lf) {
 		enumerate_leaf(cpu, lf);

@@ -37,6 +37,12 @@ void print_version_info(const cpu_t& cpu) {
 		split_model_t split;
 	} a = { regs[eax] };
 
+	const union
+	{
+		std::uint32_t full;
+		id_info_t split;
+	} b = { regs[ebx] };
+	
 	std::cout << "\tsignature: 0x" << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n"
 	          << "\t   family: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.family << "\n"
 	          << "\t    model: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.model << "\n"
@@ -59,18 +65,6 @@ void print_version_info(const cpu_t& cpu) {
 		}
 	}
 	std::cout << std::endl;
-
-	const union
-	{
-		std::uint32_t full;
-		struct version_b_t
-		{
-			std::uint8_t brand_id;
-			std::uint8_t cache_line_size;
-			std::uint8_t maximum_addressable_ids;
-			std::uint8_t local_apic_id;
-		} split;
-	} b = { regs[ebx] };
 
 	if(cpu.vendor == intel) {
 		if(b.split.brand_id != 0ui32) {
@@ -119,9 +113,11 @@ void print_version_info(const cpu_t& cpu) {
 		}
 	}
 
-	std::cout << "\tcache line size/bytes: " << std::dec << b.split.cache_line_size * 8 << "\n"
-	          << "\tlogical processors per package: " << gsl::narrow_cast<std::uint32_t>(b.split.maximum_addressable_ids) << "\n"
-	          << "\tlocal APIC ID: " << gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id) << "\n";
+	std::cout << "\tcache line size/bytes: " << std::dec << b.split.cache_line_size * 8 << "\n";
+	if(0 != (cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main).at(edx) & 0x1000'0000ui32)) {
+		std::cout << "\tlogical processors per package: " << gsl::narrow_cast<std::uint32_t>(b.split.maximum_addressable_ids) << "\n";
+	}
+	std::cout << "\tlocal APIC ID: " << gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id) << "\n";
 	std::cout << std::endl;
 
 	std::cout << "\tFeature identifiers\n";
@@ -965,4 +961,37 @@ void print_address_limits(const cpu_t& cpu) {
 		std::cout << std::endl;
 		break;
 	}
+}
+
+void print_secure_virtual_machine(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.leaves.at(leaf_t::secure_virtual_machine).at(subleaf_t::main);
+
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t svm_revision : 8;
+			std::uint32_t reserved_1   : 24;
+		} split;
+	} a = { regs[eax] };
+
+	std::cout << "Secure Virtual Machine\n";
+	std::cout << "\tSVM revision: " << a.split.svm_revision << "\n";
+	std::cout << "\tNumber of address space identifiers: " << regs[ebx] << "\n";
+	std::cout << "\n";
+	print_features(leaf_t::secure_virtual_machine, subleaf_t::main, edx, cpu);
+	std::cout << std::endl;
+}
+
+void print_performance_optimization(const cpu_t& cpu) {
+	std::cout << "Performance Optimization\n";
+	print_features(leaf_t::performance_optimization, subleaf_t::main, eax, cpu);
+	std::cout << std::endl;
+}
+
+void print_instruction_based_sampling(const cpu_t& cpu) {
+	std::cout << "Instruction Based Sampling\n";
+	print_features(leaf_t::instruction_based_sampling, subleaf_t::main, eax, cpu);
+	std::cout << std::endl;
 }

@@ -256,7 +256,54 @@ const feature_map_t all_features = {
 				{         amd            , 0x0000'0002ui32, "XSaveErPtr"             , "XSAVE (etc.) saves error pointer"     },
 			}}
 		}}
-	}}
+	}},
+	{ leaf_t::secure_virtual_machine, {
+		{ subleaf_t::main, {
+			{ edx, {
+				{         amd            , 0x0000'0001ui32, "NP"                     , "Nested paging"                        },
+				{         amd            , 0x0000'0002ui32, "LbrVirt"                , "LBR virtualization"                   },
+				{         amd            , 0x0000'0004ui32, "SVML"                   , "SVM lock"                             },
+				{         amd            , 0x0000'0008ui32, "NRIPS"                  , "NRIP Save"                            },
+				{         amd            , 0x0000'0010ui32, "TscRateMsr"             , "MSR-based TSC rate control"           },
+				{         amd            , 0x0000'0020ui32, "VmcbClean"              , "VMCB clean bits"                      },
+				{         amd            , 0x0000'0040ui32, "FlushByAsid"            , "Flush by ASID"                        },
+				{         amd            , 0x0000'0080ui32, "DecodeAssists"          , "Decode assists"                       },
+				{         amd            , 0x0000'0400ui32, "PauseFilter"            , "PAUSE intercept filter"               },
+				{         amd            , 0x0000'1000ui32, "PauseFilterThreshold"   , "PAUSE filter threshold"               },
+				{         amd            , 0x0000'2000ui32, "AVIC"                   , "AMD virtual interrupt controller"     },
+				{         amd            , 0x0000'8000ui32, "V_VMSAVE_VMLOAD"        , "Virtualized VMSAVE/VMLOAD"            },
+				{         amd            , 0x0001'0000ui32, "vGIF"                   , "Virtualized GIF"                      },
+
+			}}
+		}}
+	}},
+	{ leaf_t::performance_optimization, {
+		{ subleaf_t::main, {
+			{ eax, {
+				{         amd            , 0x0000'0001ui32, "FP128"                  , "FP128"                                },
+				{         amd            , 0x0000'0002ui32, "MOVU"                   , "MOVU"                                 },
+				{         amd            , 0x0000'0004ui32, "FP256"                  , "FP256"                                },
+			}}
+		}}
+	}},
+	{ leaf_t::instruction_based_sampling, {
+		{ subleaf_t::main, {
+			{ eax, {
+				{         amd            , 0x0000'0001ui32, "IBSFFV"                 , "IBS feature flags valid"              },
+				{         amd            , 0x0000'0002ui32, "FetchSam"               , "IBS fetch sampling supported"         },
+				{         amd            , 0x0000'0004ui32, "OpSam"                  , "IBS execution sampling supported"     },
+				{         amd            , 0x0000'0008ui32, "RdWrOpCnt"              , "Read/write of op counter supported"   },
+				{         amd            , 0x0000'0010ui32, "OpCnt"                  , "Op counting mode supported"           },
+				{         amd            , 0x0000'0020ui32, "BrnTarget"              , "Branch target address reporting supported" },
+				{         amd            , 0x0000'0040ui32, "OpCntExt"               , "Op counters extended by 7 bits"       },
+				{         amd            , 0x0000'0080ui32, "RipInvalidChk"          , "Invalid RIP indication supported"     },
+				{         amd            , 0x0000'0100ui32, "OpBrnFuse"              , "Fused branch micro-op indication supported" },
+				{         amd            , 0x0000'0200ui32, "IbsFetchCtlExtd"        , "IBS fetch control extended MSR supported" },
+				{         amd            , 0x0000'0400ui32, "IbsOpData4"             , "IBS op data 4 MSR supported"          },
+			}}
+		}}
+	}},
+
 };
 
 void print_features(leaf_t leaf, subleaf_t sub, register_t reg, const cpu_t& cpu) {

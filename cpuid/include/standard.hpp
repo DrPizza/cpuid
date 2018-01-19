@@ -42,4 +42,10 @@ void print_ras_advanced_power_management(const cpu_t& cpu);
 
 void print_address_limits(const cpu_t& cpu);
 
+void print_secure_virtual_machine(const cpu_t& cpu);
+
+void print_performance_optimization(const cpu_t& cpu);
+
+void print_instruction_based_sampling(const cpu_t& cpu);
+
 #endif
