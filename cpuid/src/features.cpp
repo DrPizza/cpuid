@@ -357,7 +357,7 @@ const feature_map_t all_features = {
 	}}
 };
 
-void print_features(leaf_t leaf, subleaf_t sub, register_t reg, const cpu_t& cpu) {
+void print_features(const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg) {
 	const std::vector<feature_t>& features = all_features.at(leaf).at(sub).at(reg);
 	const std::uint32_t value              = cpu.leaves.at(leaf).at(sub).at(reg);
 

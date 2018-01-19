@@ -11,6 +11,6 @@ struct feature_t
 	const char* description;
 };
 
-void print_features(leaf_t leaf, subleaf_t sub, register_t reg, const cpu_t& cpu);
+void print_features(const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg);
 
 #endif

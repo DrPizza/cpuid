@@ -264,8 +264,7 @@ int main(int, char*[]) {
 	cpu.local_apic_id = get_local_apic_id(regs);
 
 	for(leaf_t lf = leaf_t::basic_info; lf <= cpu.highest_leaf; ++lf) {
-		//enumerate_leaf(cpu, lf);
-		std::cout << std::hex << static_cast<std::uint32_t>(lf) << std::endl;
+		enumerate_leaf(cpu, lf);
 		enumerate_leaf_brute_force(cpu, lf);
 	}
 
@@ -273,9 +272,8 @@ int main(int, char*[]) {
 	cpu.highest_extended_leaf = leaf_t{ regs[eax] };
 
 	for(leaf_t lf = leaf_t::extended_limit; lf <= cpu.highest_extended_leaf; ++lf) {
-		//enumerate_leaf(cpu, lf);
-		std::cout << std::hex << static_cast<std::uint32_t>(lf) << std::endl;
-		enumerate_leaf_brute_force(cpu, lf);
+		enumerate_leaf(cpu, lf);
+		//enumerate_leaf_brute_force(cpu, lf);
 	}
 
 	for(const auto& lf : cpu.leaves) {

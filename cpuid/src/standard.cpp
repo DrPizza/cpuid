@@ -63,10 +63,8 @@ void print_version_info(const cpu_t& cpu) {
 			std::cout << "Intel reserved\n";
 			break;
 		}
-	}
-	std::cout << std::endl;
+		std::cout << std::endl;
 
-	if(cpu.vendor == intel) {
 		if(b.split.brand_id != 0ui32) {
 			std::cout << "\tbrand ID: ";
 			switch(b.split.brand_id) {
@@ -121,9 +119,9 @@ void print_version_info(const cpu_t& cpu) {
 	std::cout << std::endl;
 
 	std::cout << "\tFeature identifiers\n";
-	print_features(leaf_t::version_info, subleaf_t::main, edx, cpu);
+	print_features(cpu, leaf_t::version_info, subleaf_t::main, edx);
 	std::cout << "\n";
-	print_features(leaf_t::version_info, subleaf_t::main, ecx, cpu);
+	print_features(cpu, leaf_t::version_info, subleaf_t::main, ecx);
 	std::cout << std::endl;
 }
 
@@ -212,7 +210,7 @@ void print_mwait_parameters(const cpu_t& cpu) {
 void print_thermal_and_power(const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::thermal_and_power).at(subleaf_t::main);
 	std::cout << "Thermal and Power Management\n";
-	print_features(leaf_t::thermal_and_power, subleaf_t::main, eax, cpu);
+	print_features(cpu, leaf_t::thermal_and_power, subleaf_t::main, eax);
 	std::cout << std::endl;
 
 	if(cpu.vendor == intel) {
@@ -229,7 +227,7 @@ void print_thermal_and_power(const cpu_t& cpu) {
 		if(b.split.interrupt_thresholds) {
 			std::cout << b.split.interrupt_thresholds << " interrupt thresholds in Digital Thermal Sensor\n";
 		}
-		print_features(leaf_t::thermal_and_power, subleaf_t::main, ecx, cpu);
+		print_features(cpu, leaf_t::thermal_and_power, subleaf_t::main, ecx);
 		std::cout << std::endl;
 	}
 }
@@ -249,13 +247,13 @@ void enumerate_extended_features(cpu_t& cpu) {
 void print_extended_features(const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_features).at(subleaf_t::main);
 	std::cout << "Extended features\n";
-	print_features(leaf_t::extended_features, subleaf_t::main, ebx, cpu);
+	print_features(cpu, leaf_t::extended_features, subleaf_t::main, ebx);
 	std::cout << "\n";
 	if(cpu.vendor & intel) {
-		print_features(leaf_t::extended_features, subleaf_t::main, ecx, cpu);
+		print_features(cpu, leaf_t::extended_features, subleaf_t::main, ecx);
 		std::cout << "\n";
 	}
-	print_features(leaf_t::extended_features, subleaf_t::main, edx, cpu);
+	print_features(cpu, leaf_t::extended_features, subleaf_t::main, edx);
 	std::cout << std::endl;
 
 	const union
@@ -782,9 +780,9 @@ void print_processor_trace(const cpu_t& cpu) {
 		switch(sub.first) {
 		case subleaf_t::main:
 			std::cout << "Processor Trace\n";
-			print_features(leaf_t::processor_trace, subleaf_t::main, ebx, cpu);
+			print_features(cpu, leaf_t::processor_trace, subleaf_t::main, ebx);
 			std::cout << std::endl;
-			print_features(leaf_t::processor_trace, subleaf_t::main, ecx, cpu);
+			print_features(cpu, leaf_t::processor_trace, subleaf_t::main, ecx);
 			std::cout << std::endl;
 			break;
 		default:
@@ -984,9 +982,9 @@ void print_extended_signature_and_features(const cpu_t& cpu) {
 		std::cout << std::endl;
 	}
 	std::cout << "\tFeature identifiers\n";
-	print_features(leaf_t::extended_signature_and_features, subleaf_t::main, ecx, cpu);
+	print_features(cpu, leaf_t::extended_signature_and_features, subleaf_t::main, ecx);
 	std::cout << std::endl;
-	print_features(leaf_t::extended_signature_and_features, subleaf_t::main, edx, cpu);
+	print_features(cpu, leaf_t::extended_signature_and_features, subleaf_t::main, edx);
 	std::cout << std::endl;
 }
 
@@ -1030,16 +1028,16 @@ void print_ras_advanced_power_management(const cpu_t& cpu) {
 		std::cout << "\tMaximum seconds between readings to avoid wraps: " << a.split.max_wrap_time << "\n";
 		std::cout << std::endl;
 		std::cout << "RAS capabilities\n";
-		print_features(leaf_t::ras_advanced_power_management, subleaf_t::main, ebx, cpu);
+		print_features(cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, ebx);
 		std::cout << std::endl;
 		std::cout << "Advanced Power Management information\n";
 		std::cout << "\tCompute unit power sample time period: " << std::dec << regs[ecx] << "\n";
-		print_features(leaf_t::ras_advanced_power_management, subleaf_t::main, edx, cpu);
+		print_features(cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, edx);
 		std::cout << std::endl;
 		break;
 	case intel:
 		std::cout << "Advanced Power Management information\n";
-		print_features(leaf_t::ras_advanced_power_management, subleaf_t::main, edx, cpu);
+		print_features(cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, edx);
 		std::cout << std::endl;
 		break;
 	}
@@ -1084,7 +1082,7 @@ void print_address_limits(const cpu_t& cpu) {
 		std::cout << std::endl;
 
 		std::cout << "\tExtended features\n";
-		print_features(leaf_t::address_limits, subleaf_t::main, ebx, cpu);
+		print_features(cpu, leaf_t::address_limits, subleaf_t::main, ebx);
 		std::cout << std::endl;
 
 		std::cout << "\tSize identifiers\n";
@@ -1138,19 +1136,19 @@ void print_secure_virtual_machine(const cpu_t& cpu) {
 	std::cout << "\tSVM revision: " << a.split.svm_revision << "\n";
 	std::cout << "\tNumber of address space identifiers: " << regs[ebx] << "\n";
 	std::cout << "\n";
-	print_features(leaf_t::secure_virtual_machine, subleaf_t::main, edx, cpu);
+	print_features(cpu, leaf_t::secure_virtual_machine, subleaf_t::main, edx);
 	std::cout << std::endl;
 }
 
 void print_performance_optimization(const cpu_t& cpu) {
 	std::cout << "Performance Optimization\n";
-	print_features(leaf_t::performance_optimization, subleaf_t::main, eax, cpu);
+	print_features(cpu, leaf_t::performance_optimization, subleaf_t::main, eax);
 	std::cout << std::endl;
 }
 
 void print_instruction_based_sampling(const cpu_t& cpu) {
 	std::cout << "Instruction Based Sampling\n";
-	print_features(leaf_t::instruction_based_sampling, subleaf_t::main, eax, cpu);
+	print_features(cpu, leaf_t::instruction_based_sampling, subleaf_t::main, eax);
 	std::cout << std::endl;
 }
 
@@ -1189,8 +1187,8 @@ void print_lightweight_profiling(const cpu_t& cpu) {
 
 	std::cout << "Lightweight profiling\n";
 	std::cout << "\tLWP version: " << std::dec << c.split.version << "\n";
-	print_features(leaf_t::lightweight_profiling, subleaf_t::main, eax, cpu);
-	print_features(leaf_t::lightweight_profiling, subleaf_t::main, ecx, cpu);
+	print_features(cpu, leaf_t::lightweight_profiling, subleaf_t::main, eax);
+	print_features(cpu, leaf_t::lightweight_profiling, subleaf_t::main, ecx);
 	std::cout << std::endl;
 	std::cout << "\tControl block size/bytes: " << std::dec << (b.split.lwpcp_size * 4ui32) << "\n";
 	std::cout << "\tEvent record size/bytes: " << std::dec << b.split.event_size << "\n";
@@ -1250,7 +1248,7 @@ void print_encrypted_memory(const cpu_t& cpu) {
 	} b = { regs[ebx] };
 
 	std::cout << "Encrypted memory\n";
-	print_features(leaf_t::encrypted_memory, subleaf_t::main, eax, cpu);
+	print_features(cpu, leaf_t::encrypted_memory, subleaf_t::main, eax);
 	std::cout << std::endl;
 	std::cout << "\tC-bit position in PTE: " << std::dec << b.split.cbit_position << "\n";
 	std::cout << "\tPhysical address bit reduction: " << std::dec << b.split.physical_address_reduction << "\n";
