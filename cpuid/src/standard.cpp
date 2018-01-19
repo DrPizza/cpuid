@@ -226,18 +226,6 @@ void print_thermal_and_power(const cpu_t& cpu) {
 			} split;
 		} b = { regs[ebx] };
 
-		const union
-		{
-			std::uint32_t full;
-			struct
-			{
-				std::uint32_t hcf : 1;
-				std::uint32_t reserved_1 : 2;
-				std::uint32_t bias_preference : 1;
-				std::uint32_t reserved_2 : 28;
-			} split;
-		} c = { regs[ecx] };
-
 		if(b.split.interrupt_thresholds) {
 			std::cout << b.split.interrupt_thresholds << " interrupt thresholds in Digital Thermal Sensor\n";
 		}
@@ -348,6 +336,7 @@ void print_performance_monitoring(const cpu_t& cpu) {
 	std::cout << "\tCounter bit width: " << a.split.counter_bit_width << "\n";
 	std::cout << "\tFixed function counters: " << d.split.fixed_function_counters << "\n";
 	std::cout << "\tFixed function counter bit width: " << d.split.fixed_function_counter_width << "\n";
+	std::cout << "\tAnyThread: " << d.split.any_thread << "\n";
 
 	std::cout << "\tSupported counters\n";
 	if(0 == b.split.core_cycle) {
