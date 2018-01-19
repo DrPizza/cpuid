@@ -703,8 +703,8 @@ void print_sgx_info(const cpu_t& cpu) {
 				}
 				std::cout << std::endl;
 				std::cout << "\tMISCSELECT extended features: 0x" << std::setw(8) << std::setfill('0') << std::hex << regs[ebx] << "\n";
-				std::cout << "\tMaximum enclage size in 32-bit mode: " << (2ui64 << d.split.max_enclave_32_bit) << " bytes\n";
-				std::cout << "\tMaximum enclage size in 64-bit mode: " << (2ui64 << d.split.max_enclave_64_bit) << " bytes\n";
+				std::cout << "\tMaximum enclave size in 32-bit mode: " << (2ui64 << d.split.max_enclave_32_bit) << " bytes\n";
+				std::cout << "\tMaximum enclave size in 64-bit mode: " << (2ui64 << d.split.max_enclave_64_bit) << " bytes\n";
 				std::cout << std::endl;
 			}
 			break;
@@ -1087,8 +1087,8 @@ void print_address_limits(const cpu_t& cpu) {
 	switch(cpu.vendor) {
 	case amd:
 		std::cout << "Address size limits\n";
-		std::cout << "\tPhysical address size/bits: " << a.split.physical_address_size << "\n";
-		std::cout << "\tVirtual address size/bits: " << a.split.virtual_address_size << "\n";
+		std::cout << "\tPhysical address size/bits: " << std::dec << a.split.physical_address_size << "\n";
+		std::cout << "\tVirtual address size/bits: " << std::dec << a.split.virtual_address_size << "\n";
 		if(0 == a.split.guest_physical_size) {
 			std::cout << "\tGuest physical size matches machine physical size\n";
 		}
@@ -1125,8 +1125,8 @@ void print_address_limits(const cpu_t& cpu) {
 		break;
 	case intel:
 		std::cout << "Address size limits\n";
-		std::cout << "\tPhysical address size/bits: " << a.split.physical_address_size << "\n";
-		std::cout << "\tVirtual address size/bits: " << a.split.virtual_address_size << "\n";
+		std::cout << "\tPhysical address size/bits: " << std::dec << a.split.physical_address_size << "\n";
+		std::cout << "\tVirtual address size/bits: " << std::dec << a.split.virtual_address_size << "\n";
 		std::cout << std::endl;
 		break;
 	}

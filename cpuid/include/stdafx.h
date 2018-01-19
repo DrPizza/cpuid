@@ -110,6 +110,8 @@
 #endif
 
 #include <gsl/gsl>
+
+#define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
 #pragma warning(pop)
