@@ -47,9 +47,10 @@ enum struct leaf_t : std::uint32_t
 	tlb_1g_identifiers                = 0x8000'0019ui32,
 	performance_optimization          = 0x8000'001aui32,
 	instruction_based_sampling        = 0x8000'001bui32,
+	lightweight_profiling             = 0x8000'001cui32,
 	cache_properties                  = 0x8000'001dui32,
 	extended_apic                     = 0x8000'001eui32,
-	secure_memory_encryption          = 0x8000'001fui32,
+	encrypted_memory                  = 0x8000'001fui32,
 
 	none                              = 0x0000'0000ui32,
 };

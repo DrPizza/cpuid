@@ -165,10 +165,11 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::secure_virtual_machine            , {         amd            , nullptr                      , print_secure_virtual_machine         , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0000'0004ui32 } } },
 	{ leaf_t::tlb_1g_identifiers                , {         amd            , nullptr                      , print_1g_tlb                         , {} } },
 	{ leaf_t::performance_optimization          , {         amd            , nullptr                      , print_performance_optimization       , {} } },
-	{ leaf_t::instruction_based_sampling        , {         amd            , nullptr                      , print_instruction_based_sampling     , {} } },
+	{ leaf_t::instruction_based_sampling        , {         amd            , nullptr                      , print_instruction_based_sampling     , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0000'0400ui32 } } },
+	{ leaf_t::lightweight_profiling             , {         amd            , nullptr                      , print_lightweight_profiling          , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0000'8000ui32 } } },
 	{ leaf_t::cache_properties                  , {         amd            , enumerate_cache_properties   , print_cache_properties               , {} } },
-	{ leaf_t::extended_apic                     , {         amd            , nullptr                      , nullptr                              , {} } },
-	{ leaf_t::secure_memory_encryption          , {         amd            , nullptr                      , nullptr                              , {} } }
+	{ leaf_t::extended_apic                     , {         amd            , nullptr                      , print_extended_apic                  , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0040'0000ui32 } } },
+	{ leaf_t::encrypted_memory                  , {         amd            , nullptr                      , print_encrypted_memory               , {} } }
 };
 
 void print_generic(const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {

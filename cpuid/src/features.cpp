@@ -44,7 +44,7 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x1000'0000ui32, "AVX"               , "AVX instructions" },
 				{ intel | amd            , 0x2000'0000ui32, "F16C"              , "16-bit floating-point conversion instructions" },
 				{ intel | amd            , 0x4000'0000ui32, "RDRAND"            , "RDRAND instruction" },
-				{ any                    , 0x8000'0000ui32, "(hypervisor)"      , "Hypervisor guest" },
+				{ any                    , 0x8000'0000ui32, "RAZ"               , "Hypervisor guest" },
 			}},
 			{ edx, {
 				{ intel | amd | transmeta, 0x0000'0001ui32, "FPU"               , "x87 FPU on chip"},
@@ -280,9 +280,9 @@ const feature_map_t all_features = {
 	{ leaf_t::performance_optimization, {
 		{ subleaf_t::main, {
 			{ eax, {
-				{         amd            , 0x0000'0001ui32, "FP128"                  , "FP128"                                },
-				{         amd            , 0x0000'0002ui32, "MOVU"                   , "MOVU"                                 },
-				{         amd            , 0x0000'0004ui32, "FP256"                  , "FP256"                                },
+				{         amd            , 0x0000'0001ui32, "FP128"                  , "Full-width 128-bit SSE instructions"  },
+				{         amd            , 0x0000'0002ui32, "MOVU"                   , "Prefer MOVU to MOVL/MOVH"             },
+				{         amd            , 0x0000'0004ui32, "FP256"                  , "Full-width AVX256 instructions"       },
 			}}
 		}}
 	}},
@@ -303,7 +303,39 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-
+	{ leaf_t::lightweight_profiling, {
+		{ subleaf_t::main, {
+			{ eax, {
+				{         amd            , 0x0000'0001ui32, "LwpAvail"               , "Lightweight profiling supported"      },
+				{         amd            , 0x0000'0002ui32, "LwpVAL"                 , "LWPVAL instruction supported"         },
+				{         amd            , 0x0000'0004ui32, "LwpIRE"                 , "Instructions retired event"           },
+				{         amd            , 0x0000'0008ui32, "LwpBRE"                 , "Branch retired event"                 },
+				{         amd            , 0x0000'0010ui32, "LwpDME"                 , "DC miss event"                        },
+				{         amd            , 0x0000'0020ui32, "LwpCNH"                 , "Core clocks not halted"               },
+				{         amd            , 0x0000'0040ui32, "LwpRNH"                 , "Core reference clocks not halted"     },
+				{         amd            , 0x2000'0000ui32, "LwpCont"                , "Samping in continuous mode"           },
+				{         amd            , 0x4000'0000ui32, "LwpPTSC"                , "Performance TSC in event record"      },
+				{         amd            , 0x8000'0000ui32, "LwpInt"                 , "Interrupt on threshold overflow"      },
+			}},
+			{ ecx, {
+				{         amd            , 0x0000'0020ui32, "LwpDataAddress"         , "Data cache miss address valid"        },
+				{         amd            , 0x1000'0000ui32, "LwpBranchPrediction"    , "Branch prediction filtering supported"},
+				{         amd            , 0x2000'0000ui32, "LwpIpFiltering"         , "IP filtering supported"               },
+				{         amd            , 0x4000'0000ui32, "LwpCacheLevels"         , "Cache level filtering supported"      },
+				{         amd            , 0x8000'0000ui32, "LwpCacheLatency"        , "Cache latency filtering supported"    },
+			}}
+		}}
+	}},
+	{ leaf_t::encrypted_memory, {
+		{ subleaf_t::main, {
+			{ eax, {
+				{         amd            , 0x0000'0001ui32, "SME"                    , "Secure Memory Encryption supported"   },
+				{         amd            , 0x0000'0002ui32, "SEV"                    , "Secure Encrypted Virtualization supported" },
+				{         amd            , 0x0000'0004ui32, "PageFlushMsr"           , "Page Flush MSR available"             },
+				{         amd            , 0x0000'0008ui32, "SEV-ES"                 , "SEV Encrypted State available"        },
+			}}
+		}}
+	}}
 };
 
 void print_features(leaf_t leaf, subleaf_t sub, register_t reg, const cpu_t& cpu) {

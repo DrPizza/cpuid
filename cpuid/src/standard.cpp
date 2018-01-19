@@ -131,10 +131,6 @@ void print_serial_number(const cpu_t& cpu) {
 	using namespace fmt::literals;
 
 	std::cout << "Processor serial number: ";
-	if(0 == (cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main)[edx] & (1ui32 << 18ui32))) {
-		std::cout << "N/A" << std::endl;
-		return;
-	}
 	const register_set_t& regs = cpu.leaves.at(leaf_t::serial_number).at(subleaf_t::main);
 	switch(cpu.vendor) {
 	case intel:
@@ -252,12 +248,12 @@ void print_thermal_and_power(const cpu_t& cpu) {
 
 void enumerate_extended_features(cpu_t& cpu) {
 	register_set_t regs = { 0 };
-	cpuid(regs,  leaf_t::extended_features, subleaf_t::main);
+	cpuid(regs, leaf_t::extended_features, subleaf_t::main);
 	cpu.leaves[leaf_t::extended_features][subleaf_t::main] = regs;
 
 	const subleaf_t limit = subleaf_t{ regs[eax] };
 	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
-		cpuid(regs,  leaf_t::extended_features, sub);
+		cpuid(regs, leaf_t::extended_features, sub);
 		cpu.leaves[leaf_t::extended_features][sub] = regs;
 	}
 }
@@ -272,7 +268,7 @@ void print_extended_features(const cpu_t& cpu) {
 		std::cout << "\n";
 	}
 	print_features(leaf_t::extended_features, subleaf_t::main, edx, cpu);
-	std::cout << "\n";
+	std::cout << std::endl;
 
 	const union
 	{
@@ -287,15 +283,11 @@ void print_extended_features(const cpu_t& cpu) {
 
 	if(cpu.vendor & intel) {
 		std::cout << "\tMAWAU value: " << c.split.mawau_value << "\n";
+		std::cout << std::endl;
 	}
-
-	std::cout << std::endl;
 }
 
 void print_direct_cache_access(const cpu_t& cpu) {
-	if(0 == (cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main).at(ecx) & 0x0004'0000ui32)) {
-		return;
-	}
 	const register_set_t& regs = cpu.leaves.at(leaf_t::direct_cache_access).at(subleaf_t::main);
 	std::cout << "Direct Cache Access\n";
 	std::cout << "\t" << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n";
@@ -384,20 +376,25 @@ void print_performance_monitoring(const cpu_t& cpu) {
 
 void enumerate_extended_state(cpu_t& cpu) {
 	register_set_t regs = { 0 };
-	cpuid(regs,  leaf_t::extended_state, subleaf_t::extended_state_main);
+	cpuid(regs, leaf_t::extended_state, subleaf_t::extended_state_main);
 	cpu.leaves[leaf_t::extended_state][subleaf_t::extended_state_main] = regs;
-	cpuid(regs,  leaf_t::extended_state, subleaf_t::extended_state_sub);
+	cpuid(regs, leaf_t::extended_state, subleaf_t::extended_state_sub);
 	cpu.leaves[leaf_t::extended_state][subleaf_t::extended_state_sub] = regs;
 
 	const std::uint64_t valid_bits = regs[eax] | (gsl::narrow_cast<std::uint64_t>(regs[edx]) << 32ui64);
 	std::uint64_t mask = 0x1ui64 << 2ui64;
 	for(subleaf_t i = subleaf_t{ 2ui32 }; i < subleaf_t{ 63ui32 }; ++i, mask <<= 1ui64) {
 		if(valid_bits & mask) {
-			cpuid(regs,  leaf_t::extended_state, i);
-			if(regs[ebx] == 0ui32) {
-				continue;
+			cpuid(regs, leaf_t::extended_state, i);
+			if(regs[ebx] != 0ui32) {
+				cpu.leaves[leaf_t::extended_state][i] = regs;
 			}
-			cpu.leaves[leaf_t::extended_state][i] = regs;
+		}
+	}
+	if(cpu.vendor & amd) {
+		cpuid(regs, leaf_t::extended_state, subleaf_t{ 0x3e });
+		if(regs[ebx] != 0ui32) {
+			cpu.leaves[leaf_t::extended_state][subleaf_t{ 0x3e }] = regs;
 		}
 	}
 }
@@ -475,7 +472,8 @@ void print_extended_state(const cpu_t& cpu) {
 
 				const std::uint32_t idx = static_cast<std::uint32_t>(sub.first);
 				const char* const description = idx < saveables.size() ? saveables[idx].description
-				                                                       : "(unknown)";
+				                              : idx == 0xe3ui32        ? "Lightweight Profiling"
+				                              :                          "(unknown)";
 
 				std::cout << "\tExtended state for " << description << " (0x" << std::hex << std::setfill('0') << std::setw(2) << static_cast<std::uint32_t>(sub.first) << ") uses " << regs[eax] << " bytes at offset " << regs[ebx] << "\n";
 				if(c.split.set_in_xss) {
@@ -497,14 +495,14 @@ void print_extended_state(const cpu_t& cpu) {
 
 void enumerate_rdt_monitoring(cpu_t& cpu) {
 	register_set_t regs = { 0 };
-	cpuid(regs,  leaf_t::rdt_monitoring, subleaf_t::rdt_monitoring_main);
+	cpuid(regs, leaf_t::rdt_monitoring, subleaf_t::rdt_monitoring_main);
 	cpu.leaves[leaf_t::rdt_monitoring][subleaf_t::rdt_monitoring_main] = regs;
 
 	const std::uint32_t valid_bits = regs[edx];
 	std::uint32_t mask = 0x1ui32 << 1ui32;
 	for(subleaf_t i = subleaf_t::rdt_monitoring_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1ui32) {
 		if(valid_bits & mask) {
-			cpuid(regs,  leaf_t::rdt_monitoring, i);
+			cpuid(regs, leaf_t::rdt_monitoring, i);
 			cpu.leaves[leaf_t::rdt_monitoring][i] = regs;
 		}
 	}
@@ -551,14 +549,14 @@ void print_rdt_monitoring(const cpu_t& cpu) {
 
 void enumerate_rdt_allocation(cpu_t& cpu) {
 	register_set_t regs = { 0 };
-	cpuid(regs,  leaf_t::rdt_allocation, subleaf_t::rdt_allocation_main);
+	cpuid(regs, leaf_t::rdt_allocation, subleaf_t::rdt_allocation_main);
 	cpu.leaves[leaf_t::rdt_allocation][subleaf_t::rdt_allocation_main] = regs;
 
 	const std::uint32_t valid_bits = regs[edx];
 	std::uint32_t mask = 0x1ui32 << 1ui32;
 	for(subleaf_t i = subleaf_t::rdt_cat_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1ui32) {
 		if(valid_bits & mask) {
-			cpuid(regs,  leaf_t::rdt_allocation, i);
+			cpuid(regs, leaf_t::rdt_allocation, i);
 			cpu.leaves[leaf_t::rdt_allocation][i] = regs;
 		}
 	}
@@ -656,10 +654,10 @@ void print_rdt_allocation(const cpu_t& cpu) {
 
 void enumerate_sgx_info(cpu_t& cpu) {
 	register_set_t regs = { 0 };
-	cpuid(regs,  leaf_t::sgx_info, subleaf_t::sgx_capabilities);
+	cpuid(regs, leaf_t::sgx_info, subleaf_t::sgx_capabilities);
 	cpu.leaves[leaf_t::sgx_info][subleaf_t::sgx_capabilities] = regs;
 
-	cpuid(regs,  leaf_t::sgx_info, subleaf_t::sgx_attributes);
+	cpuid(regs, leaf_t::sgx_info, subleaf_t::sgx_attributes);
 	cpu.leaves[leaf_t::sgx_info][subleaf_t::sgx_attributes] = regs;
 
 	for(subleaf_t i = subleaf_t{ 2 }; ; ++i) {
@@ -794,11 +792,12 @@ void print_extended_signature_and_features(const cpu_t& cpu) {
 			std::uint32_t full;
 			struct
 			{
-				std::uint32_t reserved_1   : 28;
+				std::uint32_t brand_id     : 16;
+				std::uint32_t reserved_1   : 12;
 				std::uint32_t package_type : 4;
 			} split;
 		} b = { regs[ebx] };
-
+		std::cout << "\tBrand ID: " << std::setw(2) << std::setfill('0') << std::hex << b.split.brand_id << "\n";
 		std::cout << "\tPackage: ";
 		switch(b.split.package_type) {
 		case 0x0:
@@ -993,5 +992,110 @@ void print_performance_optimization(const cpu_t& cpu) {
 void print_instruction_based_sampling(const cpu_t& cpu) {
 	std::cout << "Instruction Based Sampling\n";
 	print_features(leaf_t::instruction_based_sampling, subleaf_t::main, eax, cpu);
+	std::cout << std::endl;
+}
+
+void print_lightweight_profiling(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.leaves.at(leaf_t::lightweight_profiling).at(subleaf_t::main);
+
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t lwpcp_size   : 8;
+			std::uint32_t event_size   : 8;
+			std::uint32_t max_event_id : 8;
+			std::uint32_t event_offset : 8;
+		} split;
+	} b = { regs[ebx] };
+
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t latency_max             : 5;
+			std::uint32_t data_address_valid      : 1;
+			std::uint32_t latency_rounding        : 3;
+			std::uint32_t version                 : 7;
+			std::uint32_t minimum_buffer_size     : 8;
+			std::uint32_t reserved_1              : 4;
+			std::uint32_t branch_prediction       : 1;
+			std::uint32_t ip_filtering            : 1;
+			std::uint32_t cache_level_filtering   : 1;
+			std::uint32_t cache_latency_filtering : 1;
+		} split;
+	} c = { regs[ecx] };
+
+	std::cout << "Lightweight profiling\n";
+	std::cout << "\tLWP version: " << std::dec << c.split.version << "\n";
+	print_features(leaf_t::lightweight_profiling, subleaf_t::main, eax, cpu);
+	print_features(leaf_t::lightweight_profiling, subleaf_t::main, ecx, cpu);
+	std::cout << std::endl;
+	std::cout << "\tControl block size/bytes: " << std::dec << (b.split.lwpcp_size * 4ui32) << "\n";
+	std::cout << "\tEvent record size/bytes: " << std::dec << b.split.event_size << "\n";
+	std::cout << "\tMaximum EventID: " << std::dec << b.split.max_event_id << "\n";
+	std::cout << "\tOffset to first interval/bytes: " << std::dec << b.split.event_offset << "\n";
+	std::cout << "\tLatency counter size/bits: " << std::dec << c.split.latency_max << "\n";
+	std::cout << "\tLatency counter rounding: " << std::dec << c.split.latency_rounding << "\n";
+	std::cout << "\tMinimum ring buffer size/32 events: " << std::dec << c.split.minimum_buffer_size << "\n";
+	std::cout << std::endl;
+}
+
+void print_extended_apic(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main);
+
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t core_id          : 8;
+			std::uint32_t threads_per_core : 8;
+			std::uint32_t reserved_1       : 16;
+		} split;
+	} b = { regs[ebx] };
+
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t node_id             : 8;
+			std::uint32_t nodes_per_processor : 3;
+			std::uint32_t reserved_1          : 21;
+		} split;
+	} c = { regs[ecx] };
+
+	std::cout << "Extended APIC\n";
+	std::cout << "\tExtended APIC ID: " << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n";
+	std::cout << "\tCore ID: " << std::setw(2) << std::setfill('0') << std::hex << b.split.core_id << "\n";
+	std::cout << "\tThreads per core: " << std::dec << (b.split.threads_per_core + 1ui32) << "\n";
+	std::cout << "\tNode ID: " << std::setw(2) << std::setfill('0') << std::hex << c.split.node_id << "\n";
+	std::cout << "\tNodes per processor: " << std::dec << (c.split.nodes_per_processor + 1ui32) << "\n";
+	std::cout << std::endl;
+}
+
+void print_encrypted_memory(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.leaves.at(leaf_t::encrypted_memory).at(subleaf_t::main);
+
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t cbit_position              : 6;
+			std::uint32_t physical_address_reduction : 6;
+		} split;
+	} b = { regs[ebx] };
+
+	std::cout << "Encrypted memory\n";
+	print_features(leaf_t::encrypted_memory, subleaf_t::main, eax, cpu);
+	std::cout << std::endl;
+	std::cout << "\tC-bit position in PTE: " << std::dec << b.split.cbit_position << "\n";
+	std::cout << "\tPhysical address bit reduction: " << std::dec << b.split.physical_address_reduction << "\n";
+	std::cout << "\tNumber of simultaneous encrypted guests: " << std::dec << regs[ecx] << "\n";
+	std::cout << "\tMinimum ASID for an SEV-enabled, SEV-ES-disabled gust: " << std::hex << regs[edx] << "\n";
 	std::cout << std::endl;
 }
