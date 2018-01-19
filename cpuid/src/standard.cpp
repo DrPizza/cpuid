@@ -703,8 +703,8 @@ void print_sgx_info(const cpu_t& cpu) {
 				}
 				std::cout << std::endl;
 				std::cout << "\tMISCSELECT extended features: 0x" << std::setw(8) << std::setfill('0') << std::hex << regs[ebx] << "\n";
-				std::cout << "\tMaximum enclave size in 32-bit mode: " << (2ui64 << d.split.max_enclave_32_bit) << " bytes\n";
-				std::cout << "\tMaximum enclave size in 64-bit mode: " << (2ui64 << d.split.max_enclave_64_bit) << " bytes\n";
+				std::cout << "\tMaximum enclave size in 32-bit mode: " << std::dec << (2ui64 << d.split.max_enclave_32_bit) << " bytes\n";
+				std::cout << "\tMaximum enclave size in 64-bit mode: " << std::dec << (2ui64 << d.split.max_enclave_64_bit) << " bytes\n";
 				std::cout << std::endl;
 			}
 			break;
