@@ -54,6 +54,10 @@ enum struct leaf_t : std::uint32_t
 	xen_hvm_features                  = 0x4000'0004ui32, xen_hvm_features_offset           = 0x4000'0104ui32,
 	xen_pv_features                   = 0x4000'0005ui32, xen_pv_features_offset            = 0x4000'0105ui32,
 
+	vmware_timing                     = 0x4000'0010ui32,
+
+	kvm_features                      = 0x4000'0001ui32,
+
 	extended_limit                    = 0x8000'0000ui32,
 	extended_signature_and_features   = 0x8000'0001ui32,
 	brand_string_0                    = 0x8000'0002ui32,

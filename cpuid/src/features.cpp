@@ -287,38 +287,50 @@ const feature_map_t all_features = {
 	{ leaf_t::xen_time, {
 		{ subleaf_t::xen_time_main, {
 			{ eax, {
-				{           xen_hvm      , 0x0000'0001ui32, "VTSC"                   , "Virtual RDTSC" },
-				{           xen_hvm      , 0x0000'0002ui32, "SafeRDTSC"              , "Host has safe RDTSC" },
-				{           xen_hvm      , 0x0000'0004ui32, "RDTSCP"                 , "Host has RDTSCP" },
+				{ xen_hvm                , 0x0000'0001ui32, "VTSC"                   , "Virtual RDTSC" },
+				{ xen_hvm                , 0x0000'0002ui32, "SafeRDTSC"              , "Host has safe RDTSC" },
+				{ xen_hvm                , 0x0000'0004ui32, "RDTSCP"                 , "Host has RDTSCP" },
 			}}
 		}}
 	}},
 	{ leaf_t::xen_time_offset, {
 		{ subleaf_t::xen_time_main, {
 			{ eax, {
-				{           xen_hvm      , 0x0000'0001ui32, "VTSC"                   , "Virtual RDTSC" },
-				{           xen_hvm      , 0x0000'0002ui32, "SafeRDTSC"              , "Host has safe RDTSC" },
-				{           xen_hvm      , 0x0000'0004ui32, "RDTSCP"                 , "Host has RDTSCP" },
+				{ xen_hvm                , 0x0000'0001ui32, "VTSC"                   , "Virtual RDTSC" },
+				{ xen_hvm                , 0x0000'0002ui32, "SafeRDTSC"              , "Host has safe RDTSC" },
+				{ xen_hvm                , 0x0000'0004ui32, "RDTSCP"                 , "Host has RDTSCP" },
 			}}
 		}}
 	}},
 	{ leaf_t::xen_hvm_features, {
 		{ subleaf_t::xen_time_main, {
 			{ eax, {
-				{           xen_hvm      , 0x0000'0001ui32, "VAPIC"                  , "Virtualized APIC registers" },
-				{           xen_hvm      , 0x0000'0002ui32, "Vx2APIC"                , "Virtualized x2APIC registers" },
-				{           xen_hvm      , 0x0000'0004ui32, "IOMMU"                  , "IOMMU mappings from other domains exist" },
-				{           xen_hvm      , 0x0000'0008ui32, "VCPU"                   , "VCPU ID is present" },
+				{ xen_hvm                , 0x0000'0001ui32, "VAPIC"                  , "Virtualized APIC registers" },
+				{ xen_hvm                , 0x0000'0002ui32, "Vx2APIC"                , "Virtualized x2APIC registers" },
+				{ xen_hvm                , 0x0000'0004ui32, "IOMMU"                  , "IOMMU mappings from other domains exist" },
+				{ xen_hvm                , 0x0000'0008ui32, "VCPU"                   , "VCPU ID is present" },
 			}}
 		}}
 	}},
 	{ leaf_t::xen_hvm_features_offset, {
 		{ subleaf_t::xen_time_main, {
 			{ eax, {
-				{           xen_hvm      , 0x0000'0001ui32, "VAPIC"                  , "Virtualized APIC registers" },
-				{           xen_hvm      , 0x0000'0002ui32, "Vx2APIC"                , "Virtualized x2APIC registers" },
-				{           xen_hvm      , 0x0000'0004ui32, "IOMMU"                  , "IOMMU mappings from other domains exist" },
-				{           xen_hvm      , 0x0000'0008ui32, "VCPU"                   , "VCPU ID is present" },
+				{ xen_hvm                , 0x0000'0001ui32, "VAPIC"                  , "Virtualized APIC registers" },
+				{ xen_hvm                , 0x0000'0002ui32, "Vx2APIC"                , "Virtualized x2APIC registers" },
+				{ xen_hvm                , 0x0000'0004ui32, "IOMMU"                  , "IOMMU mappings from other domains exist" },
+				{ xen_hvm                , 0x0000'0008ui32, "VCPU"                   , "VCPU ID is present" },
+			}}
+		}}
+	}},
+	{ leaf_t::kvm_features, {
+		{ subleaf_t::main, {
+			{ eax, {
+				{ kvm                    , 0x0000'0001ui32, "CLOCKSOURCE"            , "kvmclock MSRs available" },
+				{ kvm                    , 0x0000'0002ui32, "NOP_IO_DELAY"           , "Don't delay PIO operations" },
+				{ kvm                    , 0x0000'0004ui32, "MMU_OP"                 , "Deprecated" },
+				{ kvm                    , 0x0000'0008ui32, "CLOCKSOURCE_2"          , "More kvmclock MSRs available" },
+				{ kvm                    , 0x0000'0010ui32, "ASYNC_PF"               , "Async PF supported" },
+				{ kvm                    , 0x0100'0000ui32, "CLOCKSOURCE_STABLE"     , "Guest-side clock should not be warped" },
 			}}
 		}}
 	}},
