@@ -93,6 +93,7 @@
 #include <utility>
 #include <memory>
 #include <tuple>
+#include <thread>
 #include <cstdlib>
 
 // disable additionally for third-party libraries
