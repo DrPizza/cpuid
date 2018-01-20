@@ -859,7 +859,7 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 		return print_size(cache_size * 1024 * 512);
 	};
 
-	switch(cpu.vendor) {
+	switch(cpu.vendor & any_silicon) {
 	case amd:
 		std::cout << "Level 2 TLB\n";
 		std::cout << "\t" << print_tlb(a.split.d, "data", "2M") << "\n";

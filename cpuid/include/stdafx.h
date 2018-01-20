@@ -92,6 +92,7 @@
 #include <type_traits>
 #include <utility>
 #include <memory>
+#include <tuple>
 #include <cstdlib>
 
 // disable additionally for third-party libraries

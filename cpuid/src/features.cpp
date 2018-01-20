@@ -8,7 +8,7 @@
 #include <map>
 #include <vector>
 
-using feature_map_t = std::map<leaf_t, std::map<subleaf_t, std::map<register_t, std::vector<feature_t>>>>;
+using feature_map_t = std::multimap<leaf_t, std::map<subleaf_t, std::map<register_t, std::vector<feature_t>>>>;
 
 const feature_map_t all_features = {
 	{ leaf_t::version_info, {
@@ -173,6 +173,152 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'0004ui32, "SRO"               , "Single-Range Output" },
 				{ intel                  , 0x0000'0008ui32, "TT"                , "Trace Transport output" },
 				{ intel                  , 0x8000'0000ui32, "IPLIP"             , "IP payloads have LIP values" },
+			}}
+		}}
+	}},
+	{ leaf_t::hyper_v_features, {
+		{ subleaf_t::main, {
+			{ edx, {
+				{ hyper_v                , 0x0000'0001ui32, "MWAIT"                , "MWAIT available" },
+				{ hyper_v                , 0x0000'0002ui32, "GDBG"                 , "Guest debugging" },
+				{ hyper_v                , 0x0000'0004ui32, "PM"                   , "Performance Monitoring" },
+				{ hyper_v                , 0x0000'0008ui32, "DynamicPartitioning"  , "Physical CPU dynamic partitioning" },
+				{ hyper_v                , 0x0000'0010ui32, "XMMHypercallInput"    , "Hypercall parameters in XMM registers" },
+				{ hyper_v                , 0x0000'0020ui32, "GuestIdle"            , "Virtual guest idle state available" },
+				{ hyper_v                , 0x0000'0040ui32, "HypervisorSleep"      , "Hypervisor sleep state available" },
+				{ hyper_v                , 0x0000'0080ui32, "QueryNUMA"            , "NUMA distances queryable" },
+				{ hyper_v                , 0x0000'0100ui32, "TimerFrequencies"     , "Determining timer frequencies supported" },
+				{ hyper_v                , 0x0000'0200ui32, "MCEInject"            , "Support injecting MCEs" },
+				{ hyper_v                , 0x0000'0400ui32, "CrashMSRs"            , "Guest crash MSRs available" },
+				{ hyper_v                , 0x0000'0800ui32, "DebugMSRs"            , "Debug MSRs available" },
+				{ hyper_v                , 0x0000'1000ui32, "NPIEP"                , "NPIEP supported" },
+				{ hyper_v                , 0x0000'2000ui32, "DisableHypervisor"    , "Disable hypervisor supported" },
+				{ hyper_v                , 0x0000'4000ui32, "ExtendedGvaRanges"    , "Extended GVA ranges for flush" },
+				{ hyper_v                , 0x0000'8000ui32, "XMMHypercallOutput"   , "Hypercall results in XMM registers" },
+				{ hyper_v                , 0x0002'0000ui32, "SintPollingMode"      , "Sint polling mode available" },
+				{ hyper_v                , 0x0004'0000ui32, "HypercallMsrLock"     , "Hypercall MSR lock available" },
+				{ hyper_v                , 0x0008'0000ui32, "SyntheticTimers"      , "Use direct synthetic timers" },
+			}}
+		}}
+	}},
+	{ leaf_t::hyper_v_enlightenment_recs, {
+		{ subleaf_t::main, {
+			{ eax, {
+				{ hyper_v                , 0x0000'0001ui32, "MOV_CR3"              , "Use hypercall instead of MOV CR3" },
+				{ hyper_v                , 0x0000'0002ui32, "INVLPG"               , "Use hypercall instead of INVLPG or MOV CR3" },
+				{ hyper_v                , 0x0000'0004ui32, "IPI"                  , "Use hypercall instead of inter-processor interrupts" },
+				{ hyper_v                , 0x0000'0008ui32, "APIC_MSR"             , "Use MSRs for APIC registers" },
+				{ hyper_v                , 0x0000'0010ui32, "RESET_MSR"            , "Use MSR for system reset" },
+				{ hyper_v                , 0x0000'0020ui32, "RelaxTimings"         , "Use relaxed timings/disable watchdogs" },
+				{ hyper_v                , 0x0000'0040ui32, "DMARemapping"         , "Use DMA remapping" },
+				{ hyper_v                , 0x0000'0080ui32, "InterruptRemapping"   , "Use interrupt remapping" },
+				{ hyper_v                , 0x0000'0100ui32, "x2_APIC_MSR"          , "Use x2 APIC MSRs" },
+				{ hyper_v                , 0x0000'0200ui32, "DeprecateAutoEOI"     , "Deprecate AutoEOI" },
+				{ hyper_v                , 0x0000'0400ui32, "SyntheticClusterIpi"  , "Use SyntheticClusterIpi hypercall" },
+				{ hyper_v                , 0x0000'0800ui32, "ExProcessorMasks"     , "Use ExProcessorMasks interface" },
+				{ hyper_v                , 0x0000'1000ui32, "Nested"               , "Running in a nested partition" },
+				{ hyper_v                , 0x0000'2000ui32, "INT_MBEC"             , "Use INT for MBEC system calls" },
+				{ hyper_v                , 0x0000'4000ui32, "VMCS"                 , "Use VMCS for nested hypervisor" },
+			}}
+		}}
+	}},
+	{ leaf_t::hyper_v_implementation_hardware, {
+		{ subleaf_t::main, {
+			{ eax, {
+				{ hyper_v                , 0x0000'0001ui32, "APIC_OVERLAY"          , "APIC overlay assist" },
+				{ hyper_v                , 0x0000'0002ui32, "MSR_BITMAPS"           , "MSR bitmaps" },
+				{ hyper_v                , 0x0000'0004ui32, "PERF_COUNTERS"         , "Architectural performance counters" },
+				{ hyper_v                , 0x0000'0008ui32, "SLAT"                  , "Second Level Address Translation" },
+				{ hyper_v                , 0x0000'0010ui32, "DMA_REMAP"             , "DMA remapping" },
+				{ hyper_v                , 0x0000'0020ui32, "INTERRUPT_REMAP"       , "Interrupt remapping" },
+				{ hyper_v                , 0x0000'0040ui32, "MEMORY_SCRUBBER"       , "Memory patrol scrubber" },
+				{ hyper_v                , 0x0000'0080ui32, "DMA_PROTECTION"        , "DMA protection" },
+				{ hyper_v                , 0x0000'0100ui32, "HPET"                  , "HPET" },
+				{ hyper_v                , 0x0000'0200ui32, "SyntheticTimers"       , "Volatile synthetic timers" },
+			}}
+		}}
+	}},
+	{ leaf_t::hyper_v_root_cpu_management, {
+		{ subleaf_t::main, {
+			{ eax, {
+				{ hyper_v                , 0x0000'0001ui32, "StartLogicalProcessor" , "Start logical processor" },
+				{ hyper_v                , 0x0000'0002ui32, "CreateRootVirtProc"    , "Create root virtual processor" },
+				{ hyper_v                , 0x8000'0000ui32, "ReservedIdentityBit"   , "Reserved identity bit" },
+			}},
+			{ ebx, {
+				{ hyper_v                , 0x0000'0001ui32, "ProcessorPowerMgmt"    , "Processor power management" },
+				{ hyper_v                , 0x0000'0002ui32, "MwaitIdleStates"       , "MWAIT idle states" },
+				{ hyper_v                , 0x0000'0004ui32, "LogicalProcessorIdling", "Logical processor idling" },
+			}}
+		}}
+	}},
+	{ leaf_t::hyper_v_shared_virtual_memory, {
+		{ subleaf_t::main, {
+			{ eax, {
+				{ hyper_v                , 0x0000'0001ui32, "SvmSupported"          , "Shared virtual memory supported" },
+			}},
+		}}
+	}},
+	{ leaf_t::hyper_v_nested_hypervisor, {
+		{ subleaf_t::main, {
+			{ eax, {
+				{ hyper_v                , 0x0000'0004ui32, "AccessSynIcRegs"       , "SynIC MSRs" },
+				{ hyper_v                , 0x0000'0010ui32, "AccessIntrCtrlRegs"    , "Interrupt Control MSRs" },
+				{ hyper_v                , 0x0000'0020ui32, "AccessHypercallMsrs"   , "Hypercall MSRs" },
+				{ hyper_v                , 0x0000'0040ui32, "AccessVpIndex"         , "VP Index MSRs" },
+				{ hyper_v                , 0x0000'0100ui32, "AccessReenlightenment" , "Reenlightenment controls" },
+			}},
+			{ edx, {
+				{ hyper_v                , 0x0000'0010ui32, "XMMHypercallInput"     , "Hypercall parameters in XMM registers" },
+				{ hyper_v                , 0x0000'8000ui32, "XMMHypercallOutput"    , "Hypercall results in XMM registers" },
+				{ hyper_v                , 0x0002'0000ui32, "SintPollingAvailable"  , "Sint polling mode available" },
+			}},
+		}}
+	}},
+	{ leaf_t::hyper_v_nested_features, {
+		{ subleaf_t::main, {
+			{ eax, {
+				{ hyper_v                , 0x0002'0000ui32, "DirectVirtualFlush"    , "Direct virtual flush hypercalls" },
+				{ hyper_v                , 0x0004'0010ui32, "FlushGuestPhysical"    , "HvFlushGuestPhysicalAddressXxx hypercalls" },
+				{ hyper_v                , 0x0008'0020ui32, "EnlightenedMSRBitmap"  , "Enlightened MSR bitmap" },
+			}},
+		}}
+	}},
+	{ leaf_t::xen_time, {
+		{ subleaf_t::xen_time_main, {
+			{ eax, {
+				{           xen_hvm      , 0x0000'0001ui32, "VTSC"                   , "Virtual RDTSC" },
+				{           xen_hvm      , 0x0000'0002ui32, "SafeRDTSC"              , "Host has safe RDTSC" },
+				{           xen_hvm      , 0x0000'0004ui32, "RDTSCP"                 , "Host has RDTSCP" },
+			}}
+		}}
+	}},
+	{ leaf_t::xen_time_offset, {
+		{ subleaf_t::xen_time_main, {
+			{ eax, {
+				{           xen_hvm      , 0x0000'0001ui32, "VTSC"                   , "Virtual RDTSC" },
+				{           xen_hvm      , 0x0000'0002ui32, "SafeRDTSC"              , "Host has safe RDTSC" },
+				{           xen_hvm      , 0x0000'0004ui32, "RDTSCP"                 , "Host has RDTSCP" },
+			}}
+		}}
+	}},
+	{ leaf_t::xen_hvm_features, {
+		{ subleaf_t::xen_time_main, {
+			{ eax, {
+				{           xen_hvm      , 0x0000'0001ui32, "VAPIC"                  , "Virtualized APIC registers" },
+				{           xen_hvm      , 0x0000'0002ui32, "Vx2APIC"                , "Virtualized x2APIC registers" },
+				{           xen_hvm      , 0x0000'0004ui32, "IOMMU"                  , "IOMMU mappings from other domains exist" },
+				{           xen_hvm      , 0x0000'0008ui32, "VCPU"                   , "VCPU ID is present" },
+			}}
+		}}
+	}},
+	{ leaf_t::xen_hvm_features_offset, {
+		{ subleaf_t::xen_time_main, {
+			{ eax, {
+				{           xen_hvm      , 0x0000'0001ui32, "VAPIC"                  , "Virtualized APIC registers" },
+				{           xen_hvm      , 0x0000'0002ui32, "Vx2APIC"                , "Virtualized x2APIC registers" },
+				{           xen_hvm      , 0x0000'0004ui32, "IOMMU"                  , "IOMMU mappings from other domains exist" },
+				{           xen_hvm      , 0x0000'0008ui32, "VCPU"                   , "VCPU ID is present" },
 			}}
 		}}
 	}},
@@ -358,15 +504,26 @@ const feature_map_t all_features = {
 };
 
 void print_features(const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg) {
-	const std::vector<feature_t>& features = all_features.at(leaf).at(sub).at(reg);
-	const std::uint32_t value              = cpu.leaves.at(leaf).at(sub).at(reg);
+	const auto range = all_features.equal_range(leaf);
+	for(auto it = range.first; it != range.second; ++it) {
+		if(it->second.find(sub) == it->second.end()) {
+			continue;
+		}
+		auto subleaf = it->second.at(sub);
+		if(subleaf.find(reg) == subleaf.end()) {
+			continue;
+		}
 
-	for(const feature_t& f : features) {
-		if(0 != (cpu.vendor & f.vendor)) {
-			if(0 != (value & f.mask)) {
-				std::cout << std::setw(24) << std::setfill(' ') << f.mnemonic << " \x1b[32;1m[+]\x1b[0m " << f.description << "\n";
-			} else {
-				std::cout << std::setw(24) << std::setfill(' ') << f.mnemonic << " \x1b[31;1m[-]\x1b[0m " << f.description << "\n";
+		const std::vector<feature_t>& features = subleaf.at(reg);
+		const std::uint32_t value = cpu.leaves.at(leaf).at(sub).at(reg);
+
+		for(const feature_t& f : features) {
+			if(cpu.vendor & f.vendor) {
+				if(0 != (value & f.mask)) {
+					std::cout << std::setw(24) << std::setfill(' ') << f.mnemonic << " \x1b[32;1m[+]\x1b[0m " << f.description << "\n";
+				} else {
+					std::cout << std::setw(24) << std::setfill(' ') << f.mnemonic << " \x1b[31;1m[-]\x1b[0m " << f.description << "\n";
+				}
 			}
 		}
 	}

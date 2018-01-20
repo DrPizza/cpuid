@@ -79,6 +79,7 @@
     <ClCompile Include="src\cpuid.cpp" />
     <ClCompile Include="src\docopt.cpp" />
     <ClCompile Include="src\features.cpp" />
+    <ClCompile Include="src\hypervisors.cpp" />
     <ClCompile Include="src\standard.cpp" />
     <ClCompile Include="src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -93,6 +94,7 @@
     <ClInclude Include="include\docopt_private.h" />
     <ClInclude Include="include\docopt_util.h" />
     <ClInclude Include="include\features.hpp" />
+    <ClInclude Include="include\hypervisors.hpp" />
     <ClInclude Include="include\standard.hpp" />
     <ClInclude Include="include\stdafx.h" />
     <ClInclude Include="include\topology.hpp" />

@@ -21,7 +21,10 @@ void print_basic_info(const cpu_t& cpu) {
 		std::array<char, 12> vndr;
 	} data = { regs[ebx], regs[edx], regs[ecx] };
 
-	std::cout << "\t   vendor: " << data.vndr.data() << "\n";
+	std::cout << "\tVendor identifier: ";
+	std::cout.write(data.vndr.data(), gsl::narrow_cast<std::streamsize>(data.vndr.size()));
+	std::cout << "\n";
+	std::cout << "\tVendor name: " << to_string(cpu.vendor) << std::endl;
 	std::cout << std::endl;
 }
 
@@ -45,7 +48,7 @@ void print_version_info(const cpu_t& cpu) {
 	          << "\t   family: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.family << "\n"
 	          << "\t    model: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.model << "\n"
 	          << "\t stepping: 0x" << std::setw(2) << std::setfill('0') << std::hex << cpu.model.stepping << "\n";
-	if(cpu.vendor == intel) {
+	if(cpu.vendor & intel) {
 		std::cout << "\t";
 		switch(a.split.type) {
 		case 0:
@@ -128,7 +131,7 @@ void print_serial_number(const cpu_t& cpu) {
 
 	std::cout << "Processor serial number: ";
 	const register_set_t& regs = cpu.leaves.at(leaf_t::serial_number).at(subleaf_t::main);
-	switch(cpu.vendor) {
+	switch(cpu.vendor & any_silicon) {
 	case intel:
 		{
 			const std::uint32_t top = cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main)[eax];
@@ -213,7 +216,7 @@ void print_thermal_and_power(const cpu_t& cpu) {
 	print_features(cpu, leaf_t::thermal_and_power, subleaf_t::main, eax);
 	std::cout << std::endl;
 
-	if(cpu.vendor == intel) {
+	if(cpu.vendor & intel) {
 		const union
 		{
 			std::uint32_t full;
@@ -1020,7 +1023,7 @@ void print_ras_advanced_power_management(const cpu_t& cpu) {
 		} split;
 	} a = { regs[eax] };
 
-	switch(cpu.vendor) {
+	switch(cpu.vendor & any_silicon) {
 	case amd:
 		std::cout << "Processor feedback capabilities\n";
 		std::cout << "\tNumber of monitors: " << std::dec << a.split.number_of_monitors << "\n";
@@ -1073,7 +1076,7 @@ void print_address_limits(const cpu_t& cpu) {
 		} split;
 	} c = { regs[ecx] };
 
-	switch(cpu.vendor) {
+	switch(cpu.vendor & any_silicon) {
 	case amd:
 		std::cout << "Address size limits\n";
 		std::cout << "\tPhysical address size/bits: " << std::dec << a.split.physical_address_size << "\n";

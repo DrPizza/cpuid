@@ -5,10 +5,12 @@
 #include "features.hpp"
 #include "standard.hpp"
 #include "topology.hpp"
+#include "hypervisors.hpp"
 
 #include <map>
 #include <iostream>
 #include <iomanip>
+#include <tuple>
 
 #include <gsl/gsl>
 
@@ -42,9 +44,23 @@ vendor_t get_vendor_from_name(const register_set_t& regs) {
 		{ to_array("UMC UMC UMC "), umc },
 		{ to_array("VIA VIA VIA "), via },
 		{ to_array("Vortex86 SoC"), vortex },
+	};
+
+	const union
+	{
+		std::array<std::uint32_t, 3> registers;
+		std::array<char, 12> vndr;
+	} data = { regs[ebx], regs[edx], regs[ecx] };
+
+	const auto it = vendors.find(data.vndr);
+	return it != vendors.end() ? it->second : unknown;
+}
+
+vendor_t get_hypervisor_from_name(const register_set_t& regs) {
+	static const std::map<std::array<char, 12>, vendor_t> vendors = {
 		{ to_array("bhyve byhve "), bhyve },
 		{ to_array("KVMKVMKVM\0\0\0"), kvm },
-		{ to_array("Microsoft hv"), hyper_v },
+		{ to_array("Microsoft Hv"), hyper_v },
 		{ to_array(" lrpepyh vr\0"), parallels },
 		{ to_array("VMwareVMware"), vmware },
 		{ to_array("XenVMMXenVMM"), xen_hvm }
@@ -54,7 +70,7 @@ vendor_t get_vendor_from_name(const register_set_t& regs) {
 	{
 		std::array<std::uint32_t, 3> registers;
 		std::array<char, 12> vndr;
-	} data = { regs[ebx], regs[edx], regs[ecx] };
+	} data = { regs[ebx], regs[ecx], regs[edx] };
 
 	const auto it = vendors.find(data.vndr);
 	return it != vendors.end() ? it->second : unknown;
@@ -134,7 +150,7 @@ struct leaf_descriptor_t
 void print_null(const cpu_t&) noexcept {
 }
 
-const std::map<leaf_t, leaf_descriptor_t> descriptors = {
+const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::basic_info                     , { any                    , nullptr                        , print_basic_info                     , {} } },
 	{ leaf_t::version_info                   , { any                    , nullptr                        , print_version_info                   , {} } },
 	{ leaf_t::cache_and_tlb                  , { intel                  , nullptr                        , print_cache_tlb_info                 , {} } },
@@ -155,6 +171,34 @@ const std::map<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::processor_frequency            , { intel                  , nullptr                        , print_processor_frequency            , {} } },
 	{ leaf_t::system_on_chip_vendor          , { intel                  , enumerate_system_on_chip_vendor, print_system_on_chip_vendor          , {} } },
 	{ leaf_t::deterministic_tlb              , { intel                  , enumerate_deterministic_tlb    , print_deterministic_tlb              , {} } },
+
+	{ leaf_t::hypervisor_limit               , { any                    , nullptr                        , print_hypervisor_limit               , {} } },
+
+	{ leaf_t::hyper_v_signature              , { hyper_v                , nullptr                        , print_hyper_v_signature              , {} } },
+	{ leaf_t::hyper_v_system_identity        , { hyper_v                , nullptr                        , print_hyper_v_system_identity        , {} } },
+	{ leaf_t::hyper_v_features               , { hyper_v                , nullptr                        , print_hyper_v_features               , {} } },
+	{ leaf_t::hyper_v_enlightenment_recs     , { hyper_v                , nullptr                        , print_hyper_v_enlightenment_recs     , {} } },
+	{ leaf_t::hyper_v_implementation_limits  , { hyper_v                , nullptr                        , print_hyper_v_implementation_limits  , {} } },
+	{ leaf_t::hyper_v_implementation_hardware, { hyper_v                , nullptr                        , print_hyper_v_implementation_hardware, {} } },
+	{ leaf_t::hyper_v_root_cpu_management    , { hyper_v                , nullptr                        , print_hyper_v_root_cpu_management    , {} } },
+	{ leaf_t::hyper_v_shared_virtual_memory  , { hyper_v                , nullptr                        , print_hyper_v_shared_virtual_memory  , {} } },
+	{ leaf_t::hyper_v_nested_hypervisor      , { hyper_v                , nullptr                        , print_hyper_v_nested_hypervisor      , {} } },
+	{ leaf_t::hyper_v_nested_features        , { hyper_v                , nullptr                        , print_hyper_v_nested_features        , {} } },
+
+	{ leaf_t::xen_limit						 , {           xen_hvm      , nullptr                        , print_null                           , {} } },
+	{ leaf_t::xen_version					 , {           xen_hvm      , nullptr                        , print_xen_version                    , {} } },
+	{ leaf_t::xen_features					 , {           xen_hvm      , nullptr                        , print_xen_features                   , {} } },
+	{ leaf_t::xen_time						 , {           xen_hvm      , enumerate_xen_time             , print_xen_time                       , {} } },
+	{ leaf_t::xen_hvm_features				 , {           xen_hvm      , nullptr                        , print_xen_hvm_features               , {} } },
+	{ leaf_t::xen_pv_features				 , {           xen_hvm      , nullptr                        , print_xen_pv_features                , {} } },
+
+	{ leaf_t::xen_limit_offset				 , {           xen_hvm      , nullptr                        , print_xen_limit                      , {} } },
+	{ leaf_t::xen_version_offset			 , {           xen_hvm      , nullptr                        , print_xen_version                    , {} } },
+	{ leaf_t::xen_features_offset			 , {           xen_hvm      , nullptr                        , print_xen_features                   , {} } },
+	{ leaf_t::xen_time_offset				 , {           xen_hvm      , enumerate_xen_time             , print_xen_time                       , {} } },
+	{ leaf_t::xen_hvm_features_offset		 , {           xen_hvm      , nullptr                        , print_xen_hvm_features               , {} } },
+	{ leaf_t::xen_pv_features_offset		 , {           xen_hvm      , nullptr                        , print_xen_pv_features                , {} } },
+
 	{ leaf_t::extended_limit                 , { any                    , nullptr                        , print_extended_limit                 , {} } },
 	{ leaf_t::extended_signature_and_features, { any                    , nullptr                        , print_extended_signature_and_features, {} } },
 	{ leaf_t::brand_string_0                 , { any                    , nullptr                        , print_brand_string                   , {} } },
@@ -199,9 +243,12 @@ void print_generic(const cpu_t& cpu) {
 }
 
 void enumerate_leaf_brute_force(cpu_t& cpu, leaf_t leaf) {
-	register_set_t previous = { 0 };
-	for(subleaf_t subleaf = subleaf_t::main; ; ++subleaf) {
-		register_set_t regs = { 0 };
+	register_set_t regs = { 0 };
+	cpuid(regs, leaf, subleaf_t::main);
+	cpu.leaves[leaf][subleaf_t::main] = regs;
+	for(subleaf_t subleaf = subleaf_t{ 1 }; ; ++subleaf) {
+		register_set_t previous = regs;
+		regs = { 0 };
 		cpuid(regs, leaf, subleaf);
 		if(regs[eax] == 0ui32
 			&& regs[ebx] == 0ui32
@@ -216,7 +263,6 @@ void enumerate_leaf_brute_force(cpu_t& cpu, leaf_t leaf) {
 			break;
 		}
 		cpu.leaves[leaf][subleaf] = regs;
-		previous = regs;
 	}
 }
 
@@ -284,32 +330,72 @@ int main(int argc, char* argv[]) {
 	cpu.model = get_model(cpu.vendor, regs);
 	cpu.local_apic_id = get_local_apic_id(regs);
 
-	for(leaf_t lf = leaf_t::basic_info; lf <= cpu.highest_leaf; ++lf) {
-		enumerate_leaf(cpu, lf);
+	for(leaf_t leaf = leaf_t::basic_info; leaf <= cpu.highest_leaf; ++leaf) {
+		enumerate_leaf(cpu, leaf);
+	}
+
+	cpuid(regs, leaf_t::hypervisor_limit, subleaf_t::main);
+	if(regs[eax] != 0ui32) {
+		const vendor_t hypervisor = get_hypervisor_from_name(regs);
+		// something is set, and it looks like a hypervisor
+		if(hypervisor & any_hypervisor) {
+			cpu.vendor = cpu.vendor | hypervisor;
+			cpu.highest_hypervisor_leaf = leaf_t{ regs[eax] };
+
+			cpu.xen_base         = leaf_t{ 0x4fff'ffffui32 };
+			cpu.highest_xen_leaf = leaf_t{ 0x4fff'ffffui32 };
+
+			if(hypervisor & hyper_v) {
+				// xen with viridian extensions masquerades as hyper-v, and puts its own cpuid leaves 0x100 further up
+				cpuid(regs, leaf_t::xen_limit_offset, subleaf_t::main);
+				const vendor_t xen_hypervisor = get_hypervisor_from_name(regs);
+
+				if(xen_hypervisor & xen_hvm) {
+					cpu.vendor           = cpu.vendor | xen_hypervisor;
+					cpu.xen_base         = leaf_t::xen_limit_offset;
+					cpu.highest_xen_leaf = leaf_t{ regs[eax] };
+				}
+			}
+
+			for(leaf_t leaf = leaf_t::hypervisor_limit; leaf <= cpu.highest_hypervisor_leaf; ++leaf) {
+				enumerate_leaf(cpu, leaf);
+			}
+
+			if(cpu.vendor & xen_hvm) {
+				for(leaf_t leaf = cpu.xen_base; leaf <= cpu.highest_xen_leaf; ++leaf) {
+					enumerate_leaf(cpu, leaf);
+				}
+			}
+		}
 	}
 
 	cpuid(regs, leaf_t::extended_limit, subleaf_t::main);
 	cpu.highest_extended_leaf = leaf_t{ regs[eax] };
 
-	for(leaf_t lf = leaf_t::extended_limit; lf <= cpu.highest_extended_leaf; ++lf) {
-		enumerate_leaf(cpu, lf);
+	for(leaf_t leaf = leaf_t::extended_limit; leaf <= cpu.highest_extended_leaf; ++leaf) {
+		enumerate_leaf(cpu, leaf);
 	}
 
 	for(const auto& lf : cpu.leaves) {
-		const auto it = descriptors.find(lf.first);
-		if(it != descriptors.end()) {
-			if(it->second.vendor & cpu.vendor) {
-				const filter_t filter = it->second.filter;
-				if(filter      == no_filter
-				|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
-					if(it->second.printer) {
-						it->second.printer(cpu);
-					} else {
-						print_generic(cpu, lf.first);
-						std::cout << std::endl;
+		const auto range = descriptors.equal_range(lf.first);
+		if(range.first != range.second) {
+			for(auto it = range.first; it != range.second; ++it) {
+				if(it->second.vendor & cpu.vendor) {
+					const filter_t filter = it->second.filter;
+					if(filter == no_filter
+					|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
+						if(it->second.printer) {
+							it->second.printer(cpu);
+						} else {
+							print_generic(cpu, lf.first);
+							std::cout << std::endl;
+						}
 					}
 				}
 			}
+		} else {
+			print_generic(cpu, lf.first);
+			std::cout << std::endl;
 		}
 	}
 
