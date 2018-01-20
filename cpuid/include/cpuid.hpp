@@ -63,7 +63,23 @@ enum struct leaf_t : std::uint32_t
 	l2_cache_identifiers              = 0x8000'0006ui32,
 	ras_advanced_power_management     = 0x8000'0007ui32,
 	address_limits                    = 0x8000'0008ui32,
+	reserved_6                        = 0x8000'0009ui32,
 	secure_virtual_machine            = 0x8000'000aui32,
+
+	reserved_7                        = 0x8000'000bui32,
+	reserved_8                        = 0x8000'000cui32,
+	reserved_9                        = 0x8000'000dui32,
+	reserved_10                       = 0x8000'000eui32,
+	reserved_11                       = 0x8000'0010ui32,
+	reserved_12                       = 0x8000'0011ui32,
+	reserved_13                       = 0x8000'0012ui32,
+	reserved_14                       = 0x8000'0013ui32,
+	reserved_15                       = 0x8000'0014ui32,
+	reserved_16                       = 0x8000'0015ui32,
+	reserved_17                       = 0x8000'0016ui32,
+	reserved_18                       = 0x8000'0017ui32,
+	reserved_19                       = 0x8000'0018ui32,
+	
 	tlb_1g_identifiers                = 0x8000'0019ui32,
 	performance_optimization          = 0x8000'001aui32,
 	instruction_based_sampling        = 0x8000'001bui32,
@@ -86,7 +102,7 @@ constexpr inline leaf_t operator+=(leaf_t& lhs, std::uint32_t rhs) {
 }
 
 constexpr inline leaf_t operator+(const leaf_t& lhs, std::uint32_t rhs) {
-	return leaf_t{ static_cast<std::uint32_t>(lhs) + rhs };
+	return static_cast<leaf_t>(static_cast<std::uint32_t>(lhs) + rhs);
 }
 
 enum struct subleaf_t : std::uint32_t
@@ -246,7 +262,7 @@ inline std::string to_string(vendor_t vendor) {
 		break;
 	}
 
-	return hypervisor.size() != 0 ? silicon + " with " + hypervisor : silicon;
+	return hypervisor.size() != 0 ? hypervisor + " on " + silicon : silicon;
 }
 
 using register_set_t = std::array<std::uint32_t, 4>;
