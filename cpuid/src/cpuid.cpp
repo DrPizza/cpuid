@@ -227,6 +227,7 @@ const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::reserved_17                    , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_t::reserved_18                    , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_t::reserved_19                    , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_t::reserved_20                    , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_t::tlb_1g_identifiers             , {         amd            , nullptr                        , print_1g_tlb                         , {} } },
 	{ leaf_t::performance_optimization       , {         amd            , nullptr                        , print_performance_optimization       , {} } },
 	{ leaf_t::instruction_based_sampling     , {         amd            , nullptr                        , print_instruction_based_sampling     , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0000'0400ui32 } } },
@@ -332,6 +333,9 @@ int main(int argc, char* argv[]) {
 
 	const std::map<std::string, docopt::value> args = docopt::docopt(usage_message, { argv + 1, argv + argc }, true, "cpuid 0.1");
 
+	determine_topology();
+
+#if 0
 	// I don't care which thread I run on, just as long as I'm not bouncing between cores.
 	const DWORD current_processor = ::GetCurrentProcessorNumber();
 	const DWORD_PTR mask = 1ui64 << current_processor;
@@ -418,6 +422,6 @@ int main(int argc, char* argv[]) {
 	}
 
 	//print_generic(cpu);
-
-	determine_topology();
+#endif
+	return 0;
 }
