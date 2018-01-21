@@ -248,31 +248,47 @@ void enumerate_extended_features(cpu_t& cpu) {
 }
 
 void print_extended_features(const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_features).at(subleaf_t::main);
-	std::cout << "Extended features\n";
-	print_features(cpu, leaf_t::extended_features, subleaf_t::main, ebx);
-	std::cout << "\n";
-	if(cpu.vendor & intel) {
-		print_features(cpu, leaf_t::extended_features, subleaf_t::main, ecx);
-		std::cout << "\n";
-	}
-	print_features(cpu, leaf_t::extended_features, subleaf_t::main, edx);
-	std::cout << std::endl;
+	for(const auto& sub : cpu.leaves.at(leaf_t::extended_features)) {
+		const register_set_t& regs = sub.second;
+		switch(sub.first) {
+		case subleaf_t::extended_state_main:
+			{
+				std::cout << "Extended features\n";
+				print_features(cpu, leaf_t::extended_features, subleaf_t::extended_features_main, ebx);
+				std::cout << "\n";
+				if(cpu.vendor & intel) {
+					const union
+					{
+						std::uint32_t full;
+						struct
+						{
+							std::uint32_t prefetchw   : 1;
+							std::uint32_t avx512_vbml : 1;
+							std::uint32_t umip        : 1;
+							std::uint32_t pku         : 1;
+							std::uint32_t ospke       : 1;
+							std::uint32_t reserved_1  : 12;
+							std::uint32_t mawau_value : 5;
+							std::uint32_t rdpid       : 1;
+							std::uint32_t reserved_2  : 7;
+							std::uint32_t sgx_lc      : 1;
+							std::uint32_t reserved_3  : 1;
 
-	const union
-	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t reserved_1  : 17;
-			std::uint32_t mawau_value : 5;
-			std::uint32_t reserve_2   : 10;
-		} split;
-	} c = { regs[ecx] };
-
-	if(cpu.vendor & intel) {
-		std::cout << "\tMAWAU value: " << c.split.mawau_value << "\n";
-		std::cout << std::endl;
+						} split;
+					} c = { regs[ecx] };
+					std::cout << "\tMAWAU value: " << c.split.mawau_value << "\n";
+					std::cout << "\n";
+					print_features(cpu, leaf_t::extended_features, subleaf_t::extended_features_main, ecx);
+					std::cout << "\n";
+				}
+				print_features(cpu, leaf_t::extended_features, subleaf_t::extended_features_main, edx);
+				std::cout << std::endl;
+			}
+			break;
+		default:
+			print_generic(cpu, leaf_t::extended_features, sub.first);
+			break;
+		}
 	}
 }
 

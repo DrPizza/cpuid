@@ -112,6 +112,7 @@ constexpr inline leaf_t operator+(const leaf_t& lhs, std::uint32_t rhs) {
 enum struct subleaf_t : std::uint32_t
 {
 	main                                   = 0x0000'0000ui32,
+	extended_features_main                 = 0x0000'0000ui32,
 	extended_state_main                    = 0x0000'0000ui32,
 	extended_state_sub                     = 0x0000'0001ui32,
 	rdt_monitoring_main                    = 0x0000'0000ui32,
@@ -280,7 +281,6 @@ struct id_info_t
 	std::uint32_t local_apic_id           : 8;
 };
 
-
 struct split_model_t
 {
 	std::uint32_t stepping        : 4;
@@ -321,5 +321,7 @@ inline void cpuid(register_set_t& regs, leaf_t leaf, subleaf_t subleaf) noexcept
 	regs[ecx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ecx]);
 	regs[edx] = gsl::narrow_cast<std::uint32_t>(raw_regs[edx]);
 }
+
+void print_generic(const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf);
 
 #endif

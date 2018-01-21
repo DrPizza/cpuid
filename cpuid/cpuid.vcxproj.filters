@@ -21,16 +21,10 @@
     <ClCompile Include="src\cpuid.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\cache.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\features.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\standard.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\topology.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\docopt.cpp">
@@ -39,12 +33,12 @@
     <ClCompile Include="src\hypervisors.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\cache-and-topology.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\cache.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\cpuid.hpp">
@@ -54,9 +48,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\standard.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\topology.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\docopt.h">
@@ -69,6 +60,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\hypervisors.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cache-and-topology.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -104,7 +104,7 @@ const feature_map_t all_features = {
 		}}
 	}},
 	{ leaf_t::extended_features, {
-		{ subleaf_t::main, {
+		{ subleaf_t::extended_features_main, {
 			{ ebx, {
 				{ intel | amd            , 0x0000'0001ui32, "FSGSBASE"          , "FSGSBASE instructions" },
 				{ intel                  , 0x0000'0002ui32, "TSC_ADJUST"        , "TSC_ADJUST MSR" },
