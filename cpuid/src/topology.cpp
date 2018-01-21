@@ -82,6 +82,14 @@ void print_extended_topology(const cpu_t& cpu) {
 	}
 }
 
+struct cache_t
+{
+	std::uint32_t ways;
+	std::uint32_t sets;
+	std::uint32_t line_size;
+	std::uint32_t total_size;
+};
+
 struct logical_core_t
 {
 	std::uint32_t logical_core_id;
