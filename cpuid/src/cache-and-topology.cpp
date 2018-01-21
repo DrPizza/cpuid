@@ -2,6 +2,8 @@
 
 #include "cache-and-topology.hpp"
 
+#include "utility.hpp"
+
 #include <thread>
 
 #include <fmt/format.h>
@@ -1256,142 +1258,122 @@ std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noe
 	return std::make_pair((1ui32 << idx) - 1ui32, idx);
 }
 
-void determine_topology() {
+void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 	system_t machine = {};
-	std::uint32_t total_addressable_cores = 0ui32;
+	const std::uint32_t total_addressable_cores = static_cast<std::uint32_t>(logical_cpus.size());
+	bool enumerated_caches = false;
+	std::for_each(std::begin(logical_cpus), std::end(logical_cpus), [&machine, &enumerated_caches](const cpu_t& cpu) {
+		machine.x2_apic_ids.push_back(cpu.apic_id);
+		if(enumerated_caches) {
+			return;
+		}
+		enumerated_caches = true;
 
-	std::thread bouncer = std::thread([&machine, &total_addressable_cores]() {
-		bool enumerated_caches = false;
+		for(const auto& sub : cpu.leaves.at(leaf_t::extended_topology)) {
+			const register_set_t& regs = sub.second;
 
-		const WORD total_processor_groups = ::GetMaximumProcessorGroupCount();
-		for(WORD group_id = 0; group_id < total_processor_groups; ++group_id) {
-			const DWORD processors_in_group = ::GetMaximumProcessorCount(group_id);
-			for(DWORD proc = 0; proc < processors_in_group; ++proc) {
-				++total_addressable_cores;
+			const union
+			{
+				std::uint32_t full;
+				struct
+				{
+					std::uint32_t shift_distance : 5;
+					std::uint32_t reserved_1     : 27;
+				} split;
+			} a = { regs[eax] };
 
-				const GROUP_AFFINITY aff = { 1ui64 << proc, group_id};
-				::SetThreadGroupAffinity(::GetCurrentThread(), &aff, nullptr);
+			const union
+			{
+				std::uint32_t full;
+				struct
+				{
+					std::uint32_t level_number : 8;
+					std::uint32_t level_type   : 8;
+					std::uint32_t reserved_1   : 16;
+				} split;
+			} c = { regs[ecx] };
 
-				cpu_t cpu = { 0 };
-				enumerate_extended_topology(cpu);
-				//print_extended_topology(cpu);
-				
-				machine.x2_apic_ids.push_back(cpu.leaves.at(leaf_t::extended_topology).at(subleaf_t::main).at(edx));
-				if(enumerated_caches) {
-					continue;
+			switch(c.split.level_type) {
+			case 1:
+				if(machine.logical_mask_width == 0ui32) {
+					machine.logical_mask_width = a.split.shift_distance;
 				}
-				enumerated_caches = true;
-
-				enumerate_deterministic_cache(cpu);
-				//print_deterministic_cache(cpu);
-
-				for(const auto& sub : cpu.leaves.at(leaf_t::extended_topology)) {
-					const register_set_t& regs = sub.second;
-
-					const union
-					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t shift_distance : 5;
-							std::uint32_t reserved_1     : 27;
-						} split;
-					} a = { regs[eax] };
-
-					const union
-					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t level_number : 8;
-							std::uint32_t level_type   : 8;
-							std::uint32_t reserved_1   : 16;
-						} split;
-					} c = { regs[ecx] };
-
-					switch(c.split.level_type) {
-					case 1:
-						if(machine.logical_mask_width == 0ui32) {
-							machine.logical_mask_width = a.split.shift_distance;
-						}
-						break;
-					case 2:
-						if(machine.physical_mask_width == 0ui32) {
-							machine.physical_mask_width = a.split.shift_distance;
-						}
-						break;
-					default:
-						break;
-					}
+				break;
+			case 2:
+				if(machine.physical_mask_width == 0ui32) {
+					machine.physical_mask_width = a.split.shift_distance;
 				}
-				for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_cache)) {
-					const register_set_t& regs = sub.second;
-
-					const union
-					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t type                           : 5;
-							std::uint32_t level                          : 3;
-							std::uint32_t self_initializing              : 1;
-							std::uint32_t fully_associative              : 1;
-							std::uint32_t reserved_1                     : 4;
-							std::uint32_t maximum_addressable_thread_ids : 12;
-							std::uint32_t maximum_addressable_core_ids   : 6;
-						} split;
-					} a = { regs[eax] };
-
-					const union
-					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t coherency_line_size      : 12;
-							std::uint32_t physical_line_partitions : 10;
-							std::uint32_t associativity_ways       : 10;
-						} split;
-					} b = { regs[ebx] };
-
-					const union
-					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t writeback_invalidates : 1;
-							std::uint32_t cache_inclusive       : 1;
-							std::uint32_t complex_indexing      : 1;
-							std::uint32_t reserved_1            : 29;
-						} split;
-					} d = { regs[edx] };
-					
-					const std::uint32_t sets = regs[ecx];
-					const std::uint32_t cache_size = (b.split.associativity_ways       + 1ui32)
-					                               * (b.split.physical_line_partitions + 1ui32)
-					                               * (b.split.coherency_line_size      + 1ui32)
-					                               * (sets                             + 1ui32);
-
-					const cache_t cache = {
-						a.split.level,
-						a.split.type,
-						b.split.associativity_ways + 1ui32,
-						regs[ecx] + 1ui32,
-						b.split.coherency_line_size + 1ui32,
-						b.split.physical_line_partitions + 1ui32,
-						cache_size,
-						a.split.fully_associative != 0,
-						a.split.self_initializing != 0,
-						d.split.writeback_invalidates != 0,
-						d.split.cache_inclusive != 0,
-						d.split.complex_indexing == 0,
-						a.split.maximum_addressable_thread_ids + 1ui32
-					};
-					machine.all_caches.push_back(cache);
-				}
+				break;
+			default:
+				break;
 			}
 		}
+
+		for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_cache)) {
+			const register_set_t& regs = sub.second;
+
+			const union
+			{
+				std::uint32_t full;
+				struct
+				{
+					std::uint32_t type                           : 5;
+					std::uint32_t level                          : 3;
+					std::uint32_t self_initializing              : 1;
+					std::uint32_t fully_associative              : 1;
+					std::uint32_t reserved_1                     : 4;
+					std::uint32_t maximum_addressable_thread_ids : 12;
+					std::uint32_t maximum_addressable_core_ids   : 6;
+				} split;
+			} a = { regs[eax] };
+
+			const union
+			{
+				std::uint32_t full;
+				struct
+				{
+					std::uint32_t coherency_line_size      : 12;
+					std::uint32_t physical_line_partitions : 10;
+					std::uint32_t associativity_ways       : 10;
+				} split;
+			} b = { regs[ebx] };
+
+			const union
+			{
+				std::uint32_t full;
+				struct
+				{
+					std::uint32_t writeback_invalidates : 1;
+					std::uint32_t cache_inclusive       : 1;
+					std::uint32_t complex_indexing      : 1;
+					std::uint32_t reserved_1            : 29;
+				} split;
+			} d = { regs[edx] };
+			
+			const std::uint32_t sets = regs[ecx];
+			const std::uint32_t cache_size = (b.split.associativity_ways       + 1ui32)
+			                               * (b.split.physical_line_partitions + 1ui32)
+			                               * (b.split.coherency_line_size      + 1ui32)
+			                               * (sets                             + 1ui32);
+
+			const cache_t cache = {
+				a.split.level,
+				a.split.type,
+				b.split.associativity_ways + 1ui32,
+				regs[ecx] + 1ui32,
+				b.split.coherency_line_size + 1ui32,
+				b.split.physical_line_partitions + 1ui32,
+				cache_size,
+				a.split.fully_associative != 0,
+				a.split.self_initializing != 0,
+				d.split.writeback_invalidates != 0,
+				d.split.cache_inclusive != 0,
+				d.split.complex_indexing == 0,
+				a.split.maximum_addressable_thread_ids + 1ui32
+			};
+			machine.all_caches.push_back(cache);
+		}
 	});
-	bouncer.join();
 
 	for(const std::uint32_t id : machine.x2_apic_ids) {
 		const full_apic_id_t split = split_apic_id(id, machine.logical_mask_width, machine.physical_mask_width);

@@ -96,6 +96,7 @@
     <ClInclude Include="include\hypervisors.hpp" />
     <ClInclude Include="include\standard.hpp" />
     <ClInclude Include="include\stdafx.h" />
+    <ClInclude Include="include\utility.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -303,7 +303,7 @@ struct model_t
 
 struct cpu_t
 {
-	std::uint32_t local_apic_id;
+	std::uint32_t apic_id;
 	leaf_t highest_leaf;
 	leaf_t highest_hypervisor_leaf;
 	leaf_t xen_base;
