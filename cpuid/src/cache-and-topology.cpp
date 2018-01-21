@@ -6,6 +6,18 @@
 
 #include <fmt/format.h>
 
+std::string print_size(std::size_t cache_bytes) {
+	using namespace fmt::literals;
+
+	double printable_cache_size = cache_bytes / 1024.0;
+	char   cache_scale = 'K';
+	if(printable_cache_size > 1'024.0) {
+		printable_cache_size /= 1'024.0;
+		cache_scale = 'M';
+	}
+	return "{:g} {:c}byte"_format(printable_cache_size, cache_scale);
+}
+
 enum cache_type_t : std::uint8_t
 {
 	data_tlb        = 0x01ui8,
@@ -277,15 +289,15 @@ const dual_descriptors_map_t dual_cache_descriptors = {
 	{ 0x49, {
 		{ unified    , level_3 , 4    MB, 0   , no_attributes      , static_cast<cache_associativity_t>(0x10), 64 },
 		{ unified    , level_2 , 4    MB, 0   , no_attributes      , static_cast<cache_associativity_t>(0x10), 64 }
-	} },
+	}},
 	{ 0x63, {
 		{ data_tlb   , no_cache, 0      , 32  , pages_2m | pages_4m, static_cast<cache_associativity_t>(0x04), 0 },
 		{ data_tlb   , no_cache, 0      , 4   , pages_1g           , static_cast<cache_associativity_t>(0x04), 0 }
-	} },
+	}},
 	{ 0xc3, {
 		{ unified_tlb, level_2 , 0      , 1536, pages_4k | pages_2m, static_cast<cache_associativity_t>(0x06), 0 },
 		{ unified_tlb, level_2 , 0      , 16  , pages_1g           , static_cast<cache_associativity_t>(0x04), 0 }
-	} }
+	}}
 };
 
 #undef MB
@@ -300,13 +312,7 @@ std::string to_string(cache_descriptor_t desc) {
 	}
 	w << to_string(desc.type) << ": ";
 	if(desc.type & all_cache) {
-		double printable_cache_size = desc.size / 1'024.0;
-		char   cache_scale = 'K';
-		if(printable_cache_size > 1'024.0) {
-			printable_cache_size /= 1'024.0;
-			cache_scale = 'M';
-		}
-		w << "{:g} {:c}byte"_format(printable_cache_size, cache_scale);
+		w << print_size(desc.size);
 	} else if(desc.type & all_tlb) {
 		w << to_string(desc.attributes);
 	} else if(desc.type & trace) {
@@ -492,17 +498,11 @@ void print_deterministic_cache(const cpu_t& cpu) {
 		                             * (b.split.physical_line_partitions + 1ui32)
 		                             * (b.split.coherency_line_size      + 1ui32)
 		                             * (sets                             + 1ui32);
-		double printable_cache_size = cache_size / 1'024.0;
-		char   cache_scale = 'K';
-		if(printable_cache_size > 1'024.0) {
-			printable_cache_size /= 1'024.0;
-			cache_scale = 'M';
-		}
-		
+
 		fmt::MemoryWriter w;
 		w << "\t";
-		w << "{:g} {:c}byte "_format(printable_cache_size, cache_scale);
-		w << "L" << a.split.level << " ";
+		w << print_size(cache_size);
+		w << " L" << a.split.level << " ";
 		switch(a.split.type) {
 		case 1:
 			w << "data";
@@ -516,12 +516,11 @@ void print_deterministic_cache(const cpu_t& cpu) {
 		}
 		w << "\n";
 		w << "\t\t";
-		w << "{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:g} {:c}bytes.\n"_format(b.split.coherency_line_size      + 1ui32,
-		                                                                                                               b.split.associativity_ways       + 1ui32,
-		                                                                                                               b.split.physical_line_partitions + 1ui32,
-		                                                                                                               sets                             + 1ui32,
-		                                                                                                               printable_cache_size,
-		                                                                                                               cache_scale);
+		w << "{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:s}.\n"_format(b.split.coherency_line_size      + 1ui32,
+		                                                                                                     b.split.associativity_ways       + 1ui32,
+		                                                                                                     b.split.physical_line_partitions + 1ui32,
+		                                                                                                     sets                             + 1ui32,
+		                                                                                                     print_size(cache_size));
 		if(a.split.self_initializing) {
 			w << "\t\tSelf-initializing.\n";
 		}
@@ -914,23 +913,11 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 		l3_cache_info split;
 	} d = { regs[edx] };
 
-	auto print_size = [](std::uint32_t cache_bytes) {
-		using namespace fmt::literals;
-
-		double printable_cache_size = cache_bytes / 1024.0;
-		char   cache_scale = 'K';
-		if(printable_cache_size > 1'024.0) {
-			printable_cache_size /= 1'024.0;
-			cache_scale = 'M';
-		}
-		return "{:g} {:c}byte"_format(printable_cache_size, cache_scale);
-	};
-
-	const auto print_l2_size = [&print_size](std::uint32_t cache_size) {
+	const auto print_l2_size = [](std::uint32_t cache_size) {
 		return print_size(cache_size * 1024);
 	};
 
-	const auto print_l3_size = [&print_size](std::uint32_t cache_size) {
+	const auto print_l3_size = [](std::uint32_t cache_size) {
 		return print_size(cache_size * 1024 * 512);
 	};
 
@@ -1063,17 +1050,11 @@ void print_cache_properties(const cpu_t& cpu) {
 		const std::size_t cache_size = (b.split.associativity_ways       + 1ui32)
 		                             * (b.split.coherency_line_size      + 1ui32)
 		                             * (sets                             + 1ui32);
-		double printable_cache_size = cache_size / 1'024.0;
-		char   cache_scale = 'K';
-		if(printable_cache_size > 1'024.0) {
-			printable_cache_size /= 1'024.0;
-			cache_scale = 'M';
-		}
 
 		fmt::MemoryWriter w;
 		w << "\t";
-		w << "{:g} {:c}byte "_format(printable_cache_size, cache_scale);
-		w << "L" << a.split.level << " ";
+		w << print_size(cache_size);
+		w << " L" << a.split.level << " ";
 		switch(a.split.type) {
 		case 1:
 			w << "data";
@@ -1087,11 +1068,10 @@ void print_cache_properties(const cpu_t& cpu) {
 		}
 		w << "\n";
 		w << "\t\t";
-		w << "{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} sets = {:g} {:c}bytes.\n"_format(b.split.coherency_line_size + 1ui32,
-		                                                                                        b.split.associativity_ways  + 1ui32,
-		                                                                                        sets                        + 1ui32,
-		                                                                                        printable_cache_size,
-		                                                                                        cache_scale);
+		w << "{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} sets = {:s}.\n"_format(b.split.coherency_line_size + 1ui32,
+		                                                                              b.split.associativity_ways  + 1ui32,
+		                                                                              sets                        + 1ui32,
+		                                                                              print_size(cache_size));
 		if(a.split.self_initializing) {
 			w << "\t\tSelf-initializing.\n";
 		}
@@ -1114,6 +1094,8 @@ void print_cache_properties(const cpu_t& cpu) {
 
 struct cache_t
 {
+	cache_level_t level;
+	cache_type_t  type;
 	std::uint32_t ways;
 	std::uint32_t sets;
 	std::uint32_t line_size;
@@ -1122,18 +1104,15 @@ struct cache_t
 
 struct logical_core_t
 {
-	std::uint32_t logical_core_id;
 };
 
 struct physical_core_t
 {
-	std::uint32_t physical_core_id;
 	std::map<std::uint32_t, logical_core_t> logical_cores;
 };
 
 struct package_t
 {
-	std::uint32_t package_id;
 	std::map<std::uint32_t, physical_core_t> physical_cores;
 };
 
@@ -1141,6 +1120,7 @@ struct system_t
 {
 	std::uint32_t logical_mask_width;
 	std::uint32_t physical_mask_width;
+	std::set<std::uint32_t> x2_apic_ids;
 
 	std::map<std::uint32_t, package_t> packages;
 };
@@ -1174,6 +1154,8 @@ void determine_topology() {
 				::SetThreadGroupAffinity(::GetCurrentThread(), &aff, nullptr);
 
 				cpu_t cpu = { 0 };
+				enumerate_deterministic_cache(cpu);
+				print_deterministic_cache(cpu);
 				enumerate_extended_topology(cpu);
 				print_extended_topology(cpu);
 				
@@ -1201,6 +1183,8 @@ void determine_topology() {
 						} split;
 					} c = { regs[ecx] };
 
+					machine.x2_apic_ids.insert(regs[edx]);
+
 					switch(c.split.level_type) {
 					case 1:
 						if(machine.logical_mask_width == 0ui32) {
@@ -1220,4 +1204,16 @@ void determine_topology() {
 		}
 	});
 	bouncer.join();
+
+	for(const std::uint32_t id : machine.x2_apic_ids) {
+		full_apic_id_t split = split_apic_id(id, machine.logical_mask_width, machine.physical_mask_width);
+		machine.packages[split.package_id].physical_cores[split.physical_id].logical_cores[split.logical_id] = {};
+	}
+	for(const auto& pack : machine.packages) {
+		for(const auto& core : pack.second.physical_cores) {
+			for(const auto& thread : core.second.logical_cores) {
+				std::cout << "Package " << std::hex << pack.first << " core " << core.first << " thread " << thread.first << std::endl;
+			}
+		}
+	}
 }
