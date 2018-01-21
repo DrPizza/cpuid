@@ -311,3 +311,17 @@ void print_xen_pv_features(const cpu_t& cpu) {
 	std::cout << "\tHighest subleaf: " << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n";
 	std::cout << std::endl;
 }
+
+void print_vmware_timing(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.leaves.at(leaf_t::vmware_timing).at(subleaf_t::main);
+	std::cout << "VMware timing\n";
+	std::cout << "\tVirtual TSC frequency/kHz: " << std::dec << regs[eax] << "\n";
+	std::cout << "\tVirtual bus/APIC frequency/kHz: " << std::dec << regs[ebx] << "\n";
+	std::cout << std::endl;
+}
+
+void print_kvm_features(const cpu_t& cpu) {
+	std::cout << "KVM features\n";
+	print_features(cpu, leaf_t::kvm_features, subleaf_t::main, eax);
+	std::cout << std::endl;
+}

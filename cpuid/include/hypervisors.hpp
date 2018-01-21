@@ -38,4 +38,8 @@ void print_xen_hvm_features(const cpu_t& cpu);
 
 void print_xen_pv_features(const cpu_t& cpu);
 
+void print_vmware_timing(const cpu_t& cpu);
+
+void print_kvm_features(const cpu_t& cpu);
+
 #endif
