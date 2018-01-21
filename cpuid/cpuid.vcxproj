@@ -75,7 +75,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\cache.cpp" />
+    <ClCompile Include="src\cache-and-topology.cpp" />
     <ClCompile Include="src\cpuid.cpp" />
     <ClCompile Include="src\docopt.cpp" />
     <ClCompile Include="src\features.cpp" />
@@ -85,10 +85,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\topology.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\cache.hpp" />
+    <ClInclude Include="include\cache-and-topology.hpp" />
     <ClInclude Include="include\cpuid.hpp" />
     <ClInclude Include="include\docopt.h" />
     <ClInclude Include="include\docopt_private.h" />
@@ -97,7 +96,6 @@
     <ClInclude Include="include\hypervisors.hpp" />
     <ClInclude Include="include\standard.hpp" />
     <ClInclude Include="include\stdafx.h" />
-    <ClInclude Include="include\topology.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

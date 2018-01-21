@@ -1,10 +1,9 @@
 #include "stdafx.h"
 
 #include "cpuid.hpp"
-#include "cache.hpp"
+#include "cache-and-topology.hpp"
 #include "features.hpp"
 #include "standard.hpp"
-#include "topology.hpp"
 #include "hypervisors.hpp"
 
 #include <map>
