@@ -1094,7 +1094,7 @@ void print_cache_properties(const cpu_t& cpu) {
 		} else {
 			w << "\t\tWBINVD/INVD invalidate lower level caches for all threads.\n";
 		}
-		w << "\t\tCache is {:s} of lower cache levels.\n"_format(d.split.cache_inclusive != 0 ? "inclusive" : "exclusive");
+		w << "\t\tCache is {:s}inclusive of lower cache levels.\n"_format(d.split.cache_inclusive != 0 ? "" : "not ");
 		w << "\t\tCache is shared by up to {:d} threads in the package.\n"_format(a.split.maximum_addressable_thread_ids + 1);
 		std::cout << w.str();
 		std::cout << std::endl;
