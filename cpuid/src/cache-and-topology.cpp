@@ -1037,9 +1037,9 @@ void print_cache_properties(const cpu_t& cpu) {
 			std::uint32_t full;
 			struct
 			{
-				std::uint32_t coherency_line_size : 12;
-				std::uint32_t partitions          : 10;
-				std::uint32_t associativity_ways  : 10;
+				std::uint32_t coherency_line_size      : 12;
+				std::uint32_t physical_line_partitions : 10;
+				std::uint32_t associativity_ways       : 10;
 			} split;
 		} b = { regs[ebx] };
 
@@ -1453,9 +1453,72 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 							std::uint32_t reserved_1       : 16;
 						} split;
 					} b = { regs[ebx] };
-					auto logical_mask = generate_mask(b.split.threads_per_core);
-					machine.logical_mask_width = logical_mask.second;
+					machine.logical_mask_width = b.split.threads_per_core;
 
+				}
+				if(cpu.highest_extended_leaf >= leaf_t::cache_properties) {
+					for(const auto& sub : cpu.leaves.at(leaf_t::cache_properties)) {
+						const register_set_t& regs = sub.second;
+						const union
+						{
+							std::uint32_t full;
+							struct
+							{
+								std::uint32_t type                           : 5;
+								std::uint32_t level                          : 3;
+								std::uint32_t self_initializing              : 1;
+								std::uint32_t fully_associative              : 1;
+								std::uint32_t reserved_1                     : 4;
+								std::uint32_t maximum_addressable_thread_ids : 12;
+								std::uint32_t reserved_2                     : 6;
+							} split;
+						} a = { regs[eax] };
+
+						const union
+						{
+							std::uint32_t full;
+							struct
+							{
+								std::uint32_t coherency_line_size      : 12;
+								std::uint32_t physical_line_partitions : 10;
+								std::uint32_t associativity_ways       : 10;
+							} split;
+						} b = { regs[ebx] };
+
+						const union
+						{
+							std::uint32_t full;
+							struct
+							{
+								std::uint32_t writeback_invalidates : 1;
+								std::uint32_t cache_inclusive       : 1;
+								std::uint32_t reserved_1            : 30;
+							} split;
+						} d = { regs[edx] };
+
+						const std::uint32_t sets = regs[ecx];
+						const std::uint32_t cache_size = (b.split.associativity_ways       + 1ui32)
+						                               * (b.split.physical_line_partitions + 1ui32)
+						                               * (b.split.coherency_line_size      + 1ui32)
+						                               * (sets                             + 1ui32);
+
+						const cache_t cache = {
+							a.split.level,
+							a.split.type,
+							b.split.associativity_ways + 1ui32,
+							regs[ecx] + 1ui32,
+							b.split.coherency_line_size + 1ui32,
+							b.split.physical_line_partitions + 1ui32,
+							cache_size,
+							a.split.fully_associative != 0,
+							a.split.self_initializing != 0,
+							d.split.writeback_invalidates != 0,
+							d.split.cache_inclusive != 0,
+							true,
+							a.split.maximum_addressable_thread_ids
+						};
+						machine.all_caches.push_back(cache);
+					}
 				}
 				if(cpu.highest_extended_leaf >= leaf_t::address_limits) {
 					const register_set_t& regs = cpu.leaves.at(leaf_t::address_limits).at(subleaf_t::main);
