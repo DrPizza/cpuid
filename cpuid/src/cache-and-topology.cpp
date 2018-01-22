@@ -538,7 +538,7 @@ void print_deterministic_cache(const cpu_t& cpu) {
 		} else {
 			w << "\t\tWBINVD/INVD invalidate lower level caches for all threads.\n";
 		}
-		w << "\t\tCache is {:s} of lower cache levels.\n"_format(d.split.cache_inclusive != 0 ? "inclusive" : "exclusive");
+		w << "\t\tCache is {:s}inclusive of lower cache levels.\n"_format(d.split.cache_inclusive != 0 ? "" : "not ");
 		w << "\t\tCache is {:s}direct mapped.\n"_format(d.split.complex_indexing != 0 ? "not " : "");
 		w << "\t\tCache is shared by up to {:d} threads, with up to {:d} cores in the package.\n"_format(a.split.maximum_addressable_thread_ids + 1, a.split.maximum_addressable_core_ids + 1);
 		std::cout << w.str() << std::endl;
@@ -1222,7 +1222,7 @@ std::string to_short_string(const cache_t& cache) {
 	} else {
 		w << " {:d}-way set associative"_format(cache.ways);
 	}
-	w << " with {:d} sets"_format(cache.sets);
+	w << " with {:d} sets, {:d} bytes per line"_format(cache.sets, cache.line_size);
 	return w.str();
 }
 
