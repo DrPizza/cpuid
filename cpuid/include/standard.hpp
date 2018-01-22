@@ -42,6 +42,9 @@ void print_processor_frequency(const cpu_t& cpu);
 void enumerate_system_on_chip_vendor(cpu_t& cpu);
 void print_system_on_chip_vendor(const cpu_t& cpu);
 
+void enumerate_pconfig(cpu_t& cpu);
+void print_pconfig(const cpu_t& cpu);
+
 void print_extended_limit(const cpu_t& cpu);
 
 void print_extended_signature_and_features(const cpu_t& cpu);
@@ -59,8 +62,6 @@ void print_performance_optimization(const cpu_t& cpu);
 void print_instruction_based_sampling(const cpu_t& cpu);
 
 void print_lightweight_profiling(const cpu_t& cpu);
-
-void print_extended_apic(const cpu_t& cpu);
 
 void print_encrypted_memory(const cpu_t& cpu);
 

@@ -121,13 +121,21 @@ uint8_t get_local_apic_id(const register_set_t& regs) noexcept {
 }
 
 uint32_t get_apic_id(const cpu_t& cpu) {
-	if(cpu.highest_leaf >= leaf_t::extended_topology) {
-		return cpu.leaves.at(leaf_t::extended_topology).at(subleaf_t::main).at(edx);
-	} else if(cpu.highest_extended_leaf >= leaf_t::extended_apic) {
-		return cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main).at(eax);
-	} else {
-		return get_local_apic_id(cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main));
+	switch(cpu.vendor & any_silicon) {
+	case intel:
+		if(cpu.highest_leaf >= leaf_t::extended_topology) {
+			return cpu.leaves.at(leaf_t::extended_topology).at(subleaf_t::main).at(edx);
+		}
+		break;
+	case amd:
+		if(cpu.highest_extended_leaf >= leaf_t::extended_apic) {
+			return cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main).at(eax);
+		}
+		break;
+	default:
+		break;
 	}
+	return get_local_apic_id(cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main));
 }
 
 using leaf_print = void(*)(const cpu_t& cpu);
@@ -190,6 +198,10 @@ const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::processor_frequency            , { intel                  , nullptr                        , print_processor_frequency            , {} } },
 	{ leaf_t::system_on_chip_vendor          , { intel                  , enumerate_system_on_chip_vendor, print_system_on_chip_vendor          , {} } },
 	{ leaf_t::deterministic_tlb              , { intel                  , enumerate_deterministic_tlb    , print_deterministic_tlb              , {} } },
+	{ leaf_t::reserved_6                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_t::reserved_7                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_t::pconfig                        , { any                    , enumerate_pconfig              , print_pconfig                        , { leaf_t::extended_features              , subleaf_t::main, edx, 0x0004'0000ui32 } } },
+
 	{ leaf_t::hypervisor_limit               , { any                    , nullptr                        , print_hypervisor_limit               , {} } },
 	{ leaf_t::hyper_v_signature              , { hyper_v                , nullptr                        , print_hyper_v_signature              , {} } },
 	{ leaf_t::hyper_v_system_identity        , { hyper_v                , nullptr                        , print_hyper_v_system_identity        , {} } },
@@ -224,10 +236,8 @@ const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::l2_cache_identifiers           , { intel | amd            , nullptr                        , print_l2_cache_tlb                   , {} } },
 	{ leaf_t::ras_advanced_power_management  , { intel | amd            , nullptr                        , print_ras_advanced_power_management  , {} } },
 	{ leaf_t::address_limits                 , { intel | amd            , nullptr                        , print_address_limits                 , {} } },
-	{ leaf_t::reserved_6                     , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::secure_virtual_machine         , {         amd            , nullptr                        , print_secure_virtual_machine         , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0000'0004ui32 } } },
-	{ leaf_t::reserved_7                     , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_t::reserved_8                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_t::secure_virtual_machine         , {         amd            , nullptr                        , print_secure_virtual_machine         , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0000'0004ui32 } } },
 	{ leaf_t::reserved_9                     , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_t::reserved_10                    , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_t::reserved_11                    , { any                    , enumerate_null                 , print_null                           , {} } },
@@ -240,6 +250,8 @@ const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::reserved_18                    , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_t::reserved_19                    , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_t::reserved_20                    , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_t::reserved_21                    , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_t::reserved_22                    , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_t::tlb_1g_identifiers             , {         amd            , nullptr                        , print_1g_tlb                         , {} } },
 	{ leaf_t::performance_optimization       , {         amd            , nullptr                        , print_performance_optimization       , {} } },
 	{ leaf_t::instruction_based_sampling     , {         amd            , nullptr                        , print_instruction_based_sampling     , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0000'0400ui32 } } },

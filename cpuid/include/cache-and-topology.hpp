@@ -22,6 +22,8 @@ void print_1g_tlb(const cpu_t& cpu);
 void enumerate_cache_properties(cpu_t& cpu);
 void print_cache_properties(const cpu_t& cpu);
 
+void print_extended_apic(const cpu_t& cpu);
+
 void determine_topology(const std::vector<cpu_t>& logical_cpus);
 
 #endif

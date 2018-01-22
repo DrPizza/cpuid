@@ -4,6 +4,8 @@
 
 #include "utility.hpp"
 
+#include <iostream>
+#include <iomanip>
 #include <thread>
 
 #include <fmt/format.h>
@@ -1098,6 +1100,40 @@ void print_cache_properties(const cpu_t& cpu) {
 	}
 }
 
+void print_extended_apic(const cpu_t& cpu) {
+	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main);
+
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t core_id          : 8;
+			std::uint32_t threads_per_core : 8;
+			std::uint32_t reserved_1       : 16;
+		} split;
+	} b = { regs[ebx] };
+
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t node_id             : 8;
+			std::uint32_t nodes_per_processor : 3;
+			std::uint32_t reserved_1          : 21;
+		} split;
+	} c = { regs[ecx] };
+
+	std::cout << "Extended APIC\n";
+	std::cout << "\tExtended APIC ID: " << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n";
+	std::cout << "\tCore ID: " << std::setw(2) << std::setfill('0') << std::hex << b.split.core_id << "\n";
+	std::cout << "\tThreads per core: " << std::dec << (b.split.threads_per_core + 1ui32) << "\n";
+	std::cout << "\tNode ID: " << std::setw(2) << std::setfill('0') << std::hex << c.split.node_id << "\n";
+	std::cout << "\tNodes per processor: " << std::dec << (c.split.nodes_per_processor + 1ui32) << "\n";
+	std::cout << std::endl;
+}
+
 struct cache_instance_t
 {
 	std::vector<std::uint32_t> sharing_ids;
@@ -1158,7 +1194,7 @@ std::string to_string(const cache_t& cache) {
 	} else {
 		w << "\t\tWBINVD/INVD invalidate lower level caches for all threads.\n";
 	}
-	w << "\t\tCache is {:s} of lower cache levels.\n"_format(cache.inclusive ? "inclusive" : "exclusive");
+	w << "\t\tCache is {:s}inclusive of lower cache levels.\n"_format(cache.inclusive ? "" : "not ");
 	w << "\t\tCache is {:s}direct mapped.\n"_format(cache.direct_mapped ? "not " : "");
 	w << "\t\tCache is shared by up to {:d} threads.\n"_format(cache.threads_sharing);
 

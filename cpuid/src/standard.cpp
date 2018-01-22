@@ -262,21 +262,32 @@ void print_extended_features(const cpu_t& cpu) {
 						std::uint32_t full;
 						struct
 						{
-							std::uint32_t prefetchw   : 1;
-							std::uint32_t avx512_vbml : 1;
-							std::uint32_t umip        : 1;
-							std::uint32_t pku         : 1;
-							std::uint32_t ospke       : 1;
-							std::uint32_t reserved_1  : 12;
-							std::uint32_t mawau_value : 5;
-							std::uint32_t rdpid       : 1;
-							std::uint32_t reserved_2  : 7;
-							std::uint32_t sgx_lc      : 1;
-							std::uint32_t reserved_3  : 1;
+							std::uint32_t prefetchw        : 1;
+							std::uint32_t avx512_vbmi      : 1;
+							std::uint32_t umip             : 1;
+							std::uint32_t pku              : 1;
+							std::uint32_t ospke            : 1;
+							std::uint32_t reserved_1       : 1;
+							std::uint32_t avx512_vbmi2     : 1;
+							std::uint32_t reserved_2       : 1;
+							std::uint32_t gfni             : 1;
+							std::uint32_t vaes             : 1;
+							std::uint32_t vpclmulqdq       : 1;
+							std::uint32_t avx512_vnni      : 1;
+							std::uint32_t avx512_bitalg    : 1;
+							std::uint32_t reserved_3       : 1;
+							std::uint32_t avx512_vpopcntdq : 1;
+							std::uint32_t reserved_4       : 1;
+							std::uint32_t la57             : 1;
+							std::uint32_t mawau_value      : 5;
+							std::uint32_t rdpid            : 1;
+							std::uint32_t reserved_5       : 7;
+							std::uint32_t sgx_lc           : 1;
+							std::uint32_t reserved_6       : 1;
 
 						} split;
 					} c = { regs[ecx] };
-					std::cout << "\tMAWAU value: " << c.split.mawau_value << "\n";
+					std::cout << "\tMPX Address-width adjust: " << c.split.mawau_value << "\n";
 					std::cout << "\n";
 					print_features(cpu, leaf_t::extended_features, subleaf_t::extended_features_main, ecx);
 					std::cout << "\n";
@@ -951,6 +962,58 @@ void print_system_on_chip_vendor(const cpu_t& cpu) {
 	}
 }
 
+void enumerate_pconfig(cpu_t& cpu) {
+	register_set_t regs = { 0 };
+	cpuid(regs, leaf_t::pconfig, subleaf_t::main);
+	cpu.leaves[leaf_t::pconfig][subleaf_t::main] = regs;
+
+	const subleaf_t sub = subleaf_t{ 0x1ui32 };
+	for(;;) {
+		cpuid(regs, leaf_t::pconfig, sub);
+		if(0 == (regs[eax] & 0x0000'0001ui32)) {
+			break;
+		}
+		cpu.leaves[leaf_t::pconfig][sub] = regs;
+	}
+}
+
+void print_pconfig(const cpu_t& cpu) {
+	for(const auto& sub : cpu.leaves.at(leaf_t::pconfig)) {
+		const register_set_t& regs = sub.second;
+		switch(sub.first) {
+		case subleaf_t::main:
+			{
+				const union
+				{
+					std::uint32_t full;
+					struct
+					{
+						std::uint32_t type       : 12;
+						std::uint32_t reserved_1 : 20;
+					} split;
+				} a = { regs[eax] };
+
+				std::cout << "PCONFIG information\n";
+				switch(a.split.type) {
+				case 0:
+					std::cout << "\tInvalid\n";
+					break;
+				case 1:
+					std::cout << "\tMKTIME\n";
+					break;
+				default:
+					std::cout << "Unknown target: " << std::setw(8) << std::setfill('0') << std::hex << a.split.type << "\n";
+					break;
+				}
+				std::cout << std::endl;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 void print_extended_limit(const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_limit).at(subleaf_t::main);
 	std::cout << "Extended limit\n";
@@ -1136,6 +1199,9 @@ void print_address_limits(const cpu_t& cpu) {
 		std::cout << "\tPhysical address size/bits: " << std::dec << a.split.physical_address_size << "\n";
 		std::cout << "\tVirtual address size/bits: " << std::dec << a.split.virtual_address_size << "\n";
 		std::cout << std::endl;
+		std::cout << "\tExtended features\n";
+		print_features(cpu, leaf_t::address_limits, subleaf_t::main, ebx);
+		std::cout << std::endl;
 		break;
 	default:
 		throw std::runtime_error("unexpected vendor");
@@ -1220,40 +1286,6 @@ void print_lightweight_profiling(const cpu_t& cpu) {
 	std::cout << "\tLatency counter size/bits: " << std::dec << c.split.latency_max << "\n";
 	std::cout << "\tLatency counter rounding: " << std::dec << c.split.latency_rounding << "\n";
 	std::cout << "\tMinimum ring buffer size/32 events: " << std::dec << c.split.minimum_buffer_size << "\n";
-	std::cout << std::endl;
-}
-
-void print_extended_apic(const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main);
-
-	const union
-	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t core_id          : 8;
-			std::uint32_t threads_per_core : 8;
-			std::uint32_t reserved_1       : 16;
-		} split;
-	} b = { regs[ebx] };
-
-	const union
-	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t node_id             : 8;
-			std::uint32_t nodes_per_processor : 3;
-			std::uint32_t reserved_1          : 21;
-		} split;
-	} c = { regs[ecx] };
-
-	std::cout << "Extended APIC\n";
-	std::cout << "\tExtended APIC ID: " << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n";
-	std::cout << "\tCore ID: " << std::setw(2) << std::setfill('0') << std::hex << b.split.core_id << "\n";
-	std::cout << "\tThreads per core: " << std::dec << (b.split.threads_per_core + 1ui32) << "\n";
-	std::cout << "\tNode ID: " << std::setw(2) << std::setfill('0') << std::hex << c.split.node_id << "\n";
-	std::cout << "\tNodes per processor: " << std::dec << (c.split.nodes_per_processor + 1ui32) << "\n";
 	std::cout << std::endl;
 }
 

@@ -98,7 +98,7 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'4000ui32, "TBT3"              , "Intel Turbo Boost Max Technology 3.0" },
 			}},
 			{ ecx, {
-				{ intel                  , 0x0000'0001ui32, "HCF"               , "Hardware Coordination Feedback Capability: MPERF, APERF"},
+				{ intel | amd            , 0x0000'0001ui32, "HCF"               , "Hardware Coordination Feedback Capability: MPERF, APERF"},
 				{ intel                  , 0x0000'0008ui32, "PERF_BIAS"         , "Performance-energy bias preference       : ENERGY_PERF_BIAS" },
 			}}
 		}}
@@ -145,12 +145,21 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'0004ui32, "UMIP"              , "User Mode Instruction Prevention" },
 				{ intel                  , 0x0000'0008ui32, "PKU"               , "Protection Keys for User-mode pages" },
 				{ intel                  , 0x0000'0010ui32, "OSPKE"             , "OS has set CR4.PKE" },
+				{ intel                  , 0x0000'0040ui32, "AVX512_VBMI2"      , "AVX512 Vector Bit Manipulation Instructions 2" },
+				{ intel                  , 0x0000'0100ui32, "GFNI"              , "Galois Field NI" },
+				{ intel                  , 0x0000'0200ui32, "VAES"              , "VEX-AES-NI" },
+				{ intel                  , 0x0000'0400ui32, "VPCLMULQDQ"        , "VEX-PCLMUL" },
+				{ intel                  , 0x0000'0800ui32, "AVX512_VNNI"       , "AVX512 Vector Neural Net Instructions" },
+				{ intel                  , 0x0000'1000ui32, "AVX512_BITALG"     , "AVX512 Bitwise Algorithms" },
+				{ intel                  , 0x0000'4000ui32, "AVX512_VPOPCNTDQ"  , "AVX512 VPOPCNTDQ" },
+				{ intel                  , 0x0001'0000ui32, "LA57"              , "5-level page tables/57-bit virtual addressing" },
 				{ intel                  , 0x0040'0000ui32, "RDPID"             , "Read Processor ID" },
 				{ intel                  , 0x4000'0000ui32, "SGX_LC"            , "SGX Launch Configuration" },
 			}},
 			{ edx, {
 				{ intel                  , 0x0000'0004ui32, "AVX512_4NNIW"      , "AVX512 4-register Neural Network Instructions" },
 				{ intel                  , 0x0000'0008ui32, "AVX512_4FMAPS"     , "AVX512 4-register Neural Network Instructions" },
+				{ intel                  , 0x0004'0000ui32, "PCONFIG"           , "PCONFIG" },
 				{ intel | amd            , 0x0400'0000ui32, "IBRS"              , "Indirect Branch Restricted Speculation and Indirect Branch Predictor Barrier" },
 				{ intel | amd            , 0x0800'0000ui32, "STIBP"             , "Single Thread Indirect Branch Predictors" },
 				{ intel                  , 0x2000'0000ui32, "ARCH_CAPS"         , "ARCH_CAPABILITIES MSR" },
@@ -430,7 +439,8 @@ const feature_map_t all_features = {
 			{ ebx, {
 				{         amd            , 0x0000'0001ui32, "CLZERO"                 , "CLZERO instruction"                   },
 				{         amd            , 0x0000'0002ui32, "IRPerf"                 , "Instructions retired count support"   },
-				{         amd            , 0x0000'0002ui32, "XSaveErPtr"             , "XSAVE (etc.) saves error pointer"     },
+				{         amd            , 0x0000'0004ui32, "XSaveErPtr"             , "XSAVE (etc.) saves error pointer"     },
+				{ intel                  , 0x0000'0200ui32, "WBNOINVD"               , "WBNOINVD is available"                },
 			}}
 		}}
 	}},
