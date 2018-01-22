@@ -1,2 +1,3 @@
-# benchmarking-tools
-Some little tools for looking at various aspects of processor performance.
+# cpuid
+
+Dump and parse cpuid data, and try to infer the system processor and cache topologies.
