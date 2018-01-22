@@ -1291,6 +1291,7 @@ std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noe
 	entries -= 1;
 	DWORD idx = 0;
 	_BitScanReverse(&idx, entries);
+	idx += 1;
 	return std::make_pair((1ui32 << idx) - 1ui32, idx);
 }
 
@@ -1307,113 +1308,173 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 		switch(cpu.vendor & any_silicon) {
 		case intel:
 			{
-				for(const auto& sub : cpu.leaves.at(leaf_t::extended_topology)) {
-					const register_set_t& regs = sub.second;
+				if(cpu.highest_leaf >= leaf_t::extended_topology) {
+					for(const auto& sub : cpu.leaves.at(leaf_t::extended_topology)) {
+						const register_set_t& regs = sub.second;
 
-					const union
-					{
-						std::uint32_t full;
-						struct
+						const union
 						{
-							std::uint32_t shift_distance : 5;
-							std::uint32_t reserved_1     : 27;
-						} split;
-					} a = { regs[eax] };
+							std::uint32_t full;
+							struct
+							{
+								std::uint32_t shift_distance : 5;
+								std::uint32_t reserved_1     : 27;
+							} split;
+						} a = { regs[eax] };
 
-					const union
-					{
-						std::uint32_t full;
-						struct
+						const union
 						{
-							std::uint32_t level_number : 8;
-							std::uint32_t level_type   : 8;
-							std::uint32_t reserved_1   : 16;
-						} split;
-					} c = { regs[ecx] };
+							std::uint32_t full;
+							struct
+							{
+								std::uint32_t level_number : 8;
+								std::uint32_t level_type   : 8;
+								std::uint32_t reserved_1   : 16;
+							} split;
+						} c = { regs[ecx] };
 
-					switch(c.split.level_type) {
-					case 1:
-						if(machine.logical_mask_width == 0ui32) {
-							machine.logical_mask_width = a.split.shift_distance;
+						switch(c.split.level_type) {
+						case 1:
+							if(machine.logical_mask_width == 0ui32) {
+								machine.logical_mask_width = a.split.shift_distance;
+							}
+							break;
+						case 2:
+							if(machine.physical_mask_width == 0ui32) {
+								machine.physical_mask_width = a.split.shift_distance;
+							}
+							break;
+						default:
+							break;
 						}
-						break;
-					case 2:
-						if(machine.physical_mask_width == 0ui32) {
-							machine.physical_mask_width = a.split.shift_distance;
-						}
-						break;
-					default:
-						break;
 					}
 				}
+				if(cpu.highest_leaf >= leaf_t::deterministic_cache) {
+					for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_cache)) {
+						const register_set_t& regs = sub.second;
 
-				for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_cache)) {
-					const register_set_t& regs = sub.second;
-
-					const union
-					{
-						std::uint32_t full;
-						struct
+						const union
 						{
-							std::uint32_t type                           : 5;
-							std::uint32_t level                          : 3;
-							std::uint32_t self_initializing              : 1;
-							std::uint32_t fully_associative              : 1;
-							std::uint32_t reserved_1                     : 4;
-							std::uint32_t maximum_addressable_thread_ids : 12;
-							std::uint32_t maximum_addressable_core_ids   : 6;
-						} split;
-					} a = { regs[eax] };
+							std::uint32_t full;
+							struct
+							{
+								std::uint32_t type                           : 5;
+								std::uint32_t level                          : 3;
+								std::uint32_t self_initializing              : 1;
+								std::uint32_t fully_associative              : 1;
+								std::uint32_t reserved_1                     : 4;
+								std::uint32_t maximum_addressable_thread_ids : 12;
+								std::uint32_t maximum_addressable_core_ids   : 6;
+							} split;
+						} a = { regs[eax] };
 
-					const union
-					{
-						std::uint32_t full;
-						struct
+						const union
 						{
-							std::uint32_t coherency_line_size      : 12;
-							std::uint32_t physical_line_partitions : 10;
-							std::uint32_t associativity_ways       : 10;
-						} split;
-					} b = { regs[ebx] };
+							std::uint32_t full;
+							struct
+							{
+								std::uint32_t coherency_line_size      : 12;
+								std::uint32_t physical_line_partitions : 10;
+								std::uint32_t associativity_ways       : 10;
+							} split;
+						} b = { regs[ebx] };
 
-					const union
-					{
-						std::uint32_t full;
-						struct
+						const union
 						{
-							std::uint32_t writeback_invalidates : 1;
-							std::uint32_t cache_inclusive       : 1;
-							std::uint32_t complex_indexing      : 1;
-							std::uint32_t reserved_1            : 29;
-						} split;
-					} d = { regs[edx] };
-					
-					const std::uint32_t sets = regs[ecx];
-					const std::uint32_t cache_size = (b.split.associativity_ways       + 1ui32)
-					                               * (b.split.physical_line_partitions + 1ui32)
-					                               * (b.split.coherency_line_size      + 1ui32)
-					                               * (sets                             + 1ui32);
+							std::uint32_t full;
+							struct
+							{
+								std::uint32_t writeback_invalidates : 1;
+								std::uint32_t cache_inclusive       : 1;
+								std::uint32_t complex_indexing      : 1;
+								std::uint32_t reserved_1            : 29;
+							} split;
+						} d = { regs[edx] };
 
-					const cache_t cache = {
-						a.split.level,
-						a.split.type,
-						b.split.associativity_ways + 1ui32,
-						regs[ecx] + 1ui32,
-						b.split.coherency_line_size + 1ui32,
-						b.split.physical_line_partitions + 1ui32,
-						cache_size,
-						a.split.fully_associative != 0,
-						a.split.self_initializing != 0,
-						d.split.writeback_invalidates != 0,
-						d.split.cache_inclusive != 0,
-						d.split.complex_indexing == 0,
-						a.split.maximum_addressable_thread_ids + 1ui32
-					};
-					machine.all_caches.push_back(cache);
+						switch(sub.first) {
+						case subleaf_t::main:
+							if(machine.logical_mask_width == 0ui32) {
+								const union
+								{
+									std::uint32_t full;
+									id_info_t     split;
+								} leaf_1_b = { cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main).at(ebx) };
+
+								const std::uint32_t total_possible_cores = leaf_1_b.split.maximum_addressable_ids;
+								const std::uint32_t total_cores_in_package = a.split.maximum_addressable_core_ids + 1ui32;
+								const std::uint32_t logical_cores_per_physical_core = total_possible_cores / total_cores_in_package;
+								
+								auto logical_mask = generate_mask(logical_cores_per_physical_core);
+								machine.logical_mask_width = logical_mask.second;
+								auto physical_mask = generate_mask(total_cores_in_package);
+								machine.physical_mask_width = physical_mask.second;
+							}
+
+							[[fallthrough]];
+						default:
+							const std::uint32_t sets = regs[ecx];
+							const std::uint32_t cache_size = (b.split.associativity_ways       + 1ui32)
+							                               * (b.split.physical_line_partitions + 1ui32)
+							                               * (b.split.coherency_line_size      + 1ui32)
+							                               * (sets                             + 1ui32);
+
+							const cache_t cache = {
+								a.split.level,
+								a.split.type,
+								b.split.associativity_ways + 1ui32,
+								regs[ecx] + 1ui32,
+								b.split.coherency_line_size + 1ui32,
+								b.split.physical_line_partitions + 1ui32,
+								cache_size,
+								a.split.fully_associative != 0,
+								a.split.self_initializing != 0,
+								d.split.writeback_invalidates != 0,
+								d.split.cache_inclusive != 0,
+								d.split.complex_indexing == 0,
+								a.split.maximum_addressable_thread_ids + 1ui32
+							};
+							machine.all_caches.push_back(cache);
+						}
+					}
 				}
 			}
 			break;
 		case amd:
+			{
+				if(cpu.highest_extended_leaf >= leaf_t::extended_apic) {
+					const register_set_t& regs = cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main);
+					const union
+					{
+						std::uint32_t full;
+						struct
+						{
+							std::uint32_t core_id          : 8;
+							std::uint32_t threads_per_core : 8;
+							std::uint32_t reserved_1       : 16;
+						} split;
+					} b = { regs[ebx] };
+					auto logical_mask = generate_mask(b.split.threads_per_core);
+					machine.logical_mask_width = logical_mask.second;
+
+				}
+				if(cpu.highest_extended_leaf >= leaf_t::address_limits) {
+					const register_set_t& regs = cpu.leaves.at(leaf_t::address_limits).at(subleaf_t::main);
+					const union
+					{
+						std::uint32_t full;
+						struct
+						{
+							std::uint32_t package_threads : 8;
+							std::uint32_t reserved_1      : 4;
+							std::uint32_t apic_id_size    : 4;
+							std::uint32_t perf_tsc_size   : 2;
+							std::uint32_t reserved_2      : 24;
+						} split;
+					} c = { regs[ecx] };
+
+					machine.physical_mask_width = c.split.apic_id_size;
+				}
+			}
 			break;
 		}
 	});

@@ -448,10 +448,10 @@ int main(int argc, char* argv[]) {
 	determine_topology(logical_cpus);
 	std::cout << std::endl;
 
-	for(const cpu_t& cpu : logical_cpus) {
-		print_generic(cpu);
-		std::cout << std::endl;
-	}
+	//for(const cpu_t& cpu : logical_cpus) {
+	//	print_generic(cpu);
+	//	std::cout << std::endl;
+	//}
 
 	return 0;
 }
