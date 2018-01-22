@@ -438,8 +438,8 @@ const feature_map_t all_features = {
 		{ subleaf_t::main, {
 			{ ebx, {
 				{         amd            , 0x0000'0001ui32, "CLZERO"                 , "CLZERO instruction"                   },
-				{         amd            , 0x0000'0002ui32, "IRPerf"                 , "Instructions retired count support"   },
-				{         amd            , 0x0000'0004ui32, "XSaveErPtr"             , "XSAVE (etc.) saves error pointer"     },
+				{         amd            , 0x0000'0002ui32, "IRPERF"                 , "Instructions retired count support"   },
+				{         amd            , 0x0000'0004ui32, "ASRFPEP"                , "XSAVE (etc.) saves error pointer"     },
 				{ intel                  , 0x0000'0200ui32, "WBNOINVD"               , "WBNOINVD is available"                },
 			}}
 		}}
@@ -448,7 +448,7 @@ const feature_map_t all_features = {
 		{ subleaf_t::main, {
 			{ edx, {
 				{         amd            , 0x0000'0001ui32, "NP"                     , "Nested paging"                        },
-				{         amd            , 0x0000'0002ui32, "LbrVirt"                , "LBR virtualization"                   },
+				{         amd            , 0x0000'0002ui32, "LBRV"                   , "LBR virtualization"                   },
 				{         amd            , 0x0000'0004ui32, "SVML"                   , "SVM lock"                             },
 				{         amd            , 0x0000'0008ui32, "NRIPS"                  , "NRIP Save"                            },
 				{         amd            , 0x0000'0010ui32, "TscRateMsr"             , "MSR-based TSC rate control"           },
@@ -458,7 +458,7 @@ const feature_map_t all_features = {
 				{         amd            , 0x0000'0400ui32, "PauseFilter"            , "PAUSE intercept filter"               },
 				{         amd            , 0x0000'1000ui32, "PauseFilterThreshold"   , "PAUSE filter threshold"               },
 				{         amd            , 0x0000'2000ui32, "AVIC"                   , "AMD virtual interrupt controller"     },
-				{         amd            , 0x0000'8000ui32, "V_VMSAVE_VMLOAD"        , "Virtualized VMSAVE/VMLOAD"            },
+				{         amd            , 0x0000'8000ui32, "VLS"                    , "Virtualized VMSAVE/VMLOAD"            },
 				{         amd            , 0x0001'0000ui32, "vGIF"                   , "Virtualized GIF"                      },
 
 			}}
