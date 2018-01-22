@@ -1057,6 +1057,7 @@ void print_cache_properties(const cpu_t& cpu) {
 		const std::size_t sets = regs[ecx];
 		const std::size_t cache_size = (b.split.associativity_ways       + 1ui32)
 		                             * (b.split.coherency_line_size      + 1ui32)
+		                             * (b.split.physical_line_partitions + 1ui32)
 		                             * (sets                             + 1ui32);
 
 		fmt::MemoryWriter w;
@@ -1568,18 +1569,46 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 		std::uint32_t cores_covered = 0ui32;
 		for(const auto& instance : cache.instances) {
 			for(std::uint32_t i = 0; i < cores_covered; ++i) {
-				std::cout << ".";
+				std::cout << "-";
 			}
 			for(std::uint32_t i = 0; i < instance.second.sharing_ids.size(); ++i) {
 				std::cout << "*";
 				++cores_covered;
 			}
 			for(std::uint32_t i = cores_covered; i < total_addressable_cores; ++i) {
-				std::cout << ".";
+				std::cout << "-";
 			}
 			std::cout << " " << to_short_string(cache) << std::endl;
 		}
 	}
+	std::cout << std::endl;
+
+	std::multimap<std::uint32_t, std::string> cache_output;
+
+	for(const cache_t& cache : machine.all_caches) {
+		std::uint32_t cores_covered = 0ui32;
+		for(const auto& instance : cache.instances) {
+			std::uint32_t first_core = cores_covered;
+			std::string line;
+			for(std::uint32_t i = 0; i < cores_covered; ++i) {
+				line += "-";
+			}
+			for(std::uint32_t i = 0; i < instance.second.sharing_ids.size(); ++i) {
+				line += "*";
+				++cores_covered;
+			}
+			for(std::uint32_t i = cores_covered; i < total_addressable_cores; ++i) {
+				line += "-";
+			}
+			line += " ";
+			line += to_short_string(cache);
+			cache_output.insert(std::make_pair(first_core, line));
+		}
+	}
+	for(const auto& p : cache_output) {
+		std::cout << p.second << std::endl;
+	}
+
 	std::cout << std::endl;
 
 	std::uint32_t cores_covered_package = 0ui32;
@@ -1591,7 +1620,7 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 			std::uint32_t logical_per_physical = 0ui32;
 			for(const auto& logical : physical.second.logical_cores) {
 				for(std::uint32_t i = 0; i < cores_covered_logical; ++i) {
-					std::cout << ".";
+					std::cout << "-";
 				}
 				for(std::uint32_t i = 0; i < 1; ++i) {
 					std::cout << "*";
@@ -1600,31 +1629,31 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 					++logical_per_package;
 				}
 				for(std::uint32_t i = cores_covered_logical; i < total_addressable_cores; ++i) {
-					std::cout << ".";
+					std::cout << "-";
 				}
 				std::cout << " logical  " << package.first << ":" << physical.first << ":" << logical.first << std::endl;
 			}
 			for(std::uint32_t i = 0; i < cores_covered_physical; ++i) {
-				std::cout << ".";
+				std::cout << "-";
 			}
 			for(std::uint32_t i = 0; i < logical_per_physical; ++i) {
 				std::cout << "*";
 				++cores_covered_physical;
 			}
 			for(std::uint32_t i = cores_covered_physical; i < total_addressable_cores; ++i) {
-				std::cout << ".";
+				std::cout << "-";
 			}
 			std::cout << " physical " << package.first << ":" << physical.first << std::endl;
 		}
 		for(std::uint32_t i = 0; i < cores_covered_package; ++i) {
-			std::cout << ".";
+			std::cout << "-";
 		}
 		for(std::uint32_t i = 0; i < logical_per_package; ++i) {
 			std::cout << "*";
 			++cores_covered_package;
 		}
 		for(std::uint32_t i = cores_covered_package; i < total_addressable_cores; ++i) {
-			std::cout << ".";
+			std::cout << "-";
 		}
 		std::cout << " package  " << package.first << std::endl;
 	}
