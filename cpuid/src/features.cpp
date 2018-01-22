@@ -112,7 +112,7 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x0000'0008ui32, "BMI1"              , "Bit Manipulation Instructions 1" },
 				{ intel                  , 0x0000'0010ui32, "HLE"               , "Hardware Lock Elision" },
 				{ intel | amd            , 0x0000'0020ui32, "AVX2"              , "Advanced Vector Extensions 2.0 instructions" },
-				{ intel                  , 0x0000'0040ui32, "FDP_EXCPT"         , "x87 FPU Data Pointer updated only on x87 exceptions" },
+				{ intel                  , 0x0000'0040ui32, "FDP_EXCPTN_ONLY"   , "x87 FPU Data Pointer updated only on x87 exceptions" },
 				{ intel | amd            , 0x0000'0080ui32, "SMEP"              , "Supervisor-Mode Execution Prevention" },
 				{ intel | amd            , 0x0000'0100ui32, "BMI2"              , "Bit Manipulation Instructions 2" },
 				{ intel                  , 0x0000'0200ui32, "EREPMOVSB"         , "Enhanced REP MOVSB/REP STOSB" },
@@ -159,7 +159,7 @@ const feature_map_t all_features = {
 			{ edx, {
 				{ intel                  , 0x0000'0004ui32, "AVX512_4NNIW"      , "AVX512 4-register Neural Network Instructions" },
 				{ intel                  , 0x0000'0008ui32, "AVX512_4FMAPS"     , "AVX512 4-register Neural Network Instructions" },
-				{ intel                  , 0x0004'0000ui32, "PCONFIG"           , "PCONFIG" },
+				{ intel                  , 0x0004'0000ui32, "PCONFIG"           , "Platform configuration for MKTME" },
 				{ intel | amd            , 0x0400'0000ui32, "IBRS"              , "Indirect Branch Restricted Speculation and Indirect Branch Predictor Barrier" },
 				{ intel | amd            , 0x0800'0000ui32, "STIBP"             , "Single Thread Indirect Branch Predictors" },
 				{ intel                  , 0x2000'0000ui32, "ARCH_CAPS"         , "ARCH_CAPABILITIES MSR" },
