@@ -1153,7 +1153,7 @@ struct cache_t
 	bool invalidates_lower_levels;
 	bool inclusive;
 	bool direct_mapped;
-	std::uint32_t threads_sharing;
+	std::uint32_t sharing_mask;
 
 	std::map<std::uint32_t, cache_instance_t> instances;
 };
@@ -1196,7 +1196,7 @@ std::string to_string(const cache_t& cache) {
 	}
 	w << "\t\tCache is {:s}inclusive of lower cache levels.\n"_format(cache.inclusive ? "" : "not ");
 	w << "\t\tCache is {:s}direct mapped.\n"_format(cache.direct_mapped ? "not " : "");
-	w << "\t\tCache is shared by up to {:d} threads.\n"_format(cache.threads_sharing);
+	w << "\t\tCache is shared by up to {:d} threads.\n"_format(cache.sharing_mask);
 
 	return w.str();
 }
@@ -1431,7 +1431,7 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 								d.split.writeback_invalidates != 0,
 								d.split.cache_inclusive != 0,
 								d.split.complex_indexing == 0,
-								a.split.maximum_addressable_thread_ids + 1ui32
+								a.split.maximum_addressable_thread_ids
 							};
 							machine.all_caches.push_back(cache);
 						}
@@ -1548,9 +1548,8 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 		logical_core_t core = { id, split.package_id, split.physical_id, split.logical_id };
 
 		for(const cache_t& cache : machine.all_caches) {
-			const auto cache_mask = generate_mask(cache.threads_sharing);
-			core.shared_cache_ids.push_back(id & cache_mask.first);
-			core.non_shared_cache_ids.push_back(id & ~cache_mask.first);
+			core.shared_cache_ids.push_back(id & cache.sharing_mask);
+			core.non_shared_cache_ids.push_back(id & ~cache.sharing_mask);
 		}
 		machine.all_cores.push_back(core);
 
