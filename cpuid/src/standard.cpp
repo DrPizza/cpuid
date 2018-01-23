@@ -24,7 +24,7 @@ void print_basic_info(const cpu_t& cpu) {
 	std::cout << "\tVendor identifier: ";
 	std::cout.write(data.vndr.data(), gsl::narrow_cast<std::streamsize>(data.vndr.size()));
 	std::cout << "\n";
-	std::cout << "\tVendor name: " << to_string(cpu.vendor) << std::endl;
+	std::cout << "\tVendor name: " << to_string(get_vendor_from_name(regs)) << std::endl;
 	std::cout << std::endl;
 }
 
@@ -144,7 +144,8 @@ void print_serial_number(const cpu_t& cpu) {
 		std::cout << "{:08x}-{:08x}-{:08x}-{:08x}"_format(regs[eax], regs[ebx], regs[ecx], regs[edx]) << std::endl;
 		break;
 	default:
-		throw std::runtime_error("unexpected vendor");
+		print_generic(cpu, leaf_t::serial_number, subleaf_t::main);
+		break;
 	}
 	std::cout << std::endl;
 }
@@ -1123,7 +1124,8 @@ void print_ras_advanced_power_management(const cpu_t& cpu) {
 		std::cout << std::endl;
 		break;
 	default:
-		throw std::runtime_error("unexpected vendor");
+		print_generic(cpu, leaf_t::ras_advanced_power_management, subleaf_t::main);
+		break;
 	}
 }
 
@@ -1204,7 +1206,8 @@ void print_address_limits(const cpu_t& cpu) {
 		std::cout << std::endl;
 		break;
 	default:
-		throw std::runtime_error("unexpected vendor");
+		print_generic(cpu, leaf_t::address_limits, subleaf_t::main);
+		break;
 	}
 }
 

@@ -278,6 +278,8 @@ inline std::string to_string(vendor_t vendor) {
 using register_set_t = std::array<std::uint32_t, 4>;
 using leaves_t = std::map<leaf_t, std::map<subleaf_t, register_set_t>>;
 
+vendor_t get_vendor_from_name(const register_set_t& regs);
+
 struct id_info_t
 {
 	std::uint32_t brand_id                : 8;

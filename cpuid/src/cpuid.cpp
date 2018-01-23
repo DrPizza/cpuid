@@ -335,13 +335,14 @@ static const char usage_message[] =
 R"(cpuid.
 
 	Usage:
-		cpuid [--cpu <index>] [--dump]
+		cpuid [--cpu <index>] [--dump] [--ignore-vendor]
 		cpuid --help
 		cpuid --version
 
 	Options:
 		--cpu <index>         Index of logical core to get info from
 		--dump                Print unparsed output
+		--ignore-vendor       Ignore vendor constraints
 		--help                Show this text
 		--version             Show the version
 )";
@@ -359,7 +360,7 @@ int main(int argc, char* argv[]) {
 	const std::map<std::string, docopt::value> args = docopt::docopt(usage_message, { argv + 1, argv + argc }, true, "cpuid 0.1");
 
 	std::vector<cpu_t> logical_cpus;
-	run_on_every_core([&logical_cpus]() {
+	run_on_every_core([&logical_cpus, &args]() {
 		cpu_t cpu = {};
 		register_set_t regs = { 0 };
 
@@ -419,16 +420,18 @@ int main(int argc, char* argv[]) {
 		logical_cpus.push_back(cpu);
 	});
 
+	const bool skip_vendor_check = std::get<bool>(args.at("--ignore-vendor"));
+
 	{
 		const cpu_t& cpu = logical_cpus[0];
 		for(const auto& leaf : cpu.leaves) {
 			const auto range = descriptors.equal_range(leaf.first);
 			if(range.first != range.second) {
 				for(auto it = range.first; it != range.second; ++it) {
-					if(it->second.vendor & cpu.vendor) {
+					if(skip_vendor_check || (it->second.vendor & cpu.vendor)) {
 						const filter_t filter = it->second.filter;
 						if(filter == no_filter
-							|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
+						|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
 							if(it->second.printer) {
 								it->second.printer(cpu);
 							} else {

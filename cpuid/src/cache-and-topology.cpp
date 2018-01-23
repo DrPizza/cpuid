@@ -19,7 +19,7 @@ std::string print_size(std::size_t cache_bytes) {
 		printable_cache_size /= 1'024.0;
 		cache_scale = 'M';
 	}
-	return "{:g} {:c}byte"_format(printable_cache_size, cache_scale);
+	return "{:<3g} {:c}B"_format(printable_cache_size, cache_scale);
 }
 
 enum cache_type_t : std::uint8_t
@@ -41,7 +41,7 @@ std::string to_string(cache_type_t type) {
 		return "Data TLB";
 	case instruction_tlb:
 		return "Instruction TLB";
-	case unified_tlb:
+	case unified_tlb: 
 		return "Shared TLB";
 	case data:
 		return "Data cache";
@@ -928,7 +928,7 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 	const auto print_l3_size = [](std::uint32_t cache_size) {
 		return print_size(cache_size * 1024 * 512);
 	};
-
+	
 	switch(cpu.vendor & any_silicon) {
 	case amd:
 		std::cout << "Level 2 TLB\n";
@@ -966,7 +966,8 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 		std::cout << std::endl;
 		break;
 	default:
-		throw std::runtime_error("unexpected vendor");
+		print_generic(cpu, leaf_t::l2_cache_identifiers, subleaf_t::main);
+		break;
 	}
 }
 
@@ -1150,10 +1151,10 @@ struct cache_t
 	std::uint32_t line_partitions;
 	std::uint32_t total_size;
 	bool fully_associative;
+	bool direct_mapped;
 	bool self_initializing;
 	bool invalidates_lower_levels;
 	bool inclusive;
-	bool direct_mapped;
 	std::uint32_t sharing_mask;
 
 	std::map<std::uint32_t, cache_instance_t> instances;
@@ -1209,21 +1210,23 @@ std::string to_short_string(const cache_t& cache) {
 	w << " L" << cache.level << " ";
 	switch(cache.type) {
 	case 1:
-		w << "data";
+		w << "data       ";
 		break;
 	case 2:
 		w << "instruction";
 		break;
 	case 3:
-		w << "unified";
+		w << "unified    ";
 		break;
 	}
 	if(cache.fully_associative) {
-		w << " fully associative";
+		w << " fully associative     ";
+	} else if(cache.direct_mapped) {
+		w << " direct-mapped         ";
 	} else {
-		w << " {:d}-way set associative"_format(cache.ways);
+		w << " {:>2d}-way set associative"_format(cache.ways);
 	}
-	w << " with {:d} sets, {:d} bytes per line"_format(cache.sets, cache.line_size);
+	w << " with {:>5d} sets, {:d} bytes per line"_format(cache.sets, cache.line_size);
 	return w.str();
 }
 
@@ -1428,10 +1431,10 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 								b.split.physical_line_partitions + 1ui32,
 								cache_size,
 								a.split.fully_associative != 0,
+								d.split.complex_indexing == 0,
 								a.split.self_initializing != 0,
 								d.split.writeback_invalidates != 0,
 								d.split.cache_inclusive != 0,
-								d.split.complex_indexing == 0,
 								a.split.maximum_addressable_thread_ids
 							};
 							machine.all_caches.push_back(cache);
@@ -1454,8 +1457,7 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 							std::uint32_t reserved_1       : 16;
 						} split;
 					} b = { regs[ebx] };
-					machine.logical_mask_width = b.split.threads_per_core;
-
+					machine.logical_mask_width = generate_mask(b.split.threads_per_core).second;
 				}
 				if(cpu.highest_extended_leaf >= leaf_t::cache_properties) {
 					for(const auto& sub : cpu.leaves.at(leaf_t::cache_properties)) {
@@ -1512,10 +1514,10 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 							b.split.physical_line_partitions + 1ui32,
 							cache_size,
 							a.split.fully_associative != 0,
+							false,
 							a.split.self_initializing != 0,
 							d.split.writeback_invalidates != 0,
 							d.split.cache_inclusive != 0,
-							true,
 							a.split.maximum_addressable_thread_ids
 						};
 						machine.all_caches.push_back(cache);
@@ -1564,31 +1566,11 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 		}
 		std::cout << std::flush;
 	}
-	
-	for(const cache_t& cache : machine.all_caches) {
-		std::uint32_t cores_covered = 0ui32;
-		for(const auto& instance : cache.instances) {
-			for(std::uint32_t i = 0; i < cores_covered; ++i) {
-				std::cout << "-";
-			}
-			for(std::uint32_t i = 0; i < instance.second.sharing_ids.size(); ++i) {
-				std::cout << "*";
-				++cores_covered;
-			}
-			for(std::uint32_t i = cores_covered; i < total_addressable_cores; ++i) {
-				std::cout << "-";
-			}
-			std::cout << " " << to_short_string(cache) << std::endl;
-		}
-	}
-	std::cout << std::endl;
 
 	std::multimap<std::uint32_t, std::string> cache_output;
-
 	for(const cache_t& cache : machine.all_caches) {
 		std::uint32_t cores_covered = 0ui32;
 		for(const auto& instance : cache.instances) {
-			std::uint32_t first_core = cores_covered;
 			std::string line;
 			for(std::uint32_t i = 0; i < cores_covered; ++i) {
 				line += "-";
@@ -1602,13 +1584,12 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 			}
 			line += " ";
 			line += to_short_string(cache);
-			cache_output.insert(std::make_pair(first_core, line));
+			cache_output.insert(std::make_pair(cores_covered, line));
 		}
 	}
 	for(const auto& p : cache_output) {
 		std::cout << p.second << std::endl;
 	}
-
 	std::cout << std::endl;
 
 	std::uint32_t cores_covered_package = 0ui32;
