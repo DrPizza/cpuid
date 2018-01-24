@@ -525,7 +525,7 @@ const feature_map_t all_features = {
 	}}
 };
 
-void print_features(const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg) {
+void print_features(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg) {
 	const auto range = all_features.equal_range(leaf);
 	for(auto it = range.first; it != range.second; ++it) {
 		if(it->second.find(sub) == it->second.end()) {
@@ -542,12 +542,17 @@ void print_features(const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg
 		for(const feature_t& f : features) {
 			if(cpu.vendor & f.vendor) {
 				if(0 != (value & f.mask)) {
-					std::cout << std::setw(24) << std::setfill(' ') << f.mnemonic << " \x1b[32;1m[+]\x1b[0m " << f.description << "\n";
+					w.write("{: >24s}  \x1b[32;1m[+]\x1b[0m {:s}\n", f.mnemonic, f.description);
 				} else {
-					std::cout << std::setw(24) << std::setfill(' ') << f.mnemonic << " \x1b[31;1m[-]\x1b[0m " << f.description << "\n";
+					w.write("{: >24s}  \x1b[31;1m[-]\x1b[0m {:s}\n", f.mnemonic, f.description);
 				}
 			}
 		}
 	}
-	std::cout << std::flush;
+}
+
+void print_features(const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg) {
+	fmt::MemoryWriter w;
+	print_features(w, cpu, leaf, sub, reg);
+	std::cout << w.str() << std::flush;
 }

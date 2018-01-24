@@ -262,16 +262,23 @@ const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::encrypted_memory               , {         amd            , nullptr                        , print_encrypted_memory               , {} } }
 };
 
-void print_generic(const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
-	using namespace fmt::literals;
+void print_generic(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf);
-	std::cout << "{:#010x} {:#010x} {:#010x}: {:#010x} {:#010x} {:#010x} {:#010x}"_format(cpu.apic_id,
-	                                                                                      static_cast<std::uint32_t>(leaf),
-	                                                                                      static_cast<std::uint32_t>(subleaf),
-	                                                                                      regs[eax],
-	                                                                                      regs[ebx],
-	                                                                                      regs[ecx],
-	                                                                                      regs[edx]) << std::endl;
+	w.write("{:#010x} {:#010x} {:#010x}: {:#010x} {:#010x} {:#010x} {:#010x}\n", cpu.apic_id,
+	                                                                             static_cast<std::uint32_t>(leaf),
+	                                                                             static_cast<std::uint32_t>(subleaf),
+	                                                                             regs[eax],
+	                                                                             regs[ebx],
+	                                                                             regs[ecx],
+	                                                                             regs[edx]);
+
+}
+
+void print_generic(const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
+	fmt::MemoryWriter w;
+	print_generic(w, cpu, leaf, subleaf);
+	w.write("\n");
+	std::cout << w.str() << std::endl;
 }
 
 void print_generic(const cpu_t& cpu, leaf_t leaf) {
@@ -310,13 +317,15 @@ void enumerate_leaf_brute_force(cpu_t& cpu, leaf_t leaf) {
 	}
 }
 
-void enumerate_leaf(cpu_t& cpu, leaf_t leaf) {
+void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool skip_vendor_check, bool skip_feature_check) {
 	register_set_t regs = { 0 };
 	const auto it = descriptors.find(leaf);
 	if(it != descriptors.end()) {
-		if(it->second.vendor & cpu.vendor) {
+		if(skip_vendor_check
+		|| it->second.vendor & cpu.vendor) {
 			const filter_t filter = it->second.filter;
-			if(filter == no_filter
+			if(skip_feature_check
+			|| filter      == no_filter
 			|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
 				if(it->second.enumerator) {
 					it->second.enumerator(cpu);
@@ -335,16 +344,17 @@ static const char usage_message[] =
 R"(cpuid.
 
 	Usage:
-		cpuid [--cpu <index>] [--dump] [--ignore-vendor]
+		cpuid [--cpu <index>] [--dump] [--ignore-vendor] [--ignore-feature-bits]
 		cpuid --help
 		cpuid --version
 
 	Options:
-		--cpu <index>         Index of logical core to get info from
-		--dump                Print unparsed output
-		--ignore-vendor       Ignore vendor constraints
-		--help                Show this text
-		--version             Show the version
+		--cpu <index>          Index of logical core to get info from
+		--dump                 Print unparsed output
+		--ignore-vendor        Ignore vendor constraints
+		--ignore-feature-bits  Ignore feature bit constraints
+		--help                 Show this text
+		--version              Show the version
 )";
 
 int main(int argc, char* argv[]) {
@@ -358,9 +368,11 @@ int main(int argc, char* argv[]) {
 	std::cout.rdbuf()->pubsetbuf(nullptr, 1024);
 
 	const std::map<std::string, docopt::value> args = docopt::docopt(usage_message, { argv + 1, argv + argc }, true, "cpuid 0.1");
+	const bool skip_vendor_check  = std::get<bool>(args.at("--ignore-vendor"));
+	const bool skip_feature_check = std::get<bool>(args.at("--ignore-feature-bits"));
 
 	std::vector<cpu_t> logical_cpus;
-	run_on_every_core([&logical_cpus, &args]() {
+	run_on_every_core([=, &logical_cpus, &args]() {
 		cpu_t cpu = {};
 		register_set_t regs = { 0 };
 
@@ -372,7 +384,7 @@ int main(int argc, char* argv[]) {
 		cpu.model = get_model(cpu.vendor, regs);
 
 		for(leaf_t leaf = leaf_t::basic_info; leaf <= cpu.highest_leaf; ++leaf) {
-			enumerate_leaf(cpu, leaf);
+			enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
 		}
 
 		cpuid(regs, leaf_t::hypervisor_limit, subleaf_t::main);
@@ -399,12 +411,12 @@ int main(int argc, char* argv[]) {
 				}
 
 				for(leaf_t leaf = leaf_t::hypervisor_limit; leaf <= cpu.highest_hypervisor_leaf; ++leaf) {
-					enumerate_leaf(cpu, leaf);
+					enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
 				}
 
 				if(cpu.vendor & xen_hvm) {
 					for(leaf_t leaf = cpu.xen_base; leaf <= cpu.highest_xen_leaf; ++leaf) {
-						enumerate_leaf(cpu, leaf);
+						enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
 					}
 				}
 			}
@@ -413,14 +425,12 @@ int main(int argc, char* argv[]) {
 		cpu.highest_extended_leaf = leaf_t{ regs[eax] };
 
 		for(leaf_t leaf = leaf_t::extended_limit; leaf <= cpu.highest_extended_leaf; ++leaf) {
-			enumerate_leaf(cpu, leaf);
+			enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
 		}
 		
 		cpu.apic_id = get_apic_id(cpu);
 		logical_cpus.push_back(cpu);
 	});
-
-	const bool skip_vendor_check = std::get<bool>(args.at("--ignore-vendor"));
 
 	{
 		const cpu_t& cpu = logical_cpus[0];
@@ -430,7 +440,8 @@ int main(int argc, char* argv[]) {
 				for(auto it = range.first; it != range.second; ++it) {
 					if(skip_vendor_check || (it->second.vendor & cpu.vendor)) {
 						const filter_t filter = it->second.filter;
-						if(filter == no_filter
+						if(skip_feature_check
+						|| filter      == no_filter
 						|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
 							if(it->second.printer) {
 								it->second.printer(cpu);

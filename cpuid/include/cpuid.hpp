@@ -270,6 +270,8 @@ inline std::string to_string(vendor_t vendor) {
 	case qemu:
 		hypervisor = "QEMU";
 		break;
+	default:
+		hypervisor = "";
 	}
 
 	return hypervisor.size() != 0 ? hypervisor + " on " + silicon : silicon;
@@ -329,6 +331,7 @@ inline void cpuid(register_set_t& regs, leaf_t leaf, subleaf_t subleaf) noexcept
 	regs[edx] = gsl::narrow_cast<std::uint32_t>(raw_regs[edx]);
 }
 
+void print_generic(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf);
 void print_generic(const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf);
 
 #endif
