@@ -332,6 +332,5 @@ inline void cpuid(register_set_t& regs, leaf_t leaf, subleaf_t subleaf) noexcept
 }
 
 void print_generic(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf);
-void print_generic(const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf);
 
 #endif

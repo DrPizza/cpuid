@@ -3,8 +3,6 @@
 #include "features.hpp"
 
 #include <cstddef>
-#include <iostream>
-#include <iomanip>
 #include <map>
 #include <vector>
 

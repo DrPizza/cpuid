@@ -3,16 +3,16 @@
 #include "hypervisors.hpp"
 #include "features.hpp"
 
-#include <iostream>
-#include <iomanip>
 #include <array>
 
 #include <fmt/format.h>
 
-void print_hypervisor_limit(const cpu_t& cpu) {
+#include "utility.hpp"
+
+void print_hypervisor_limit(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::hypervisor_limit).at(subleaf_t::main);
-	std::cout << "Hypervisor present\n";
-	std::cout << "\tMaximum hypervisor leaf: 0x" << std::setw(2) << std::setfill('0') << std::hex << regs[eax] << "\n";
+	w.write("Hypervisor present\n");
+	w.write("\tMaximum hypervisor leaf: {:#010x}\n", regs[eax]);
 
 	const union
 	{
@@ -20,18 +20,15 @@ void print_hypervisor_limit(const cpu_t& cpu) {
 		std::array<char, 12> vndr;
 	} data = { regs[ebx], regs[ecx], regs[edx] };
 
-	std::cout << "\tVendor: ";
-	std::cout.write(data.vndr.data(), gsl::narrow_cast<std::streamsize>(data.vndr.size()));
-	std::cout << "\n";
-	std::cout << "\tVendor name: " << to_string(cpu.vendor) << std::endl;
-	std::cout << std::endl;
+	w.write("\tVendor: {}\n", data.vndr);
+	w.write("\tVendor name: {:s}\n", to_string(cpu.vendor));
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_hyper_v_signature(const cpu_t& cpu) {
-	using namespace fmt::literals;
+void print_hyper_v_signature(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_signature).at(subleaf_t::main);
-
-	std::cout << "Hyper-V signature\n";
+	w.write("Hyper-V signature\n");
 	const union
 	{
 		std::uint32_t full;
@@ -44,18 +41,17 @@ void print_hyper_v_signature(const cpu_t& cpu) {
 		} split;
 	} a = { regs[eax] };
 
-	std::cout << "\tSignature: {:c}{:c}{:c}{:c}\n"_format(gsl::narrow_cast<char>(a.split.signature_1),
-	                                                      gsl::narrow_cast<char>(a.split.signature_2),
-	                                                      gsl::narrow_cast<char>(a.split.signature_3),
-	                                                      gsl::narrow_cast<char>(a.split.signature_4));
-	std::cout << std::endl;
+	w.write("\tSignature: {:c}{:c}{:c}{:c}\n", gsl::narrow_cast<char>(a.split.signature_1),
+	                                           gsl::narrow_cast<char>(a.split.signature_2),
+	                                           gsl::narrow_cast<char>(a.split.signature_3),
+	                                           gsl::narrow_cast<char>(a.split.signature_4));
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_hyper_v_system_identity(const cpu_t& cpu) {
-	using namespace fmt::literals;
-
+void print_hyper_v_system_identity(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_system_identity).at(subleaf_t::main);
-	std::cout << "Hyper-V system identiy\n";
+	w.write("Hyper-V system identiy\n");
 
 	const union
 	{
@@ -77,64 +73,64 @@ void print_hyper_v_system_identity(const cpu_t& cpu) {
 		} split;
 	} d = { regs[edx] };
 
-	std::cout << "\tBuild number: " << std::dec << regs[eax] << "\n";
-	std::cout << "\tVersion : {:d}.{:d}\n"_format(b.split.major_version, b.split.minor_version);
-	std::cout << "\tService Pack: " << std::dec << regs[ecx] << "\n";
-	std::cout << "\tService number: " << std::dec << d.split.service_number << "\n";
-	std::cout << "\tService branch: " << std::dec << d.split.service_branch << "\n";
-	std::cout << std::endl;
+	w.write("\tBuild number: {:d}\n", regs[eax]);
+	w.write("\tVersion : {:d}.{:d}\n", b.split.major_version, b.split.minor_version);
+	w.write("\tService Pack: {:d}\n", regs[ecx]);
+	w.write("\tService number: {:d}\n", d.split.service_number);
+	w.write("\tService branch: {:d}\n", d.split.service_branch);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_hyper_v_features(const cpu_t& cpu) {
-	using namespace fmt::literals;
+void print_hyper_v_features(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_features).at(subleaf_t::main);
-	std::cout << "Hyper-V features\n";
-	std::cout << "\tPartition privilege mask: {:08x}:{:08x}\n"_format(regs[ebx], regs[eax]);
-	print_features(cpu, leaf_t::hyper_v_features, subleaf_t::main, edx);
-	std::cout << std::endl;
+	w.write("Hyper-V features\n");
+	w.write("\tPartition privilege mask: {:08x}:{:08x}\n", regs[ebx], regs[eax]);
+	print_features(w, cpu, leaf_t::hyper_v_features, subleaf_t::main, edx);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_hyper_v_enlightenment_recs(const cpu_t& cpu) {
-	using namespace fmt::literals;
+void print_hyper_v_enlightenment_recs(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_enlightenment_recs).at(subleaf_t::main);
-	std::cout << "Hyper-V recommendations\n";
+	w.write("Hyper-V recommendations\n");
 	print_features(cpu, leaf_t::hyper_v_enlightenment_recs, subleaf_t::main, eax);
-	std::cout << "\n";
+	w.write("\n");
 	if(regs[ebx] != 0xffff'ffffui32) {
-		std::cout << "\tTimes to retry spinlocks before notifying hypervisor: {:d}\n"_format(regs[ebx]);
+		w.write("\tTimes to retry spinlocks before notifying hypervisor: {:d}\n", regs[ebx]);
 	} else {
-		std::cout << "\tNever retry spinlocks before notifying hypervisor\n";
+		w.write("\tNever retry spinlocks before notifying hypervisor\n");
 	}
-	std::cout << std::endl;
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_hyper_v_implementation_limits(const cpu_t& cpu) {
-	using namespace fmt::literals;
+void print_hyper_v_implementation_limits(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_implementation_limits).at(subleaf_t::main);
-	std::cout << "Hyper-V implementation limits\n";
-	std::cout << "\tMaximum virtual processors supported: " << std::dec << regs[eax] << "\n";
-	std::cout << "\tMaximum logical processors supported: " << std::dec << regs[ebx] << "\n";
-	std::cout << "\tMaximum physical interrupt vectors supported: " << std::dec << regs[ecx] << "\n";
-	std::cout << std::endl;
+	w.write("Hyper-V implementation limits\n");
+	w.write("\tMaximum virtual processors supported: {:d}\n", regs[eax]);
+	w.write("\tMaximum logical processors supported: {:d}\n", regs[ebx]);
+	w.write("\tMaximum physical interrupt vectors supported: {:d}\n", regs[ecx]);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_hyper_v_implementation_hardware(const cpu_t& cpu) {
-	using namespace fmt::literals;
-	std::cout << "Hyper-V implementation hardware\n";
-	print_features(cpu, leaf_t::hyper_v_implementation_hardware, subleaf_t::main, eax);
-	std::cout << std::endl;
+void print_hyper_v_implementation_hardware(fmt::Writer& w, const cpu_t& cpu) {
+	w.write("Hyper-V implementation hardware\n");
+	print_features(w, cpu, leaf_t::hyper_v_implementation_hardware, subleaf_t::main, eax);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_hyper_v_root_cpu_management(const cpu_t& cpu) {
-	using namespace fmt::literals;
-	std::cout << "Hyper-V root CPU management\n";
-	print_features(cpu, leaf_t::hyper_v_root_cpu_management, subleaf_t::main, eax);
-	print_features(cpu, leaf_t::hyper_v_root_cpu_management, subleaf_t::main, ebx);
-	std::cout << std::endl;
+void print_hyper_v_root_cpu_management(fmt::Writer& w, const cpu_t& cpu) {
+	w.write("Hyper-V root CPU management\n");
+	print_features(w, cpu, leaf_t::hyper_v_root_cpu_management, subleaf_t::main, eax);
+	print_features(w, cpu, leaf_t::hyper_v_root_cpu_management, subleaf_t::main, ebx);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_hyper_v_shared_virtual_memory(const cpu_t& cpu) {
-	using namespace fmt::literals;
+void print_hyper_v_shared_virtual_memory(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_shared_virtual_memory).at(subleaf_t::main);
 
 	const union
@@ -148,24 +144,24 @@ void print_hyper_v_shared_virtual_memory(const cpu_t& cpu) {
 		} split;
 	} a = { regs[eax] };
 
-	std::cout << "Hyper-V shared virtual memory features\n";
-	print_features(cpu, leaf_t::hyper_v_shared_virtual_memory, subleaf_t::main, eax);
-	std::cout << std::endl;
-	std::cout << "\tMaximum PASID space count: " << std::dec << a.split.max_pasid_space_count << "\n";
-	std::cout << std::endl;
+	w.write("Hyper-V shared virtual memory features\n");
+	print_features(w, cpu, leaf_t::hyper_v_shared_virtual_memory, subleaf_t::main, eax);
+	w.write("\n");
+	w.write("\tMaximum PASID space count: {:d}\n", a.split.max_pasid_space_count);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_hyper_v_nested_hypervisor(const cpu_t& cpu) {
-	std::cout << "Nested hypervisor features\n";
-	print_features(cpu, leaf_t::hyper_v_nested_hypervisor, subleaf_t::main, eax);
-	print_features(cpu, leaf_t::hyper_v_nested_hypervisor, subleaf_t::main, edx);
-	std::cout << std::endl;
+void print_hyper_v_nested_hypervisor(fmt::Writer& w, const cpu_t& cpu) {
+	w.write("Nested hypervisor features\n");
+	print_features(w, cpu, leaf_t::hyper_v_nested_hypervisor, subleaf_t::main, eax);
+	print_features(w, cpu, leaf_t::hyper_v_nested_hypervisor, subleaf_t::main, edx);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_hyper_v_nested_features(const cpu_t& cpu) {
-	using namespace fmt::literals;
+void print_hyper_v_nested_features(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_nested_features).at(subleaf_t::main);
-
 	const union
 	{
 		std::uint32_t full;
@@ -181,17 +177,18 @@ void print_hyper_v_nested_features(const cpu_t& cpu) {
 		} split;
 	} a = { regs[eax] };
 
-	std::cout << "Nested hypervisor virtualization features\n";
-	std::cout << "\tEnlightened VMCS version: {:d}.{:d}\n"_format(a.split.high_version, a.split.low_version);
-	print_features(cpu, leaf_t::hyper_v_nested_features, subleaf_t::main, eax);
-	std::cout << std::endl;
+	w.write("Nested hypervisor virtualization features\n");
+	w.write("\tEnlightened VMCS version: {:d}.{:d}\n", a.split.high_version, a.split.low_version);
+	print_features(w, cpu, leaf_t::hyper_v_nested_features, subleaf_t::main, eax);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_xen_limit(const cpu_t& cpu) {
+void print_xen_limit(fmt::Writer& w, const cpu_t& cpu) {
 	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_limit : leaf_t::xen_limit_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
-	std::cout << "Xen with Viridian Extensions present\n";
-	std::cout << "\tMaximum Xen leaf: 0x" << std::setw(2) << std::setfill('0') << std::hex << regs[eax] << "\n";
+	w.write("Xen{:s} signature\n", (cpu.vendor & hyper_v) ? " with viridian extensions" : "");
+	w.write("\tMaximum Xen leaf: {:#010x}\n", regs[eax]);
 
 	const union
 	{
@@ -199,15 +196,13 @@ void print_xen_limit(const cpu_t& cpu) {
 		std::array<char, 12> vndr;
 	} data = { regs[ebx], regs[ecx], regs[edx] };
 
-	std::cout << "\tVendor: ";
-	std::cout.write(data.vndr.data(), gsl::narrow_cast<std::streamsize>(data.vndr.size()));
-	std::cout << "\n";
-	std::cout << "\tVendor name: " << to_string(cpu.vendor) << std::endl;
-	std::cout << std::endl;
+	w.write("\tVendor: {}\n", data.vndr);
+	w.write("\tVendor name: {:s}\n", to_string(cpu.vendor));
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_xen_version(const cpu_t& cpu) {
-	using namespace fmt::literals;
+void print_xen_version(fmt::Writer& w, const cpu_t& cpu) {
 	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_version : leaf_t::xen_version_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
 
@@ -221,19 +216,21 @@ void print_xen_version(const cpu_t& cpu) {
 		} split;
 	} a = { regs[eax] };
 
-	std::cout << "Xen version\n";
-	std::cout << "\tVersion : {:d}.{:d}\n"_format(a.split.major_version, a.split.minor_version);
-	std::cout << std::endl;
+	w.write("Xen version\n");
+	w.write("\tVersion : {:d}.{:d}\n", a.split.major_version, a.split.minor_version);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_xen_features(const cpu_t& cpu) {
+void print_xen_features(fmt::Writer& w, const cpu_t& cpu) {
 	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_features : leaf_t::xen_features_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
 
-	std::cout << "Xen features\n";
-	std::cout << "\tHypercall transfer pages: " << std::dec << regs[eax] << "\n";
-	std::cout << "\tXen MSR base address: " << std::setw(8) << std::setfill('0') << std::hex << regs[ebx] << "\n";
-	std::cout << std::endl;
+	w.write("Xen features\n");
+	w.write("\tHypercall transfer pages: {:d}\n", regs[eax]);
+	w.write("\tXen MSR base address: {:#010x}\n", regs[ebx]);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
 void enumerate_xen_time(cpu_t& cpu) {
@@ -247,53 +244,57 @@ void enumerate_xen_time(cpu_t& cpu) {
 	cpu.leaves[leaf][subleaf_t::xen_time_host] = regs;
 }
 
-void print_xen_time(const cpu_t& cpu) {
+void print_xen_time(fmt::Writer& w, const cpu_t& cpu) {
 	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_time : leaf_t::xen_time_offset;
 	for(const auto& sub : cpu.leaves.at(leaf)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
 		case subleaf_t::xen_time_main:
-			std::cout << "Xen time features\n";
-			print_features(cpu, leaf, subleaf_t::xen_time_main, eax);
-			std::cout << "\n";
-			std::cout << "\tTSC mode: " << std::setw(8) << std::setfill('0') << std::hex << regs[ebx] << "\n";
-			std::cout << "\tTSC/kHz: " << std::dec << regs[ecx] << "\n";
-			std::cout << "\tTSC restarts: " << std::dec << regs[ecx] << "\n";
-			std::cout << std::endl;
+			w.write("Xen time features\n");
+			print_features(w, cpu, leaf, subleaf_t::xen_time_main, eax);
+			w.write("\n");
+			w.write("\tTSC mode: {:#010x}\n", regs[ebx]);
+			w.write("\tTSC/kHz: {:d}\n", regs[ecx]);
+			w.write("\tTSC restarts: {:d}\n", regs[ecx]);
+			w.write("\n");
 			break;
 		case subleaf_t::xen_time_tsc_offset:
 			{
 				const std::uint64_t tsc_offset = (gsl::narrow_cast<std::uint64_t>(regs[ebx]) << 32ui64) | gsl::narrow_cast<std::uint64_t>(regs[eax]);
-				std::cout << "Xen TSC scaling and offset\n";
-				std::cout << "\tTSC offset: " << std::dec << tsc_offset << "\n";
-				std::cout << "\tTSC to nanoseconds factor: " << std::dec << regs[ecx] << "\n";
-				std::cout << "\tTSC to nanoseconds shift: " << gsl::narrow_cast<std::int8_t>(regs[edx]) << "\n";
-				std::cout << std::endl;
+				w.write("Xen TSC scaling and offset\n");
+				w.write("\tTSC offset: {:d}\n", tsc_offset);
+				w.write("\tTSC to nanoseconds factor: {:d}\n", regs[ecx]);
+				w.write("\tTSC to nanoseconds shift: {:d}\n", gsl::narrow_cast<std::int8_t>(regs[edx]));
+				w.write("\n");
 			}
 			break;
 		case subleaf_t::xen_time_host:
-			std::cout << "Xen host CPU\n";
-			std::cout << "\tHost CPU speed/kHz: " << std::dec << regs[eax] << "\n";
-			std::cout << std::endl;
+			w.write("Xen host CPU\n");
+			w.write("\tHost CPU speed/kHz: {:d}\n", regs[eax]);
+			w.write("\n");
 			break;
 		default:
-			__assume(0);
+			w.write("Xen unknown time subleaf\n");
+			print_generic(w, cpu, leaf, sub.first);
+			w.write("\n");
 		}
 	}
+	std::cout << w.str() << std::flush;
 }
 
-void print_xen_hvm_features(const cpu_t& cpu) {
+void print_xen_hvm_features(fmt::Writer& w, const cpu_t& cpu) {
 	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_hvm_features : leaf_t::xen_hvm_features_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
-	std::cout << "Xen HVM features\n";
+	w.write("Xen HVM features\n");
 	print_features(cpu, leaf, subleaf_t::main, eax);
 	if(0x0000'0008ui32 & cpu.leaves.at(leaf).at(subleaf_t::main).at(eax)) {
-		std::cout << "\tVCPU ID: " << std::setw(8) << std::setfill('0') << std::hex << regs[ebx] << "\n";
+		w.write("\tVCPU ID: {:#010x}\n", regs[ebx]);
 	}
-	std::cout << std::endl;
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_xen_pv_features(const cpu_t& cpu) {
+void print_xen_pv_features(fmt::Writer& w, const cpu_t& cpu) {
 	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_pv_features : leaf_t::xen_pv_features_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
 
@@ -307,21 +308,24 @@ void print_xen_pv_features(const cpu_t& cpu) {
 		} split;
 	} b = { regs[ebx] };
 
-	std::cout << "Xen PV features\n";
-	std::cout << "\tHighest subleaf: " << std::setw(8) << std::setfill('0') << std::hex << regs[eax] << "\n";
-	std::cout << std::endl;
+	w.write("Xen PV features\n");
+	w.write("\tHighest subleaf: {:#010x}\n", regs[eax]);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_vmware_timing(const cpu_t& cpu) {
+void print_vmware_timing(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::vmware_timing).at(subleaf_t::main);
-	std::cout << "VMware timing\n";
-	std::cout << "\tVirtual TSC frequency/kHz: " << std::dec << regs[eax] << "\n";
-	std::cout << "\tVirtual bus/APIC frequency/kHz: " << std::dec << regs[ebx] << "\n";
-	std::cout << std::endl;
+	w.write("VMware timing\n");
+	w.write("\tVirtual TSC frequency/kHz: {:d}\n", regs[eax]);
+	w.write("\tVirtual bus/APIC frequency/kHz: {:d}\n", regs[ebx]);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }
 
-void print_kvm_features(const cpu_t& cpu) {
-	std::cout << "KVM features\n";
-	print_features(cpu, leaf_t::kvm_features, subleaf_t::main, eax);
-	std::cout << std::endl;
+void print_kvm_features(fmt::Writer& w, const cpu_t& cpu) {
+	w.write("KVM features\n");
+	print_features(w, cpu, leaf_t::kvm_features, subleaf_t::main, eax);
+	w.write("\n");
+	std::cout << w.str() << std::flush;
 }

@@ -9,6 +9,8 @@
 
 #include <thread>
 
+#include <fmt/format.h>
+
 template<typename Fn>
 void run_on_every_core(Fn&& f) {
 	std::thread bouncer = std::thread([&]() {
@@ -23,6 +25,19 @@ void run_on_every_core(Fn&& f) {
 		}
 	});
 	bouncer.join();
+}
+
+namespace fmt {
+	template<size_t N>
+	void format_arg(fmt::BasicFormatter<char>& f, const char*&, const std::array<char, N>& arr) {
+		for(const char c : arr) {
+			if(c != '\0') {
+				f.writer().write("{:c}", c);
+			} else {
+				return;
+			}
+		}
+	}
 }
 
 #endif

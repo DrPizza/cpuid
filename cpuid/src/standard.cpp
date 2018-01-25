@@ -3,30 +3,15 @@
 #include "standard.hpp"
 #include "features.hpp"
 
-#include <iostream>
-#include <iomanip>
 #include <map>
 #include <vector>
 
 #include <fmt/format.h>
 
-namespace fmt {
-	template<size_t N>
-	void format_arg(fmt::BasicFormatter<char>& f, const char*&, const std::array<char, N>& arr) {
-		for(const char c : arr) {
-			if(c != '\0') {
-				f.writer().write("{:c}", c);
-			} else {
-				return;
-			}
-		}
-	}
-}
+#include "utility.hpp"
 
-void print_basic_info(const cpu_t& cpu) {
+void print_basic_info(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::basic_info).at(subleaf_t::main);
-	fmt::MemoryWriter w;
-	
 	w.write("Basic Information\n");
 	w.write("\tMaximum basic cpuid leaf: {:#010x}\n", regs[eax]);
 
@@ -42,9 +27,8 @@ void print_basic_info(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_version_info(const cpu_t& cpu) {
+void print_version_info(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 	w.write("Version Information\n");
 
 	const union
@@ -142,10 +126,7 @@ void print_version_info(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_serial_number(const cpu_t& cpu) {
-	using namespace fmt::literals;
-	fmt::MemoryWriter w;
-
+void print_serial_number(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Processor serial number\n");
 	w.write("\t");
 	const register_set_t& regs = cpu.leaves.at(leaf_t::serial_number).at(subleaf_t::main);
@@ -169,7 +150,7 @@ void print_serial_number(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_mwait_parameters(const cpu_t& cpu) {
+void print_mwait_parameters(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::monitor_mwait).at(subleaf_t::main);
 
 	//if(regs[eax] == 0ui32 && regs[ebx] == 0ui32) {
@@ -207,9 +188,6 @@ void print_mwait_parameters(const cpu_t& cpu) {
 		} split;
 	} c = { regs[ecx] };
 
-	using namespace fmt::literals;
-
-	fmt::MemoryWriter w;
 	w.write("MONITOR/MWAIT leaf\n");
 	w.write("\tSmallest monitor-line size: {:d} bytes\n", (a.split.smallest_monitor_line + 0ui32));
 	w.write("\tLargest monitor-line size: {:d} bytes\n", (b.split.largest_monitor_line  + 0ui32));
@@ -220,7 +198,7 @@ void print_mwait_parameters(const cpu_t& cpu) {
 		if(cpu.vendor & intel) {
 			const std::uint32_t mask = 0b1111;
 			for(std::size_t i = 0; i < 8; ++i) {
-				std::uint32_t states = (regs[edx] & (mask << (i * 4))) >> (i * 4);
+				const std::uint32_t states = (regs[edx] & (mask << (i * 4))) >> (i * 4);
 				w.write("\t{:d} C{:d} sub C-states supported using MWAIT\n", states, i);
 			}
 		}
@@ -229,9 +207,8 @@ void print_mwait_parameters(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_thermal_and_power(const cpu_t& cpu) {
+void print_thermal_and_power(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::thermal_and_power).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 	w.write("Thermal and Power Management\n");
 	print_features(w, cpu, leaf_t::thermal_and_power, subleaf_t::main, eax);
 	w.write("\n");
@@ -268,8 +245,7 @@ void enumerate_extended_features(cpu_t& cpu) {
 	}
 }
 
-void print_extended_features(const cpu_t& cpu) {
-	fmt::MemoryWriter w;
+void print_extended_features(fmt::Writer& w, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::extended_features)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -327,19 +303,16 @@ void print_extended_features(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_direct_cache_access(const cpu_t& cpu) {
+void print_direct_cache_access(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::direct_cache_access).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 	w.write("Direct Cache Access\n");
 	w.write("\tDCA CAP MSR: {:#010x}\n", regs[eax]);
 	w.write("\n");
 	std::cout << w.str() << std::flush;
 }
 
-void print_performance_monitoring(const cpu_t& cpu) {
+void print_performance_monitoring(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::performance_monitoring).at(subleaf_t::main);
-	fmt::MemoryWriter w;
-
 	const union
 	{
 		std::uint32_t full;
@@ -444,7 +417,7 @@ void enumerate_extended_state(cpu_t& cpu) {
 	}
 }
 
-void print_extended_state(const cpu_t& cpu) {
+void print_extended_state(fmt::Writer& w, const cpu_t& cpu) {
 	static const std::vector<feature_t> saveables = {
 		{ intel | amd, 0x0000'0001ui32, "x87"         , "Legacy x87 floating point"    },
 		{ intel | amd, 0x0000'0002ui32, "SSE"         , "128-bit SSE XMM"              },
@@ -465,7 +438,6 @@ void print_extended_state(const cpu_t& cpu) {
 		{ intel | amd, 0x0000'0008ui32, "XSAVES"      , "XSAVES/XRSTORS"               },
 	};
 
-	fmt::MemoryWriter w;
 	for(const auto& sub : cpu.leaves.at(leaf_t::extended_state)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -555,13 +527,12 @@ void enumerate_rdt_monitoring(cpu_t& cpu) {
 	}
 }
 
-void print_rdt_monitoring(const cpu_t& cpu) {
+void print_rdt_monitoring(fmt::Writer& w, const cpu_t& cpu) {
 	static const std::vector<feature_t> monitorables = {
 		{ intel , 0x0000'0001ui32, "O", "Occupancy"       },
 		{ intel , 0x0000'0002ui32, "T", "Total Bandwidth" },
 		{ intel , 0x0000'0004ui32, "L", "Local Bandwidth" }
 	};
-	fmt::MemoryWriter w;
 	for(const auto& sub : cpu.leaves.at(leaf_t::rdt_monitoring)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -610,14 +581,12 @@ void enumerate_rdt_allocation(cpu_t& cpu) {
 	}
 }
 
-void print_rdt_allocation(const cpu_t& cpu) {
+void print_rdt_allocation(fmt::Writer& w, const cpu_t& cpu) {
 	static const std::vector<feature_t> allocatables = {
 		{ intel , 0x0000'0002ui32, "L3" , "L3 Cache Allocation"},
 		{ intel , 0x0000'0004ui32, "L2" , "L2 Cache Allocation"},
 		{ intel , 0x0000'0008ui32, "MEM", "Memory Bandwidth Allocation" }
 	};
-
-	fmt::MemoryWriter w;
 
 	for(const auto& sub : cpu.leaves.at(leaf_t::rdt_allocation)) {
 		const register_set_t& regs = sub.second;
@@ -731,14 +700,13 @@ void enumerate_sgx_info(cpu_t& cpu) {
 	}
 }
 
-void print_sgx_info(const cpu_t& cpu) {
+void print_sgx_info(fmt::Writer& w, const cpu_t& cpu) {
 	static const std::vector<feature_t> sgx_features = {
 		{ intel, 0x0000'0001ui32, "SGX1" , "SGX1 functions available"                      },
 		{ intel, 0x0000'0002ui32, "SGX2" , "SGX2 functions available"                      },
 		{ intel, 0x0000'0020ui32, "ENCLV", "EINCVIRTCHILD, EDECVIRTCHILD, and ESETCONTEXT" },
 		{ intel, 0x0000'0040ui32, "ENCLS", "ETRACKC, ERDINFO, ELDBC, and ELDUC"            },
 	};
-	fmt::MemoryWriter w;
 
 	for(const auto& sub : cpu.leaves.at(leaf_t::sgx_info)) {
 		const register_set_t& regs = sub.second;
@@ -848,8 +816,7 @@ void enumerate_processor_trace(cpu_t& cpu) {
 	}
 }
 
-void print_processor_trace(const cpu_t& cpu) {
-	fmt::MemoryWriter w;
+void print_processor_trace(fmt::Writer& w, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::processor_trace)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -894,9 +861,8 @@ void print_processor_trace(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_time_stamp_counter(const cpu_t& cpu) {
+void print_time_stamp_counter(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::time_stamp_counter).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 	w.write("Time Stamp Counter and Nominal Core Crystal Clock\n");
 	w.write("\tTSC:core crystal clock ratio: {:d}:{:d}\n", regs[ebx], regs[eax]);
 	w.write("\tNominal core crystal clock/Hz: {:d}\n", regs[ecx]);
@@ -905,7 +871,7 @@ void print_time_stamp_counter(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_processor_frequency(const cpu_t& cpu) {
+void print_processor_frequency(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::processor_frequency).at(subleaf_t::main);
 
 	struct frequency_t
@@ -932,7 +898,6 @@ void print_processor_frequency(const cpu_t& cpu) {
 		frequency_t split;
 	} c = { regs[ecx] };
 
-	fmt::MemoryWriter w;
 	w.write("Processor frequency\n");
 	w.write("\tBase frequency/MHz: {:d}\n", a.split.frequency);
 	w.write("\tMaximum frequency/MHz: {:d}\n", b.split.frequency);
@@ -953,8 +918,7 @@ void enumerate_system_on_chip_vendor(cpu_t& cpu) {
 	}
 }
 
-void print_system_on_chip_vendor(const cpu_t& cpu) {
-	fmt::MemoryWriter w;
+void print_system_on_chip_vendor(fmt::Writer& w, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::system_on_chip_vendor)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -994,8 +958,8 @@ void print_system_on_chip_vendor(const cpu_t& cpu) {
 					cpu.leaves.at(leaf_t::system_on_chip_vendor).at(subleaf_t{ 2 }),
 					cpu.leaves.at(leaf_t::system_on_chip_vendor).at(subleaf_t{ 3 })
 				};
-				std::cout << "\tSoC brand: " << brand.full.data() << "\n";
-				std::cout << std::endl;
+				w.write("\tSoC brand: {}\n", brand.full);
+				w.write("\n");
 			}
 			break;
 		case subleaf_t{ 2 }:
@@ -1007,7 +971,7 @@ void print_system_on_chip_vendor(const cpu_t& cpu) {
 			w.write("\t\t{:#010x}\n", regs[ebx]);
 			w.write("\t\t{:#010x}\n", regs[ecx]);
 			w.write("\t\t{:#010x}\n", regs[edx]);
-			std::cout << std::endl;
+			w.write("\n");
 			break;
 		}
 	}
@@ -1029,8 +993,7 @@ void enumerate_pconfig(cpu_t& cpu) {
 	}
 }
 
-void print_pconfig(const cpu_t& cpu) {
-	fmt::MemoryWriter w;
+void print_pconfig(fmt::Writer& w, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::pconfig)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -1068,18 +1031,16 @@ void print_pconfig(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_extended_limit(const cpu_t& cpu) {
+void print_extended_limit(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_limit).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 	w.write("Extended limit\n");
 	w.write("\tMaximum extended cpuid leaf: {:#010x}\n", regs[eax]);
 	w.write("\n");
 	std::cout << w.str() << std::flush;
 }
 
-void print_extended_signature_and_features(const cpu_t& cpu) {
+void print_extended_signature_and_features(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_signature_and_features).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 	w.write("Extended signature and features\n");
 	
 	if(cpu.vendor & amd) {
@@ -1128,8 +1089,7 @@ void print_extended_signature_and_features(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_brand_string(const cpu_t& cpu) {
-	fmt::MemoryWriter w;
+void print_brand_string(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Processor brand string\n");
 	const union
 	{
@@ -1146,9 +1106,8 @@ void print_brand_string(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_ras_advanced_power_management(const cpu_t& cpu) {
+void print_ras_advanced_power_management(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::ras_advanced_power_management).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 
 	const union
 	{
@@ -1191,9 +1150,8 @@ void print_ras_advanced_power_management(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_address_limits(const cpu_t& cpu) {
+void print_address_limits(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::address_limits).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 
 	const union
 	{
@@ -1278,9 +1236,8 @@ void print_address_limits(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_secure_virtual_machine(const cpu_t& cpu) {
+void print_secure_virtual_machine(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::secure_virtual_machine).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 
 	const union
 	{
@@ -1301,25 +1258,22 @@ void print_secure_virtual_machine(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_performance_optimization(const cpu_t& cpu) {
-	fmt::MemoryWriter w;
+void print_performance_optimization(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Performance Optimization\n");
 	print_features(w, cpu, leaf_t::performance_optimization, subleaf_t::main, eax);
 	w.write("\n");
 	std::cout << w.str() << std::flush;
 }
 
-void print_instruction_based_sampling(const cpu_t& cpu) {
-	fmt::MemoryWriter w;
+void print_instruction_based_sampling(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Instruction Based Sampling\n");
 	print_features(w, cpu, leaf_t::instruction_based_sampling, subleaf_t::main, eax);
 	w.write("\n");
 	std::cout << w.str() << std::flush;
 }
 
-void print_lightweight_profiling(const cpu_t& cpu) {
+void print_lightweight_profiling(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::lightweight_profiling).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 
 	const union
 	{
@@ -1367,9 +1321,8 @@ void print_lightweight_profiling(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_encrypted_memory(const cpu_t& cpu) {
+void print_encrypted_memory(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::encrypted_memory).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 
 	const union
 	{

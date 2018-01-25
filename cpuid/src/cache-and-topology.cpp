@@ -4,8 +4,6 @@
 
 #include "utility.hpp"
 
-#include <iostream>
-#include <iomanip>
 #include <thread>
 
 #include <fmt/format.h>
@@ -337,15 +335,12 @@ std::string to_string(cache_descriptor_t desc) {
 	return w.str();
 }
 
-void print_cache_tlb_info(const cpu_t& cpu) {
-	using namespace fmt::literals;
-
+void print_cache_tlb_info(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::cache_and_tlb).at(subleaf_t::main);
 
 	if((regs[eax] & 0xff) != 0x01) {
 		return;
 	}
-	fmt::MemoryWriter w;
 
 	const auto bytes = gsl::as_bytes(gsl::make_span(regs));
 
@@ -405,6 +400,7 @@ void print_cache_tlb_info(const cpu_t& cpu) {
 						}
 						break;
 					}
+					using namespace fmt::literals;
 					non_conformant_descriptors.push_back("Unknown cache type: {:#2x}"_format(value));
 				}
 				break;
@@ -453,10 +449,7 @@ void enumerate_deterministic_cache(cpu_t& cpu) {
 	}
 }
 
-void print_deterministic_cache(const cpu_t& cpu) {
-	using namespace fmt::literals;
-	fmt::MemoryWriter w;
-
+void print_deterministic_cache(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Deterministic cache\n");
 
 	for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_cache)) {
@@ -558,9 +551,7 @@ void enumerate_extended_topology(cpu_t& cpu) {
 	}
 }
 
-void print_extended_topology(const cpu_t& cpu) {
-	fmt::MemoryWriter w;
-	
+void print_extended_topology(fmt::Writer& w, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::extended_topology)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -635,10 +626,7 @@ void enumerate_deterministic_tlb(cpu_t& cpu) {
 	}
 }
 
-void print_deterministic_tlb(const cpu_t& cpu) {
-	using namespace fmt::literals;
-	fmt::MemoryWriter w;
-
+void print_deterministic_tlb(fmt::Writer& w, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_tlb)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -684,6 +672,7 @@ void print_deterministic_tlb(const cpu_t& cpu) {
 				const std::uint32_t entries = b.split.ways_of_associativity * regs[ecx];
 
 				auto print_associativity = [](std::uint32_t fully_associative, std::uint32_t ways) {
+					using namespace fmt::literals;
 					return fully_associative ? std::string("fully") : "{:d}-way"_format(ways);
 				};
 
@@ -739,9 +728,8 @@ void print_deterministic_tlb(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_l1_cache_tlb(const cpu_t & cpu) {
+void print_l1_cache_tlb(fmt::Writer& w, const cpu_t & cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::l1_cache_identifiers).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 
 	struct tlb_element
 	{
@@ -882,9 +870,8 @@ std::string print_tlb(const tlb_element& tlb, const std::string& type, const std
 	return "{:d}-entry {:s} L2 {:s} TLB for {:s} pages"_format(tlb.entries, print_associativity(tlb.associativity), type, page_size);
 };
 
-void print_l2_cache_tlb(const cpu_t & cpu) {
+void print_l2_cache_tlb(fmt::Writer& w, const cpu_t & cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::l2_cache_identifiers).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 	
 	struct l2_cache_info
 	{
@@ -975,9 +962,7 @@ void print_l2_cache_tlb(const cpu_t & cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_1g_tlb(const cpu_t& cpu) {
-	fmt::MemoryWriter w;
-
+void print_1g_tlb(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::tlb_1g_identifiers).at(subleaf_t::main);
 	
 	const union
@@ -1014,10 +999,7 @@ void enumerate_cache_properties(cpu_t& cpu) {
 	}
 }
 
-void print_cache_properties(const cpu_t& cpu) {
-	using namespace fmt::literals;
-	fmt::MemoryWriter w;
-	
+void print_cache_properties(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Cache properties\n");
 
 	for(const auto& sub : cpu.leaves.at(leaf_t::cache_properties)) {
@@ -1103,9 +1085,8 @@ void print_cache_properties(const cpu_t& cpu) {
 	std::cout << w.str() << std::flush;
 }
 
-void print_extended_apic(const cpu_t& cpu) {
+void print_extended_apic(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main);
-	fmt::MemoryWriter w;
 
 	const union
 	{
@@ -1299,7 +1280,7 @@ std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noe
 	return std::make_pair((1ui32 << idx) - 1ui32, idx);
 }
 
-void determine_topology(const std::vector<cpu_t>& logical_cpus) {
+void determine_topology(fmt::Writer& w, const std::vector<cpu_t>& logical_cpus) {
 	system_t machine = {};
 	const std::uint32_t total_addressable_cores = gsl::narrow_cast<std::uint32_t>(logical_cpus.size());
 	bool enumerated_caches = false;
@@ -1586,9 +1567,6 @@ void determine_topology(const std::vector<cpu_t>& logical_cpus) {
 			cache_output.insert(std::make_pair(cores_covered, line));
 		}
 	}
-
-
-	fmt::MemoryWriter w;
 
 	for(const auto& p : cache_output) {
 		w.write("{:s}\n", p.second);

@@ -138,7 +138,7 @@ uint32_t get_apic_id(const cpu_t& cpu) {
 	return get_local_apic_id(cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main));
 }
 
-using leaf_print = void(*)(const cpu_t& cpu);
+using leaf_print = void(*)(fmt::Writer& w, const cpu_t& cpu);
 using leaf_enumerate = void(*)(cpu_t& cpu);
 
 struct filter_t
@@ -169,7 +169,7 @@ struct leaf_descriptor_t
 void enumerate_null(cpu_t&) noexcept {
 }
 
-void print_null(const cpu_t&) noexcept {
+void print_null(fmt::Writer&, const cpu_t&) noexcept {
 }
 
 const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
@@ -274,22 +274,15 @@ void print_generic(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t subl
 
 }
 
-void print_generic(const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
-	fmt::MemoryWriter w;
-	print_generic(w, cpu, leaf, subleaf);
-	w.write("\n");
-	std::cout << w.str() << std::endl;
-}
-
-void print_generic(const cpu_t& cpu, leaf_t leaf) {
+void print_generic(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf) {
 	for(const auto& sub : cpu.leaves.at(leaf)) {
-		print_generic(cpu, leaf, sub.first);
+		print_generic(w, cpu, leaf, sub.first);
 	}
 }
 
-void print_generic(const cpu_t& cpu) {
+void print_generic(fmt::Writer& w, const cpu_t& cpu) {
 	for(const auto& leaf : cpu.leaves) {
-		print_generic(cpu, leaf.first);
+		print_generic(w, cpu, leaf.first);
 	}
 }
 
@@ -370,6 +363,7 @@ int main(int argc, char* argv[]) {
 	const std::map<std::string, docopt::value> args = docopt::docopt(usage_message, { argv + 1, argv + argc }, true, "cpuid 0.1");
 	const bool skip_vendor_check  = std::get<bool>(args.at("--ignore-vendor"));
 	const bool skip_feature_check = std::get<bool>(args.at("--ignore-feature-bits"));
+	const bool raw_dump           = std::get<bool>(args.at("--dump"));
 
 	std::vector<cpu_t> logical_cpus;
 	run_on_every_core([=, &logical_cpus, &args]() {
@@ -432,9 +426,10 @@ int main(int argc, char* argv[]) {
 		logical_cpus.push_back(cpu);
 	});
 
-	{
+	if(!raw_dump) {
 		const cpu_t& cpu = logical_cpus[0];
 		for(const auto& leaf : cpu.leaves) {
+			fmt::MemoryWriter w;
 			const auto range = descriptors.equal_range(leaf.first);
 			if(range.first != range.second) {
 				for(auto it = range.first; it != range.second; ++it) {
@@ -444,23 +439,32 @@ int main(int argc, char* argv[]) {
 						|| filter      == no_filter
 						|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
 							if(it->second.printer) {
-								it->second.printer(cpu);
+								it->second.printer(w, cpu);
 							} else {
-								print_generic(cpu, leaf.first);
-								std::cout << std::endl;
+								print_generic(w, cpu, leaf.first);
 							}
 						}
 					}
 				}
 			} else {
-				print_generic(cpu, leaf.first);
+				print_generic(w, cpu, leaf.first);
 				std::cout << std::endl;
 			}
+			std::cout << w.str() << std::flush;
 		}
+	} else {
+		fmt::MemoryWriter w;
+		w.write("#apic eax ecx: eax ebx ecx edx");
+		for(const cpu_t& cpu : logical_cpus) {
+			print_generic(w, cpu);
+			w.write("\n");
+		}
+		std::cout << w.str() << std::flush;
 	}
 
-	determine_topology(logical_cpus);
-	std::cout << std::endl;
+	fmt::MemoryWriter w;
+	determine_topology(w, logical_cpus);
+	std::cout << w.str() << std::flush;
 
 	//for(const cpu_t& cpu : logical_cpus) {
 	//	print_generic(cpu);
