@@ -470,7 +470,8 @@ int main(int argc, char* argv[]) {
 	}
 
 	fmt::MemoryWriter w;
-	print_topology(w, logical_cpus);
+	system_t machine = build_topology(logical_cpus);
+	print_topology(w, machine);
 	std::cout << w.str() << std::flush;
 
 	//for(const cpu_t& cpu : logical_cpus) {

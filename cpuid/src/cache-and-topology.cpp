@@ -1469,9 +1469,8 @@ system_t build_topology(const std::vector<cpu_t>& logical_cpus) {
 	return machine;
 }
 
-void print_topology(fmt::Writer& w, const std::vector<cpu_t>& logical_cpus) {
-	system_t machine = build_topology(logical_cpus);
-	const std::uint32_t total_addressable_cores = gsl::narrow_cast<std::uint32_t>(logical_cpus.size());
+void print_topology(fmt::Writer& w, const system_t& machine) {
+	const std::uint32_t total_addressable_cores = gsl::narrow_cast<std::uint32_t>(machine.all_cores.size());
 
 	std::multimap<std::uint32_t, std::string> cache_output;
 	for(const cache_t& cache : machine.all_caches) {
@@ -1519,7 +1518,7 @@ void print_topology(fmt::Writer& w, const std::vector<cpu_t>& logical_cpus) {
 				for(std::uint32_t i = cores_covered_logical; i < total_addressable_cores; ++i) {
 					w.write("-");
 				}
-				w.write(" logical  {:d}:{:d}:{:d}\n", package.first, physical.first, logical.first);
+				w.write(" logical  {:d}:{:d}:{:d} apic id: {:#04x}\n", package.first, physical.first, logical.first, logical.second.full_apic_id);
 			}
 			for(std::uint32_t i = 0; i < cores_covered_physical; ++i) {
 				w.write("-");

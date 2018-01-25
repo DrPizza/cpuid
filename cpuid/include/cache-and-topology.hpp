@@ -99,8 +99,8 @@ void print_cache_properties(fmt::Writer& w, const cpu_t& cpu);
 
 void print_extended_apic(fmt::Writer& w, const cpu_t& cpu);
 
-void print_topology(fmt::Writer& w, const std::vector<cpu_t>& logical_cpus);
-
 system_t build_topology(const std::vector<cpu_t>& logical_cpus);
+
+void print_topology(fmt::Writer& w, const system_t& machine);
 
 #endif
