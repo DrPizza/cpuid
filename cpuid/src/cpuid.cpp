@@ -337,15 +337,17 @@ static const char usage_message[] =
 R"(cpuid.
 
 	Usage:
-		cpuid [--cpu <index>] [--dump] [--ignore-vendor] [--ignore-feature-bits]
+		cpuid [--cpu <id>] [--dump] [--ignore-vendor] [--ignore-feature-bits]
+		cpuid --list-ids
 		cpuid --help
 		cpuid --version
 
 	Options:
-		--cpu <index>          Index of logical core to get info from
+		--cpu <id>             ID of logical core to get info from
 		--dump                 Print unparsed output
 		--ignore-vendor        Ignore vendor constraints
 		--ignore-feature-bits  Ignore feature bit constraints
+		--list-ids             List all core IDs
 		--help                 Show this text
 		--version              Show the version
 )";
@@ -364,6 +366,7 @@ int main(int argc, char* argv[]) {
 	const bool skip_vendor_check  = std::get<bool>(args.at("--ignore-vendor"));
 	const bool skip_feature_check = std::get<bool>(args.at("--ignore-feature-bits"));
 	const bool raw_dump           = std::get<bool>(args.at("--dump"));
+	const bool list_ids           = std::get<bool>(args.at("--list-ids"));
 
 	std::vector<cpu_t> logical_cpus;
 	run_on_every_core([=, &logical_cpus, &args]() {
@@ -426,6 +429,10 @@ int main(int argc, char* argv[]) {
 		logical_cpus.push_back(cpu);
 	});
 
+	if(list_ids) {
+		
+	}
+
 	if(!raw_dump) {
 		const cpu_t& cpu = logical_cpus[0];
 		for(const auto& leaf : cpu.leaves) {
@@ -448,7 +455,7 @@ int main(int argc, char* argv[]) {
 				}
 			} else {
 				print_generic(w, cpu, leaf.first);
-				std::cout << std::endl;
+				w.write("\n");
 			}
 			std::cout << w.str() << std::flush;
 		}
@@ -463,7 +470,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	fmt::MemoryWriter w;
-	determine_topology(w, logical_cpus);
+	print_topology(w, logical_cpus);
 	std::cout << w.str() << std::flush;
 
 	//for(const cpu_t& cpu : logical_cpus) {

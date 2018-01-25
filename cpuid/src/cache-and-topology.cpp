@@ -433,7 +433,6 @@ void print_cache_tlb_info(fmt::Writer& w, const cpu_t& cpu) {
 		w.write("\t{:s}\n", s);
 	}
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_deterministic_cache(cpu_t& cpu) {
@@ -535,7 +534,6 @@ void print_deterministic_cache(fmt::Writer& w, const cpu_t& cpu) {
 		w.write("\t\tCache is shared by up to {:d} threads, with up to {:d} cores in the package.\n", a.split.maximum_addressable_thread_ids + 1, a.split.maximum_addressable_core_ids + 1);
 		w.write("\n");
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_extended_topology(cpu_t& cpu) {
@@ -611,7 +609,6 @@ void print_extended_topology(fmt::Writer& w, const cpu_t& cpu) {
 			w.write("\n");
 		}
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_deterministic_tlb(cpu_t& cpu) {
@@ -725,7 +722,6 @@ void print_deterministic_tlb(fmt::Writer& w, const cpu_t& cpu) {
 			}
 		}
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void print_l1_cache_tlb(fmt::Writer& w, const cpu_t & cpu) {
@@ -815,7 +811,6 @@ void print_l1_cache_tlb(fmt::Writer& w, const cpu_t & cpu) {
 	w.write("\t{:s}\n", print_cache(d.split, "instruction"));
 
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 struct tlb_element
@@ -959,7 +954,6 @@ void print_l2_cache_tlb(fmt::Writer& w, const cpu_t & cpu) {
 		break;
 	}
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_1g_tlb(fmt::Writer& w, const cpu_t& cpu) {
@@ -983,7 +977,6 @@ void print_1g_tlb(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\t{:s}\n", print_tlb(b.split.d, "data", "1G"));
 	w.write("\t{:s}\n", print_tlb(b.split.i, "instruction", "1G"));
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_cache_properties(cpu_t& cpu) {
@@ -1082,7 +1075,6 @@ void print_cache_properties(fmt::Writer& w, const cpu_t& cpu) {
 		w.write("\t\tCache is shared by up to {:d} threads in the package.\n", a.split.maximum_addressable_thread_ids + 1);
 		w.write("\n");
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void print_extended_apic(fmt::Writer& w, const cpu_t& cpu) {
@@ -1117,32 +1109,7 @@ void print_extended_apic(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tNode ID: {:#04x}\n", c.split.node_id);
 	w.write("\tNodes per processor: {:d}\n", (c.split.nodes_per_processor + 1ui32));
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
-
-struct cache_instance_t
-{
-	std::vector<std::uint32_t> sharing_ids;
-};
-
-struct cache_t
-{
-	std::uint32_t level;
-	std::uint32_t type;
-	std::uint32_t ways;
-	std::uint32_t sets;
-	std::uint32_t line_size;
-	std::uint32_t line_partitions;
-	std::uint32_t total_size;
-	bool fully_associative;
-	bool direct_mapped;
-	bool self_initializing;
-	bool invalidates_lower_levels;
-	bool inclusive;
-	std::uint32_t sharing_mask;
-
-	std::map<std::uint32_t, cache_instance_t> instances;
-};
 
 std::string to_string(const cache_t& cache) {
 	using namespace fmt::literals;
@@ -1211,53 +1178,6 @@ std::string to_short_string(const cache_t& cache) {
 	return w.str();
 }
 
-bool operator<(const cache_t& lhs, const cache_t& rhs) noexcept {
-	return lhs.level != rhs.level ? lhs.level      < rhs.level
-	     : lhs.type  != rhs.type  ? lhs.type       < rhs.type
-	     :                          lhs.total_size < rhs.total_size;
-}
-
-struct logical_core_t
-{
-	std::uint32_t full_apic_id;
-
-	std::uint32_t package_id;
-	std::uint32_t physical_core_id;
-	std::uint32_t logical_core_id;
-
-	std::vector<std::uint32_t> non_shared_cache_ids;
-	std::vector<std::uint32_t> shared_cache_ids;
-};
-
-struct physical_core_t
-{
-	std::map<std::uint32_t, logical_core_t> logical_cores;
-};
-
-struct package_t
-{
-	std::map<std::uint32_t, physical_core_t> physical_cores;
-};
-
-struct system_t
-{
-	std::uint32_t logical_mask_width;
-	std::uint32_t physical_mask_width;
-	std::vector<std::uint32_t> x2_apic_ids;
-
-	std::vector<cache_t> all_caches;
-	std::vector<logical_core_t> all_cores;
-
-	std::map<std::uint32_t, package_t> packages;
-};
-
-struct full_apic_id_t
-{
-	std::uint32_t logical_id;
-	std::uint32_t physical_id;
-	std::uint32_t package_id;
-};
-
 constexpr full_apic_id_t split_apic_id(std::uint32_t id, std::uint32_t logical_mask_width, std::uint32_t physical_mask_width) noexcept {
 	const std::uint32_t logical_select_mask  = ~(0xffff'ffffui32 << logical_mask_width);
 	const std::uint32_t logical_id = id & logical_select_mask;
@@ -1280,9 +1200,8 @@ std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noe
 	return std::make_pair((1ui32 << idx) - 1ui32, idx);
 }
 
-void determine_topology(fmt::Writer& w, const std::vector<cpu_t>& logical_cpus) {
+system_t build_topology(const std::vector<cpu_t>& logical_cpus) {
 	system_t machine = {};
-	const std::uint32_t total_addressable_cores = gsl::narrow_cast<std::uint32_t>(logical_cpus.size());
 	bool enumerated_caches = false;
 	std::for_each(std::begin(logical_cpus), std::end(logical_cpus), [&machine, &enumerated_caches](const cpu_t& cpu) {
 		machine.x2_apic_ids.push_back(cpu.apic_id);
@@ -1547,6 +1466,13 @@ void determine_topology(fmt::Writer& w, const std::vector<cpu_t>& logical_cpus) 
 		}
 	}
 
+	return machine;
+}
+
+void print_topology(fmt::Writer& w, const std::vector<cpu_t>& logical_cpus) {
+	system_t machine = build_topology(logical_cpus);
+	const std::uint32_t total_addressable_cores = gsl::narrow_cast<std::uint32_t>(logical_cpus.size());
+
 	std::multimap<std::uint32_t, std::string> cache_output;
 	for(const cache_t& cache : machine.all_caches) {
 		std::uint32_t cores_covered = 0ui32;
@@ -1619,6 +1545,4 @@ void determine_topology(fmt::Writer& w, const std::vector<cpu_t>& logical_cpus) 
 		}
 		w.write(" package  {:d}\n", package.first);
 	}
-	w.write("\n");
-	std::cout << w.str() << std::flush;
 }

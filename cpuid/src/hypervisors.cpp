@@ -23,7 +23,6 @@ void print_hypervisor_limit(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tVendor: {}\n", data.vndr);
 	w.write("\tVendor name: {:s}\n", to_string(cpu.vendor));
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_hyper_v_signature(fmt::Writer& w, const cpu_t& cpu) {
@@ -46,7 +45,6 @@ void print_hyper_v_signature(fmt::Writer& w, const cpu_t& cpu) {
 	                                           gsl::narrow_cast<char>(a.split.signature_3),
 	                                           gsl::narrow_cast<char>(a.split.signature_4));
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_hyper_v_system_identity(fmt::Writer& w, const cpu_t& cpu) {
@@ -79,7 +77,6 @@ void print_hyper_v_system_identity(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tService number: {:d}\n", d.split.service_number);
 	w.write("\tService branch: {:d}\n", d.split.service_branch);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_hyper_v_features(fmt::Writer& w, const cpu_t& cpu) {
@@ -88,13 +85,12 @@ void print_hyper_v_features(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tPartition privilege mask: {:08x}:{:08x}\n", regs[ebx], regs[eax]);
 	print_features(w, cpu, leaf_t::hyper_v_features, subleaf_t::main, edx);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_hyper_v_enlightenment_recs(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_enlightenment_recs).at(subleaf_t::main);
 	w.write("Hyper-V recommendations\n");
-	print_features(cpu, leaf_t::hyper_v_enlightenment_recs, subleaf_t::main, eax);
+	print_features(w, cpu, leaf_t::hyper_v_enlightenment_recs, subleaf_t::main, eax);
 	w.write("\n");
 	if(regs[ebx] != 0xffff'ffffui32) {
 		w.write("\tTimes to retry spinlocks before notifying hypervisor: {:d}\n", regs[ebx]);
@@ -102,7 +98,6 @@ void print_hyper_v_enlightenment_recs(fmt::Writer& w, const cpu_t& cpu) {
 		w.write("\tNever retry spinlocks before notifying hypervisor\n");
 	}
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_hyper_v_implementation_limits(fmt::Writer& w, const cpu_t& cpu) {
@@ -112,14 +107,12 @@ void print_hyper_v_implementation_limits(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tMaximum logical processors supported: {:d}\n", regs[ebx]);
 	w.write("\tMaximum physical interrupt vectors supported: {:d}\n", regs[ecx]);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_hyper_v_implementation_hardware(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Hyper-V implementation hardware\n");
 	print_features(w, cpu, leaf_t::hyper_v_implementation_hardware, subleaf_t::main, eax);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_hyper_v_root_cpu_management(fmt::Writer& w, const cpu_t& cpu) {
@@ -127,7 +120,6 @@ void print_hyper_v_root_cpu_management(fmt::Writer& w, const cpu_t& cpu) {
 	print_features(w, cpu, leaf_t::hyper_v_root_cpu_management, subleaf_t::main, eax);
 	print_features(w, cpu, leaf_t::hyper_v_root_cpu_management, subleaf_t::main, ebx);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_hyper_v_shared_virtual_memory(fmt::Writer& w, const cpu_t& cpu) {
@@ -149,7 +141,6 @@ void print_hyper_v_shared_virtual_memory(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\n");
 	w.write("\tMaximum PASID space count: {:d}\n", a.split.max_pasid_space_count);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_hyper_v_nested_hypervisor(fmt::Writer& w, const cpu_t& cpu) {
@@ -157,7 +148,6 @@ void print_hyper_v_nested_hypervisor(fmt::Writer& w, const cpu_t& cpu) {
 	print_features(w, cpu, leaf_t::hyper_v_nested_hypervisor, subleaf_t::main, eax);
 	print_features(w, cpu, leaf_t::hyper_v_nested_hypervisor, subleaf_t::main, edx);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_hyper_v_nested_features(fmt::Writer& w, const cpu_t& cpu) {
@@ -181,7 +171,6 @@ void print_hyper_v_nested_features(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tEnlightened VMCS version: {:d}.{:d}\n", a.split.high_version, a.split.low_version);
 	print_features(w, cpu, leaf_t::hyper_v_nested_features, subleaf_t::main, eax);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_xen_limit(fmt::Writer& w, const cpu_t& cpu) {
@@ -199,7 +188,6 @@ void print_xen_limit(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tVendor: {}\n", data.vndr);
 	w.write("\tVendor name: {:s}\n", to_string(cpu.vendor));
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_xen_version(fmt::Writer& w, const cpu_t& cpu) {
@@ -219,7 +207,6 @@ void print_xen_version(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Xen version\n");
 	w.write("\tVersion : {:d}.{:d}\n", a.split.major_version, a.split.minor_version);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_xen_features(fmt::Writer& w, const cpu_t& cpu) {
@@ -230,7 +217,6 @@ void print_xen_features(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tHypercall transfer pages: {:d}\n", regs[eax]);
 	w.write("\tXen MSR base address: {:#010x}\n", regs[ebx]);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_xen_time(cpu_t& cpu) {
@@ -279,19 +265,17 @@ void print_xen_time(fmt::Writer& w, const cpu_t& cpu) {
 			w.write("\n");
 		}
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void print_xen_hvm_features(fmt::Writer& w, const cpu_t& cpu) {
 	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_hvm_features : leaf_t::xen_hvm_features_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
 	w.write("Xen HVM features\n");
-	print_features(cpu, leaf, subleaf_t::main, eax);
+	print_features(w, cpu, leaf, subleaf_t::main, eax);
 	if(0x0000'0008ui32 & cpu.leaves.at(leaf).at(subleaf_t::main).at(eax)) {
 		w.write("\tVCPU ID: {:#010x}\n", regs[ebx]);
 	}
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_xen_pv_features(fmt::Writer& w, const cpu_t& cpu) {
@@ -311,7 +295,6 @@ void print_xen_pv_features(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Xen PV features\n");
 	w.write("\tHighest subleaf: {:#010x}\n", regs[eax]);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_vmware_timing(fmt::Writer& w, const cpu_t& cpu) {
@@ -320,12 +303,10 @@ void print_vmware_timing(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tVirtual TSC frequency/kHz: {:d}\n", regs[eax]);
 	w.write("\tVirtual bus/APIC frequency/kHz: {:d}\n", regs[ebx]);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_kvm_features(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("KVM features\n");
 	print_features(w, cpu, leaf_t::kvm_features, subleaf_t::main, eax);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }

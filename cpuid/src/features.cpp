@@ -548,9 +548,3 @@ void print_features(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t sub
 		}
 	}
 }
-
-void print_features(const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg) {
-	fmt::MemoryWriter w;
-	print_features(w, cpu, leaf, sub, reg);
-	std::cout << w.str() << std::flush;
-}

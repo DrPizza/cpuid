@@ -24,7 +24,6 @@ void print_basic_info(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tVendor identifier: {}\n", data.vndr);
 	w.write("\tVendor name: {:s}\n", to_string(get_vendor_from_name(regs)));
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_version_info(fmt::Writer& w, const cpu_t& cpu) {
@@ -123,7 +122,6 @@ void print_version_info(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\n");
 	print_features(w, cpu, leaf_t::version_info, subleaf_t::main, ecx);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_serial_number(fmt::Writer& w, const cpu_t& cpu) {
@@ -147,7 +145,6 @@ void print_serial_number(fmt::Writer& w, const cpu_t& cpu) {
 		break;
 	}
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_mwait_parameters(fmt::Writer& w, const cpu_t& cpu) {
@@ -204,7 +201,6 @@ void print_mwait_parameters(fmt::Writer& w, const cpu_t& cpu) {
 		}
 	}
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_thermal_and_power(fmt::Writer& w, const cpu_t& cpu) {
@@ -230,7 +226,6 @@ void print_thermal_and_power(fmt::Writer& w, const cpu_t& cpu) {
 		print_features(w, cpu, leaf_t::thermal_and_power, subleaf_t::main, ecx);
 		w.write("\n");
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_extended_features(cpu_t& cpu) {
@@ -300,7 +295,6 @@ void print_extended_features(fmt::Writer& w, const cpu_t& cpu) {
 			break;
 		}
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void print_direct_cache_access(fmt::Writer& w, const cpu_t& cpu) {
@@ -308,7 +302,6 @@ void print_direct_cache_access(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Direct Cache Access\n");
 	w.write("\tDCA CAP MSR: {:#010x}\n", regs[eax]);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_performance_monitoring(fmt::Writer& w, const cpu_t& cpu) {
@@ -389,7 +382,6 @@ void print_performance_monitoring(fmt::Writer& w, const cpu_t& cpu) {
 		w.write("\t\tBranch instructions mispredicted\n");
 	}
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_extended_state(cpu_t& cpu) {
@@ -509,7 +501,6 @@ void print_extended_state(fmt::Writer& w, const cpu_t& cpu) {
 			break;
 		}
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_rdt_monitoring(cpu_t& cpu) {
@@ -563,7 +554,6 @@ void print_rdt_monitoring(fmt::Writer& w, const cpu_t& cpu) {
 			break;
 		}
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_rdt_allocation(cpu_t& cpu) {
@@ -680,7 +670,6 @@ void print_rdt_allocation(fmt::Writer& w, const cpu_t& cpu) {
 			break;
 		}
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_sgx_info(cpu_t& cpu) {
@@ -801,7 +790,6 @@ void print_sgx_info(fmt::Writer& w, const cpu_t& cpu) {
 			break;
 		}
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_processor_trace(cpu_t& cpu) {
@@ -858,7 +846,6 @@ void print_processor_trace(fmt::Writer& w, const cpu_t& cpu) {
 			break;
 		}
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void print_time_stamp_counter(fmt::Writer& w, const cpu_t& cpu) {
@@ -868,7 +855,6 @@ void print_time_stamp_counter(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tNominal core crystal clock/Hz: {:d}\n", regs[ecx]);
 	w.write("\tTSC frequency/Hz: {:d}\n", gsl::narrow_cast<std::uint64_t>(regs[ecx] * regs[ebx]) / regs[eax]);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_processor_frequency(fmt::Writer& w, const cpu_t& cpu) {
@@ -903,7 +889,6 @@ void print_processor_frequency(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tMaximum frequency/MHz: {:d}\n", b.split.frequency);
 	w.write("\tBus (reference) frequency/MHz: {:d}\n", c.split.frequency);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_system_on_chip_vendor(cpu_t& cpu) {
@@ -975,7 +960,6 @@ void print_system_on_chip_vendor(fmt::Writer& w, const cpu_t& cpu) {
 			break;
 		}
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void enumerate_pconfig(cpu_t& cpu) {
@@ -1028,7 +1012,6 @@ void print_pconfig(fmt::Writer& w, const cpu_t& cpu) {
 			break;
 		}
 	}
-	std::cout << w.str() << std::flush;
 }
 
 void print_extended_limit(fmt::Writer& w, const cpu_t& cpu) {
@@ -1036,7 +1019,6 @@ void print_extended_limit(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Extended limit\n");
 	w.write("\tMaximum extended cpuid leaf: {:#010x}\n", regs[eax]);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_extended_signature_and_features(fmt::Writer& w, const cpu_t& cpu) {
@@ -1086,7 +1068,6 @@ void print_extended_signature_and_features(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\n");
 	print_features(w, cpu, leaf_t::extended_signature_and_features, subleaf_t::main, edx);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_brand_string(fmt::Writer& w, const cpu_t& cpu) {
@@ -1103,7 +1084,6 @@ void print_brand_string(fmt::Writer& w, const cpu_t& cpu) {
 
 	w.write("\tBrand: {}\n", brand.full);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_ras_advanced_power_management(fmt::Writer& w, const cpu_t& cpu) {
@@ -1147,7 +1127,6 @@ void print_ras_advanced_power_management(fmt::Writer& w, const cpu_t& cpu) {
 		break;
 	}
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_address_limits(fmt::Writer& w, const cpu_t& cpu) {
@@ -1233,7 +1212,6 @@ void print_address_limits(fmt::Writer& w, const cpu_t& cpu) {
 		break;
 	}
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_secure_virtual_machine(fmt::Writer& w, const cpu_t& cpu) {
@@ -1255,21 +1233,18 @@ void print_secure_virtual_machine(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\n");
 	print_features(w, cpu, leaf_t::secure_virtual_machine, subleaf_t::main, edx);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_performance_optimization(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Performance Optimization\n");
 	print_features(w, cpu, leaf_t::performance_optimization, subleaf_t::main, eax);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_instruction_based_sampling(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Instruction Based Sampling\n");
 	print_features(w, cpu, leaf_t::instruction_based_sampling, subleaf_t::main, eax);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_lightweight_profiling(fmt::Writer& w, const cpu_t& cpu) {
@@ -1318,7 +1293,6 @@ void print_lightweight_profiling(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tLatency counter rounding: {:d}\n", c.split.latency_rounding);
 	w.write("\tMinimum ring buffer size/32 events: {:d}\n", c.split.minimum_buffer_size);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
 
 void print_encrypted_memory(fmt::Writer& w, const cpu_t& cpu) {
@@ -1342,5 +1316,4 @@ void print_encrypted_memory(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tNumber of simultaneous encrypted guests: {:d}\n", regs[ecx]);
 	w.write("\tMinimum ASID for an SEV-enabled, SEV-ES-disabled gust: {:#010x}\n", regs[edx]);
 	w.write("\n");
-	std::cout << w.str() << std::flush;
 }
