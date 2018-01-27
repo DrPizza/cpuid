@@ -309,18 +309,26 @@ struct model_t
 	std::uint32_t family;
 };
 
+inline bool operator==(const model_t& lhs, const model_t& rhs) {
+	return lhs.stepping == rhs.stepping
+	    && lhs.model    == rhs.model
+	    && lhs.family   == rhs.family;
+}
+
 struct cpu_t
 {
 	std::uint32_t apic_id;
-	leaf_t highest_leaf;
-	leaf_t highest_hypervisor_leaf;
-	leaf_t xen_base;
-	leaf_t highest_xen_leaf;
-	leaf_t highest_extended_leaf;
 	vendor_t vendor;
 	model_t model;
 	leaves_t leaves;
 };
+
+inline bool operator==(const cpu_t& lhs, const cpu_t& rhs) {
+	return lhs.apic_id                 == rhs.apic_id
+	    && lhs.vendor                  == rhs.vendor
+	    && lhs.model                   == rhs.model
+	    && lhs.leaves                  == rhs.leaves;
+}
 
 inline void cpuid(register_set_t& regs, leaf_t leaf, subleaf_t subleaf) noexcept {
 	std::array<int, 4> raw_regs;

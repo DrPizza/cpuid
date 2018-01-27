@@ -1200,10 +1200,11 @@ std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noe
 	return std::make_pair((1ui32 << idx) - 1ui32, idx);
 }
 
-system_t build_topology(const std::vector<cpu_t>& logical_cpus) {
+system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 	system_t machine = {};
 	bool enumerated_caches = false;
-	std::for_each(std::begin(logical_cpus), std::end(logical_cpus), [&machine, &enumerated_caches](const cpu_t& cpu) {
+	std::for_each(std::begin(logical_cpus), std::end(logical_cpus), [&machine, &enumerated_caches](const std::pair<std::uint32_t, cpu_t>& p) {
+		const cpu_t cpu = p.second;
 		machine.x2_apic_ids.push_back(cpu.apic_id);
 		if(enumerated_caches) {
 			return;
@@ -1212,7 +1213,7 @@ system_t build_topology(const std::vector<cpu_t>& logical_cpus) {
 		switch(cpu.vendor & any_silicon) {
 		case intel:
 			{
-				if(cpu.highest_leaf >= leaf_t::extended_topology) {
+				if(cpu.leaves.find(leaf_t::extended_topology) != cpu.leaves.end()) {
 					for(const auto& sub : cpu.leaves.at(leaf_t::extended_topology)) {
 						const register_set_t& regs = sub.second;
 
@@ -1253,7 +1254,7 @@ system_t build_topology(const std::vector<cpu_t>& logical_cpus) {
 						}
 					}
 				}
-				if(cpu.highest_leaf >= leaf_t::deterministic_cache) {
+				if(cpu.leaves.find(leaf_t::deterministic_cache) != cpu.leaves.end()) {
 					for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_cache)) {
 						const register_set_t& regs = sub.second;
 
@@ -1345,7 +1346,7 @@ system_t build_topology(const std::vector<cpu_t>& logical_cpus) {
 			break;
 		case amd:
 			{
-				if(cpu.highest_extended_leaf >= leaf_t::extended_apic) {
+				if(cpu.leaves.find(leaf_t::extended_apic) != cpu.leaves.end()) {
 					const register_set_t& regs = cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main);
 					const union
 					{
@@ -1359,7 +1360,7 @@ system_t build_topology(const std::vector<cpu_t>& logical_cpus) {
 					} b = { regs[ebx] };
 					machine.logical_mask_width = generate_mask(b.split.threads_per_core).second;
 				}
-				if(cpu.highest_extended_leaf >= leaf_t::cache_properties) {
+				if(cpu.leaves.find(leaf_t::cache_properties) != cpu.leaves.end()) {
 					for(const auto& sub : cpu.leaves.at(leaf_t::cache_properties)) {
 						const register_set_t& regs = sub.second;
 						const union
@@ -1423,7 +1424,7 @@ system_t build_topology(const std::vector<cpu_t>& logical_cpus) {
 						machine.all_caches.push_back(cache);
 					}
 				}
-				if(cpu.highest_extended_leaf >= leaf_t::address_limits) {
+				if(cpu.leaves.find(leaf_t::address_limits) != cpu.leaves.end()) {
 					const register_set_t& regs = cpu.leaves.at(leaf_t::address_limits).at(subleaf_t::main);
 					const union
 					{

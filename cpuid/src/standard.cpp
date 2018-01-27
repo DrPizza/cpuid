@@ -109,12 +109,12 @@ void print_version_info(fmt::Writer& w, const cpu_t& cpu) {
 			w.write("\n");
 		}
 	}
-
+	w.write("\n");
 	w.write("\tcache line size/bytes: {:d}\n", b.split.cache_line_size * 8);
 	if(0 != (cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main).at(edx) & 0x1000'0000ui32)) {
 		w.write("\tlogical processors per package: {:d}\n", gsl::narrow_cast<std::uint32_t>(b.split.maximum_addressable_ids));
 	}
-	w.write("\tlocal APIC ID: {:d}\n", gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id));
+	w.write("\tlocal APIC ID: {:#04x}\n", gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id));
 	w.write("\n");
 
 	w.write("\tFeature identifiers\n");

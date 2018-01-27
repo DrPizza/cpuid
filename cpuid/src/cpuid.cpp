@@ -10,8 +10,10 @@
 
 #include <map>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <tuple>
+#include <regex>
 
 #include <gsl/gsl>
 
@@ -123,12 +125,12 @@ uint8_t get_local_apic_id(const register_set_t& regs) noexcept {
 uint32_t get_apic_id(const cpu_t& cpu) {
 	switch(cpu.vendor & any_silicon) {
 	case intel:
-		if(cpu.highest_leaf >= leaf_t::extended_topology) {
+		if(cpu.leaves.find(leaf_t::extended_topology) != cpu.leaves.end()) {
 			return cpu.leaves.at(leaf_t::extended_topology).at(subleaf_t::main).at(edx);
 		}
 		break;
 	case amd:
-		if(cpu.highest_extended_leaf >= leaf_t::extended_apic) {
+		if(cpu.leaves.find(leaf_t::extended_apic) != cpu.leaves.end()) {
 			return cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main).at(eax);
 		}
 		break;
@@ -333,23 +335,147 @@ void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool skip_vendor_check, bool skip_f
 	}
 }
 
+std::map<std::uint32_t, cpu_t> enumerate_file(const std::string& filename) {
+	using namespace fmt::literals;
+	const std::regex comment_line("#.*");
+	const std::string single_element = "(0[xX][[:xdigit:]]{1,8})";
+	const std::string multiple_elements = "{} {} {}: {} {} {} {}"_format(single_element, single_element, single_element, single_element, single_element, single_element, single_element);
+	const std::regex data_line(multiple_elements);
+
+	std::map<std::uint32_t, cpu_t> logical_cpus;
+	std::ifstream fin(filename);
+	std::string line;
+	while(std::getline(fin, line)) {
+		std::smatch m;
+		if(std::regex_search(line, m, data_line)) {
+			const std::uint32_t apic_id =                        std::stoul(m[1].str(), nullptr, 16) ;
+			const leaf_t        leaf    = static_cast<leaf_t   >(std::stoul(m[2].str(), nullptr, 16));
+			const subleaf_t     subleaf = static_cast<subleaf_t>(std::stoul(m[3].str(), nullptr, 16));
+			const register_set_t regs   = {
+				std::stoul(m[4].str(), nullptr, 16),
+				std::stoul(m[5].str(), nullptr, 16),
+				std::stoul(m[6].str(), nullptr, 16),
+				std::stoul(m[7].str(), nullptr, 16)
+			};
+			logical_cpus[apic_id].leaves[leaf][subleaf] = regs;
+		} else if(!std::regex_search(line, m, comment_line) && line != "") {
+			std::cerr << "Unrecognized line: " << line << std::endl;
+		}
+	}
+	for(auto& c: logical_cpus) {
+		cpu_t& cpu = c.second;
+		register_set_t regs = {};
+
+		regs = cpu.leaves.at(leaf_t::basic_info).at(subleaf_t::main);
+		cpu.vendor = get_vendor_from_name(regs);
+
+		regs = cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main);
+		cpu.model = get_model(cpu.vendor, regs);
+
+		if(cpu.leaves.find(leaf_t::hypervisor_limit) != cpu.leaves.end()) {
+			regs = cpu.leaves.at(leaf_t::hypervisor_limit).at(subleaf_t::main);
+			if(regs[eax] != 0ui32) {
+				const vendor_t hypervisor = get_hypervisor_from_name(regs);
+				// something is set, and it looks like a hypervisor
+				if(hypervisor & any_hypervisor) {
+					cpu.vendor = cpu.vendor | hypervisor;
+
+					if(hypervisor & hyper_v) {
+						// xen with viridian extensions masquerades as hyper-v, and puts its own cpuid leaves 0x100 further up
+						if(cpu.leaves.find(leaf_t::xen_limit_offset) != cpu.leaves.end()) {
+							regs = cpu.leaves.at(leaf_t::xen_limit_offset).at(subleaf_t::main);
+							const vendor_t xen_hypervisor = get_hypervisor_from_name(regs);
+
+							if(xen_hypervisor & xen_hvm) {
+								cpu.vendor = cpu.vendor | xen_hypervisor;
+							}
+						}
+					}
+				}
+			}
+		}
+		cpu.apic_id = get_apic_id(cpu);
+	}
+	return logical_cpus;
+}
+
+std::map<std::uint32_t, cpu_t> enumerate_processors(bool skip_vendor_check, bool skip_feature_check) {
+	std::map<std::uint32_t, cpu_t> logical_cpus;
+	run_on_every_core([=, &logical_cpus]() {
+		cpu_t cpu = {};
+		register_set_t regs = { 0 };
+
+		cpuid(regs, leaf_t::basic_info, subleaf_t::main);
+		const leaf_t highest_leaf = leaf_t{ regs[eax] };
+		cpu.vendor = get_vendor_from_name(regs);
+
+		cpuid(regs, leaf_t::version_info, subleaf_t::main);
+		cpu.model = get_model(cpu.vendor, regs);
+
+		for(leaf_t leaf = leaf_t::basic_info; leaf <= highest_leaf; ++leaf) {
+			enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
+		}
+
+		cpuid(regs, leaf_t::hypervisor_limit, subleaf_t::main);
+		if(regs[eax] != 0ui32) {
+			const vendor_t hypervisor = get_hypervisor_from_name(regs);
+			// something is set, and it looks like a hypervisor
+			if(hypervisor & any_hypervisor) {
+				cpu.vendor = cpu.vendor | hypervisor;
+				const leaf_t highest_hypervisor_leaf = leaf_t{ regs[eax] };
+
+				for(leaf_t leaf = leaf_t::hypervisor_limit; leaf <= highest_hypervisor_leaf; ++leaf) {
+					enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
+				}
+
+				if(hypervisor & hyper_v) {
+					// xen with viridian extensions masquerades as hyper-v, and puts its own cpuid leaves 0x100 further up
+					cpuid(regs, leaf_t::xen_limit_offset, subleaf_t::main);
+					const vendor_t xen_hypervisor = get_hypervisor_from_name(regs);
+
+					if(xen_hypervisor & xen_hvm) {
+						cpu.vendor                    = cpu.vendor | xen_hypervisor;
+						const leaf_t xen_base         = leaf_t::xen_limit_offset;
+						const leaf_t highest_xen_leaf = leaf_t{ regs[eax] };
+
+						for(leaf_t leaf = xen_base; leaf <= highest_xen_leaf; ++leaf) {
+							enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
+						}
+					}
+				}
+			}
+		}
+		cpuid(regs, leaf_t::extended_limit, subleaf_t::main);
+		const leaf_t highest_extended_leaf = leaf_t{ regs[eax] };
+
+		for(leaf_t leaf = leaf_t::extended_limit; leaf <= highest_extended_leaf; ++leaf) {
+			enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
+		}
+		
+		cpu.apic_id = get_apic_id(cpu);
+		logical_cpus[cpu.apic_id] = cpu;
+	});
+	return logical_cpus;
+}
+
 static const char usage_message[] =
 R"(cpuid.
 
 	Usage:
-		cpuid [--cpu <id>] [--dump] [--ignore-vendor] [--ignore-feature-bits]
+		cpuid [--cpu <id> | --read-dump <filename>] [--dump] [--ignore-vendor] [--ignore-feature-bits]
 		cpuid --list-ids
 		cpuid --help
 		cpuid --version
 
 	Options:
-		--cpu <id>             ID of logical core to get info from
-		--dump                 Print unparsed output
-		--ignore-vendor        Ignore vendor constraints
-		--ignore-feature-bits  Ignore feature bit constraints
-		--list-ids             List all core IDs
-		--help                 Show this text
-		--version              Show the version
+		--cpu <id>              ID of logical core to print info from
+		--read-dump <filename>  Filename to get info from
+		--dump                  Print unparsed output
+		--ignore-vendor         Ignore vendor constraints
+		--ignore-feature-bits   Ignore feature bit constraints
+		--list-ids              List all core IDs
+		--help                  Show this text
+		--version               Show the version
 )";
 
 int main(int argc, char* argv[]) {
@@ -360,6 +486,7 @@ int main(int argc, char* argv[]) {
 	::SetConsoleMode(output, mode);
 	::SetConsoleCP(CP_UTF8);
 	::SetConsoleOutputCP(CP_UTF8);
+
 	std::cout.rdbuf()->pubsetbuf(nullptr, 1024);
 
 	const std::map<std::string, docopt::value> args = docopt::docopt(usage_message, { argv + 1, argv + argc }, true, "cpuid 0.1");
@@ -368,73 +495,35 @@ int main(int argc, char* argv[]) {
 	const bool raw_dump           = std::get<bool>(args.at("--dump"));
 	const bool list_ids           = std::get<bool>(args.at("--list-ids"));
 
-	std::vector<cpu_t> logical_cpus;
-	run_on_every_core([=, &logical_cpus, &args]() {
-		cpu_t cpu = {};
-		register_set_t regs = { 0 };
-
-		cpuid(regs, leaf_t::basic_info, subleaf_t::main);
-		cpu.highest_leaf = leaf_t{ regs[eax] };
-		cpu.vendor = get_vendor_from_name(regs);
-
-		cpuid(regs, leaf_t::version_info, subleaf_t::main);
-		cpu.model = get_model(cpu.vendor, regs);
-
-		for(leaf_t leaf = leaf_t::basic_info; leaf <= cpu.highest_leaf; ++leaf) {
-			enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
-		}
-
-		cpuid(regs, leaf_t::hypervisor_limit, subleaf_t::main);
-		if(regs[eax] != 0ui32) {
-			const vendor_t hypervisor = get_hypervisor_from_name(regs);
-			// something is set, and it looks like a hypervisor
-			if(hypervisor & any_hypervisor) {
-				cpu.vendor = cpu.vendor | hypervisor;
-				cpu.highest_hypervisor_leaf = leaf_t{ regs[eax] };
-
-				cpu.xen_base         = leaf_t{ 0x4fff'ffffui32 };
-				cpu.highest_xen_leaf = leaf_t{ 0x4fff'ffffui32 };
-
-				if(hypervisor & hyper_v) {
-					// xen with viridian extensions masquerades as hyper-v, and puts its own cpuid leaves 0x100 further up
-					cpuid(regs, leaf_t::xen_limit_offset, subleaf_t::main);
-					const vendor_t xen_hypervisor = get_hypervisor_from_name(regs);
-
-					if(xen_hypervisor & xen_hvm) {
-						cpu.vendor           = cpu.vendor | xen_hypervisor;
-						cpu.xen_base         = leaf_t::xen_limit_offset;
-						cpu.highest_xen_leaf = leaf_t{ regs[eax] };
-					}
-				}
-
-				for(leaf_t leaf = leaf_t::hypervisor_limit; leaf <= cpu.highest_hypervisor_leaf; ++leaf) {
-					enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
-				}
-
-				if(cpu.vendor & xen_hvm) {
-					for(leaf_t leaf = cpu.xen_base; leaf <= cpu.highest_xen_leaf; ++leaf) {
-						enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
-					}
-				}
-			}
-		}
-		cpuid(regs, leaf_t::extended_limit, subleaf_t::main);
-		cpu.highest_extended_leaf = leaf_t{ regs[eax] };
-
-		for(leaf_t leaf = leaf_t::extended_limit; leaf <= cpu.highest_extended_leaf; ++leaf) {
-			enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
-		}
-		
-		cpu.apic_id = get_apic_id(cpu);
-		logical_cpus.push_back(cpu);
-	});
-
-	if(list_ids) {
-		
+	std::map<std::uint32_t, cpu_t> logical_cpus;
+	if(std::holds_alternative<std::string>(args.at("--read-dump"))) {
+		logical_cpus = enumerate_file(std::get<std::string>(args.at("--read-dump")));
+	} else {
+		logical_cpus = enumerate_processors(skip_vendor_check, skip_feature_check);
 	}
 
-	if(!raw_dump) {
-		const cpu_t& cpu = logical_cpus[0];
+	if(list_ids) {
+		fmt::MemoryWriter w;
+		for(const auto& p : logical_cpus) {
+			w.write("{:04x}\n", p.first);
+		}
+		std::cout << w.str() << std::flush;
+		return 0;
+	}
+
+	if(raw_dump) {
+		fmt::MemoryWriter w;
+		w.write("#apic eax ecx: eax ebx ecx edx");
+		for(const auto& p : logical_cpus) {
+			print_generic(w, p.second);
+			w.write("\n");
+		}
+		std::cout << w.str() << std::flush;
+		return 0;
+	}
+
+	if(logical_cpus.size() > 0) {
+		const cpu_t& cpu = logical_cpus.begin()->second;
 		for(const auto& leaf : cpu.leaves) {
 			fmt::MemoryWriter w;
 			const auto range = descriptors.equal_range(leaf.first);
@@ -459,25 +548,12 @@ int main(int argc, char* argv[]) {
 			}
 			std::cout << w.str() << std::flush;
 		}
-	} else {
+
 		fmt::MemoryWriter w;
-		w.write("#apic eax ecx: eax ebx ecx edx");
-		for(const cpu_t& cpu : logical_cpus) {
-			print_generic(w, cpu);
-			w.write("\n");
-		}
+		system_t machine = build_topology(logical_cpus);
+		print_topology(w, machine);
 		std::cout << w.str() << std::flush;
-	}
-
-	fmt::MemoryWriter w;
-	system_t machine = build_topology(logical_cpus);
-	print_topology(w, machine);
-	std::cout << w.str() << std::flush;
-
-	//for(const cpu_t& cpu : logical_cpus) {
-	//	print_generic(cpu);
-	//	std::cout << std::endl;
-	//}
+	} 
 
 	return 0;
 }
