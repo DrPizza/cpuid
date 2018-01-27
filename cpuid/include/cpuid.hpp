@@ -309,7 +309,7 @@ struct model_t
 	std::uint32_t family;
 };
 
-inline bool operator==(const model_t& lhs, const model_t& rhs) {
+inline bool operator==(const model_t& lhs, const model_t& rhs) noexcept {
 	return lhs.stepping == rhs.stepping
 	    && lhs.model    == rhs.model
 	    && lhs.family   == rhs.family;
@@ -323,7 +323,7 @@ struct cpu_t
 	leaves_t leaves;
 };
 
-inline bool operator==(const cpu_t& lhs, const cpu_t& rhs) {
+inline bool operator==(const cpu_t& lhs, const cpu_t& rhs) noexcept {
 	return lhs.apic_id                 == rhs.apic_id
 	    && lhs.vendor                  == rhs.vendor
 	    && lhs.model                   == rhs.model

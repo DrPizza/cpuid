@@ -189,9 +189,7 @@ void print_mwait_parameters(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tSmallest monitor-line size: {:d} bytes\n", (a.split.smallest_monitor_line + 0ui32));
 	w.write("\tLargest monitor-line size: {:d} bytes\n", (b.split.largest_monitor_line  + 0ui32));
 	if(c.split.enumerable) {
-		if(c.split.interrupts_as_breaks) {
-			w.write("\tInterrupts break MWAIT, even when disabled\n");
-		}
+		print_features(w, cpu, leaf_t::monitor_mwait, subleaf_t::main, ecx);
 		if(cpu.vendor & intel) {
 			const std::uint32_t mask = 0b1111;
 			for(std::size_t i = 0; i < 8; ++i) {

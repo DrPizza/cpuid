@@ -81,8 +81,27 @@ void print_hyper_v_system_identity(fmt::Writer& w, const cpu_t& cpu) {
 
 void print_hyper_v_features(fmt::Writer& w, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_features).at(subleaf_t::main);
+	const union
+	{
+		std::uint32_t full;
+		struct
+		{
+			std::uint32_t maximum_power_state : 4;
+			std::uint32_t hpet_needed_for_c3  : 1;
+			std::uint32_t reserved_1          : 27;
+		} split;
+	} c = { regs[ecx] };
+
 	w.write("Hyper-V features\n");
-	w.write("\tPartition privilege mask: {:08x}:{:08x}\n", regs[ebx], regs[eax]);
+	print_features(w, cpu, leaf_t::hyper_v_features, subleaf_t::main, eax);
+	w.write("\n");
+	print_features(w, cpu, leaf_t::hyper_v_features, subleaf_t::main, ebx);
+	w.write("\n");
+	w.write("\tMaximum power state: C{:d}\n", c.split.maximum_power_state);
+	if(c.split.hpet_needed_for_c3) {
+		w.write("\tHPET needed for C3\n");
+	}
+	w.write("\n");
 	print_features(w, cpu, leaf_t::hyper_v_features, subleaf_t::main, edx);
 	w.write("\n");
 }

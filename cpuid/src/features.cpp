@@ -71,10 +71,17 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x0200'0000ui32, "SSE"               , "SSE Extensions"                                              },
 				{ intel | amd            , 0x0400'0000ui32, "SSE2"              , "SSE2 Extensions"                                             },
 				{ intel                  , 0x0800'0000ui32, "SS"                , "Self Snoop"                                                  },
-				{ intel | amd            , 0x1000'0000ui32, "HTT"               , "Max APIC IDs reserved field is Valid"                        },
+				{ intel | amd            , 0x1000'0000ui32, "HTT"               , "Hyperthreading/Max APIC IDs reserved field is Valid"         },
 				{ intel                  , 0x2000'0000ui32, "TM"                , "Thermal Monitor"                                             },
 				{ intel                  , 0x4000'0000ui32, "IA64"              , "IA64 emulating x86"                                          },
 				{ intel                  , 0x8000'0000ui32, "PBE"               , "Pending Break Enable"                                        },
+			}}
+		}}
+	}},
+	{ leaf_t::monitor_mwait, {
+		{ subleaf_t::main, {
+			{ ecx, {
+				{ intel                  , 0x0000'0002ui32, ""                  , "Supports treating interrupts as a break event." },
 			}}
 		}}
 	}},
@@ -185,63 +192,95 @@ const feature_map_t all_features = {
 	}},
 	{ leaf_t::hyper_v_features, {
 		{ subleaf_t::main, {
+			{ eax, {
+				{ hyper_v                , 0x0000'0001ui32, "accessVpRunTimeReg"              , "VP_RUNTIME MSR"              },
+				{ hyper_v                , 0x0000'0002ui32, "accessParititonReferenceCounter" , "TIME_REF_COUNT MSR"          },
+				{ hyper_v                , 0x0000'0004ui32, "acccessSynicRegs"                , "SynIC MSRs"                  },
+				{ hyper_v                , 0x0000'0008ui32, "accessSyntheticTimerRegs"        , "SynIC timer MSRs"            },
+				{ hyper_v                , 0x0000'0010ui32, "accessIntrCtrlRegs"              , "APIC MSRs"                   },
+				{ hyper_v                , 0x0000'0020ui32, "accessHypercallMsrs"             , "Hypercall MSRs"              },
+				{ hyper_v                , 0x0000'0040ui32, "accessVpIndex"                   , "Virtual Processor Index MSR" },
+				{ hyper_v                , 0x0000'0080ui32, "accessResetReg"                  , "System reset MSR"            },
+				{ hyper_v                , 0x0000'0100ui32, "accessStatsReg"                  , "Statistics pages MSR"        },
+				{ hyper_v                , 0x0000'0200ui32, "accessPartitionReferenceTsc"     , "Reference TSC MSR"           },
+				{ hyper_v                , 0x0000'0400ui32, "accessGuestIdleReg"              , "Guest idle state MSR"        },
+				{ hyper_v                , 0x0000'0800ui32, "accessFrequencyRegs"             , "TSC and APIC frequency MSRs" },
+				{ hyper_v                , 0x0000'1000ui32, "accessDebugRegs"                 , "Guest debugging MSRs"        },
+			}},
+			{ ebx, {
+				{ hyper_v                , 0x0000'0001ui32, "createPartitions"          , "HvCreatePartition hypercall"                 },
+				{ hyper_v                , 0x0000'0002ui32, "accessPartitionId"         , "HvGetPartitionId hypercall"                  },
+				{ hyper_v                , 0x0000'0004ui32, "accessMemoryPool"          , "HvDepositMemory/etc. hypercalls"             },
+				{ hyper_v                , 0x0000'0008ui32, "adjustMessageBuffers"      , "Adjust Message Buffers"                      },
+				{ hyper_v                , 0x0000'0010ui32, "postMessages"              , "HvPostMessage hypercall"                     },
+				{ hyper_v                , 0x0000'0020ui32, "signalEvents"              , "HvSignalEvent hypercall"                     },
+				{ hyper_v                , 0x0000'0040ui32, "createPort"                , "HvCreatePort hypercall"                      },
+				{ hyper_v                , 0x0000'0080ui32, "connectPort"               , "HvConnectPort hypercall"                     },
+				{ hyper_v                , 0x0000'0100ui32, "accessStats"               , "HvMapStatsPage/etc. hypercalls"              },
+				{ hyper_v                , 0x0000'0800ui32, "debugging"                 , "HvPostDebugData/etc. hypercalls"             },
+				{ hyper_v                , 0x0000'1000ui32, "cpuManagement"             , "HvGetLogicalProcessoRunTime/etc. hypercalls" },
+				{ hyper_v                , 0x0001'0000ui32, "accessVSM"                 , "The partition can use Virtual Secure Mode"   },
+				{ hyper_v                , 0x0002'0000ui32, "accessVpRegisters"         , "Access VP Registers"                         },
+				{ hyper_v                , 0x0010'0000ui32, "enabledExtendedHypercalls" , "Extended hypercall interface"                },
+				{ hyper_v                , 0x0020'0000ui32, "startVirtualProcessor"     , "HvStartVirtualProcessor hypercall"           },
+			}},
 			{ edx, {
-				{ hyper_v                , 0x0000'0001ui32, "MWAIT"                , "MWAIT available"                         },
-				{ hyper_v                , 0x0000'0002ui32, "GDBG"                 , "Guest debugging"                         },
-				{ hyper_v                , 0x0000'0004ui32, "PM"                   , "Performance Monitoring"                  },
-				{ hyper_v                , 0x0000'0008ui32, "DynamicPartitioning"  , "Physical CPU dynamic partitioning"       },
-				{ hyper_v                , 0x0000'0010ui32, "XMMHypercallInput"    , "Hypercall parameters in XMM registers"   },
-				{ hyper_v                , 0x0000'0020ui32, "GuestIdle"            , "Virtual guest idle state available"      },
-				{ hyper_v                , 0x0000'0040ui32, "HypervisorSleep"      , "Hypervisor sleep state available"        },
-				{ hyper_v                , 0x0000'0080ui32, "QueryNUMA"            , "NUMA distances queryable"                },
-				{ hyper_v                , 0x0000'0100ui32, "TimerFrequencies"     , "Determining timer frequencies supported" },
-				{ hyper_v                , 0x0000'0200ui32, "MCEInject"            , "Support injecting MCEs"                  },
-				{ hyper_v                , 0x0000'0400ui32, "CrashMSRs"            , "Guest crash MSRs available"              },
-				{ hyper_v                , 0x0000'0800ui32, "DebugMSRs"            , "Debug MSRs available"                    },
-				{ hyper_v                , 0x0000'1000ui32, "NPIEP"                , "NPIEP supported"                         },
-				{ hyper_v                , 0x0000'2000ui32, "DisableHypervisor"    , "Disable hypervisor supported"            },
-				{ hyper_v                , 0x0000'4000ui32, "ExtendedGvaRanges"    , "Extended GVA ranges for flush"           },
-				{ hyper_v                , 0x0000'8000ui32, "XMMHypercallOutput"   , "Hypercall results in XMM registers"      },
-				{ hyper_v                , 0x0002'0000ui32, "SintPollingMode"      , "Sint polling mode available"             },
-				{ hyper_v                , 0x0004'0000ui32, "HypercallMsrLock"     , "Hypercall MSR lock available"            },
-				{ hyper_v                , 0x0008'0000ui32, "SyntheticTimers"      , "Use direct synthetic timers"             },
+				{ hyper_v                , 0x0000'0001ui32, "MWAIT"               , "MWAIT available"                         },
+				{ hyper_v                , 0x0000'0002ui32, "GDBG"                , "Guest debugging"                         },
+				{ hyper_v                , 0x0000'0004ui32, "PM"                  , "Performance Monitoring"                  },
+				{ hyper_v                , 0x0000'0008ui32, "DynamicPartitioning" , "Physical CPU dynamic partitioning"       },
+				{ hyper_v                , 0x0000'0010ui32, "XMMHypercallInput"   , "Hypercall parameters in XMM registers"   },
+				{ hyper_v                , 0x0000'0020ui32, "GuestIdle"           , "Virtual guest idle state available"      },
+				{ hyper_v                , 0x0000'0040ui32, "HypervisorSleep"     , "Hypervisor sleep state available"        },
+				{ hyper_v                , 0x0000'0080ui32, "QueryNUMA"           , "NUMA distances queryable"                },
+				{ hyper_v                , 0x0000'0100ui32, "TimerFrequencies"    , "Determining timer frequencies supported" },
+				{ hyper_v                , 0x0000'0200ui32, "MCEInject"           , "Support injecting MCEs"                  },
+				{ hyper_v                , 0x0000'0400ui32, "CrashMSRs"           , "Guest crash MSRs available"              },
+				{ hyper_v                , 0x0000'0800ui32, "DebugMSRs"           , "Debug MSRs available"                    },
+				{ hyper_v                , 0x0000'1000ui32, "NPIEP"               , "NPIEP supported"                         },
+				{ hyper_v                , 0x0000'2000ui32, "DisableHypervisor"   , "Disable hypervisor supported"            },
+				{ hyper_v                , 0x0000'4000ui32, "ExtendedGvaRanges"   , "Extended GVA ranges for flush"           },
+				{ hyper_v                , 0x0000'8000ui32, "XMMHypercallOutput"  , "Hypercall results in XMM registers"      },
+				{ hyper_v                , 0x0002'0000ui32, "SintPollingMode"     , "Sint polling mode available"             },
+				{ hyper_v                , 0x0004'0000ui32, "HypercallMsrLock"    , "Hypercall MSR lock available"            },
+				{ hyper_v                , 0x0008'0000ui32, "SyntheticTimers"     , "Use direct synthetic timers"             },
 			}}
 		}}
 	}},
 	{ leaf_t::hyper_v_enlightenment_recs, {
 		{ subleaf_t::main, {
 			{ eax, {
-				{ hyper_v                , 0x0000'0001ui32, "MOV_CR3"              , "Use hypercall instead of MOV CR3"                    },
-				{ hyper_v                , 0x0000'0002ui32, "INVLPG"               , "Use hypercall instead of INVLPG or MOV CR3"          },
-				{ hyper_v                , 0x0000'0004ui32, "IPI"                  , "Use hypercall instead of inter-processor interrupts" },
-				{ hyper_v                , 0x0000'0008ui32, "APIC_MSR"             , "Use MSRs for APIC registers"                         },
-				{ hyper_v                , 0x0000'0010ui32, "RESET_MSR"            , "Use MSR for system reset"                            },
-				{ hyper_v                , 0x0000'0020ui32, "RelaxTimings"         , "Use relaxed timings/disable watchdogs"               },
-				{ hyper_v                , 0x0000'0040ui32, "DMARemapping"         , "Use DMA remapping"                                   },
-				{ hyper_v                , 0x0000'0080ui32, "InterruptRemapping"   , "Use interrupt remapping"                             },
-				{ hyper_v                , 0x0000'0100ui32, "x2_APIC_MSR"          , "Use x2 APIC MSRs"                                    },
-				{ hyper_v                , 0x0000'0200ui32, "DeprecateAutoEOI"     , "Deprecate AutoEOI"                                   },
-				{ hyper_v                , 0x0000'0400ui32, "SyntheticClusterIpi"  , "Use SyntheticClusterIpi hypercall"                   },
-				{ hyper_v                , 0x0000'0800ui32, "ExProcessorMasks"     , "Use ExProcessorMasks interface"                      },
-				{ hyper_v                , 0x0000'1000ui32, "Nested"               , "Running in a nested partition"                       },
-				{ hyper_v                , 0x0000'2000ui32, "INT_MBEC"             , "Use INT for MBEC system calls"                       },
-				{ hyper_v                , 0x0000'4000ui32, "VMCS"                 , "Use VMCS for nested hypervisor"                      },
+				{ hyper_v                , 0x0000'0001ui32, "MOV_CR3"             , "Use hypercall instead of MOV CR3"                    },
+				{ hyper_v                , 0x0000'0002ui32, "INVLPG"              , "Use hypercall instead of INVLPG or MOV CR3"          },
+				{ hyper_v                , 0x0000'0004ui32, "IPI"                 , "Use hypercall instead of inter-processor interrupts" },
+				{ hyper_v                , 0x0000'0008ui32, "APIC_MSR"            , "Use MSRs for APIC registers"                         },
+				{ hyper_v                , 0x0000'0010ui32, "RESET_MSR"           , "Use MSR for system reset"                            },
+				{ hyper_v                , 0x0000'0020ui32, "RelaxTimings"        , "Use relaxed timings/disable watchdogs"               },
+				{ hyper_v                , 0x0000'0040ui32, "DMARemapping"        , "Use DMA remapping"                                   },
+				{ hyper_v                , 0x0000'0080ui32, "InterruptRemapping"  , "Use interrupt remapping"                             },
+				{ hyper_v                , 0x0000'0100ui32, "x2_APIC_MSR"         , "Use x2 APIC MSRs"                                    },
+				{ hyper_v                , 0x0000'0200ui32, "DeprecateAutoEOI"    , "Deprecate AutoEOI"                                   },
+				{ hyper_v                , 0x0000'0400ui32, "SyntheticClusterIpi" , "Use SyntheticClusterIpi hypercall"                   },
+				{ hyper_v                , 0x0000'0800ui32, "ExProcessorMasks"    , "Use ExProcessorMasks interface"                      },
+				{ hyper_v                , 0x0000'1000ui32, "Nested"              , "Running in a nested partition"                       },
+				{ hyper_v                , 0x0000'2000ui32, "INT_MBEC"            , "Use INT for MBEC system calls"                       },
+				{ hyper_v                , 0x0000'4000ui32, "VMCS"                , "Use VMCS for nested hypervisor"                      },
 			}}
 		}}
 	}},
 	{ leaf_t::hyper_v_implementation_hardware, {
 		{ subleaf_t::main, {
 			{ eax, {
-				{ hyper_v                , 0x0000'0001ui32, "APIC_OVERLAY"          , "APIC overlay assist"                },
-				{ hyper_v                , 0x0000'0002ui32, "MSR_BITMAPS"           , "MSR bitmaps"                        },
-				{ hyper_v                , 0x0000'0004ui32, "PERF_COUNTERS"         , "Architectural performance counters" },
-				{ hyper_v                , 0x0000'0008ui32, "SLAT"                  , "Second Level Address Translation"   },
-				{ hyper_v                , 0x0000'0010ui32, "DMA_REMAP"             , "DMA remapping"                      },
-				{ hyper_v                , 0x0000'0020ui32, "INTERRUPT_REMAP"       , "Interrupt remapping"                },
-				{ hyper_v                , 0x0000'0040ui32, "MEMORY_SCRUBBER"       , "Memory patrol scrubber"             },
-				{ hyper_v                , 0x0000'0080ui32, "DMA_PROTECTION"        , "DMA protection"                     },
-				{ hyper_v                , 0x0000'0100ui32, "HPET"                  , "HPET"                               },
-				{ hyper_v                , 0x0000'0200ui32, "SyntheticTimers"       , "Volatile synthetic timers"          },
+				{ hyper_v                , 0x0000'0001ui32, "APIC_OVERLAY"    , "APIC overlay assist"                },
+				{ hyper_v                , 0x0000'0002ui32, "MSR_BITMAPS"     , "MSR bitmaps"                        },
+				{ hyper_v                , 0x0000'0004ui32, "PERF_COUNTERS"   , "Architectural performance counters" },
+				{ hyper_v                , 0x0000'0008ui32, "SLAT"            , "Second Level Address Translation"   },
+				{ hyper_v                , 0x0000'0010ui32, "DMA_REMAP"       , "DMA remapping"                      },
+				{ hyper_v                , 0x0000'0020ui32, "INTERRUPT_REMAP" , "Interrupt remapping"                },
+				{ hyper_v                , 0x0000'0040ui32, "MEMORY_SCRUBBER" , "Memory patrol scrubber"             },
+				{ hyper_v                , 0x0000'0080ui32, "DMA_PROTECTION"  , "DMA protection"                     },
+				{ hyper_v                , 0x0000'0100ui32, "HPET"            , "HPET"                               },
+				{ hyper_v                , 0x0000'0200ui32, "SyntheticTimers" , "Volatile synthetic timers"          },
 			}}
 		}}
 	}},
@@ -253,9 +292,9 @@ const feature_map_t all_features = {
 				{ hyper_v                , 0x8000'0000ui32, "ReservedIdentityBit"   , "Reserved identity bit"         },
 			}},
 			{ ebx, {
-				{ hyper_v                , 0x0000'0001ui32, "ProcessorPowerMgmt"    , "Processor power management" },
-				{ hyper_v                , 0x0000'0002ui32, "MwaitIdleStates"       , "MWAIT idle states"          },
-				{ hyper_v                , 0x0000'0004ui32, "LogicalProcessorIdling", "Logical processor idling"   },
+				{ hyper_v                , 0x0000'0001ui32, "ProcessorPowerMgmt"     , "Processor power management" },
+				{ hyper_v                , 0x0000'0002ui32, "MwaitIdleStates"        , "MWAIT idle states"          },
+				{ hyper_v                , 0x0000'0004ui32, "LogicalProcessorIdling" , "Logical processor idling"   },
 			}}
 		}}
 	}},
@@ -276,188 +315,188 @@ const feature_map_t all_features = {
 				{ hyper_v                , 0x0000'0100ui32, "AccessReenlightenment" , "Reenlightenment controls" },
 			}},
 			{ edx, {
-				{ hyper_v                , 0x0000'0010ui32, "XMMHypercallInput"     , "Hypercall parameters in XMM registers" },
-				{ hyper_v                , 0x0000'8000ui32, "XMMHypercallOutput"    , "Hypercall results in XMM registers"    },
-				{ hyper_v                , 0x0002'0000ui32, "SintPollingAvailable"  , "Sint polling mode available"           },
+				{ hyper_v                , 0x0000'0010ui32, "XMMHypercallInput"    , "Hypercall parameters in XMM registers" },
+				{ hyper_v                , 0x0000'8000ui32, "XMMHypercallOutput"   , "Hypercall results in XMM registers"    },
+				{ hyper_v                , 0x0002'0000ui32, "SintPollingAvailable" , "Sint polling mode available"           },
 			}},
 		}}
 	}},
 	{ leaf_t::hyper_v_nested_features, {
 		{ subleaf_t::main, {
 			{ eax, {
-				{ hyper_v                , 0x0002'0000ui32, "DirectVirtualFlush"    , "Direct virtual flush hypercalls"           },
-				{ hyper_v                , 0x0004'0010ui32, "FlushGuestPhysical"    , "HvFlushGuestPhysicalAddressXxx hypercalls" },
-				{ hyper_v                , 0x0008'0020ui32, "EnlightenedMSRBitmap"  , "Enlightened MSR bitmap"                    },
+				{ hyper_v                , 0x0002'0000ui32, "DirectVirtualFlush"   , "Direct virtual flush hypercalls"           },
+				{ hyper_v                , 0x0004'0010ui32, "FlushGuestPhysical"   , "HvFlushGuestPhysicalAddressXxx hypercalls" },
+				{ hyper_v                , 0x0008'0020ui32, "EnlightenedMSRBitmap" , "Enlightened MSR bitmap"                    },
 			}},
 		}}
 	}},
 	{ leaf_t::xen_time, {
 		{ subleaf_t::xen_time_main, {
 			{ eax, {
-				{ xen_hvm                , 0x0000'0001ui32, "VTSC"                   , "Virtual RDTSC"       },
-				{ xen_hvm                , 0x0000'0002ui32, "SafeRDTSC"              , "Host has safe RDTSC" },
-				{ xen_hvm                , 0x0000'0004ui32, "RDTSCP"                 , "Host has RDTSCP"     },
+				{ xen_hvm                , 0x0000'0001ui32, "VTSC"      , "Virtual RDTSC"       },
+				{ xen_hvm                , 0x0000'0002ui32, "SafeRDTSC" , "Host has safe RDTSC" },
+				{ xen_hvm                , 0x0000'0004ui32, "RDTSCP"    , "Host has RDTSCP"     },
 			}}
 		}}
 	}},
 	{ leaf_t::xen_time_offset, {
 		{ subleaf_t::xen_time_main, {
 			{ eax, {
-				{ xen_hvm                , 0x0000'0001ui32, "VTSC"                   , "Virtual RDTSC"       },
-				{ xen_hvm                , 0x0000'0002ui32, "SafeRDTSC"              , "Host has safe RDTSC" },
-				{ xen_hvm                , 0x0000'0004ui32, "RDTSCP"                 , "Host has RDTSCP"     },
+				{ xen_hvm                , 0x0000'0001ui32, "VTSC"      , "Virtual RDTSC"       },
+				{ xen_hvm                , 0x0000'0002ui32, "SafeRDTSC" , "Host has safe RDTSC" },
+				{ xen_hvm                , 0x0000'0004ui32, "RDTSCP"    , "Host has RDTSCP"     },
 			}}
 		}}
 	}},
 	{ leaf_t::xen_hvm_features, {
 		{ subleaf_t::xen_time_main, {
 			{ eax, {
-				{ xen_hvm                , 0x0000'0001ui32, "VAPIC"                  , "Virtualized APIC registers"              },
-				{ xen_hvm                , 0x0000'0002ui32, "Vx2APIC"                , "Virtualized x2APIC registers"            },
-				{ xen_hvm                , 0x0000'0004ui32, "IOMMU"                  , "IOMMU mappings from other domains exist" },
-				{ xen_hvm                , 0x0000'0008ui32, "VCPU"                   , "VCPU ID is present"                      },
+				{ xen_hvm                , 0x0000'0001ui32, "VAPIC"   , "Virtualized APIC registers"              },
+				{ xen_hvm                , 0x0000'0002ui32, "Vx2APIC" , "Virtualized x2APIC registers"            },
+				{ xen_hvm                , 0x0000'0004ui32, "IOMMU"   , "IOMMU mappings from other domains exist" },
+				{ xen_hvm                , 0x0000'0008ui32, "VCPU"    , "VCPU ID is present"                      },
 			}}
 		}}
 	}},
 	{ leaf_t::xen_hvm_features_offset, {
 		{ subleaf_t::xen_time_main, {
 			{ eax, {
-				{ xen_hvm                , 0x0000'0001ui32, "VAPIC"                  , "Virtualized APIC registers"              },
-				{ xen_hvm                , 0x0000'0002ui32, "Vx2APIC"                , "Virtualized x2APIC registers"            },
-				{ xen_hvm                , 0x0000'0004ui32, "IOMMU"                  , "IOMMU mappings from other domains exist" },
-				{ xen_hvm                , 0x0000'0008ui32, "VCPU"                   , "VCPU ID is present"                      },
+				{ xen_hvm                , 0x0000'0001ui32, "VAPIC"   , "Virtualized APIC registers"              },
+				{ xen_hvm                , 0x0000'0002ui32, "Vx2APIC" , "Virtualized x2APIC registers"            },
+				{ xen_hvm                , 0x0000'0004ui32, "IOMMU"   , "IOMMU mappings from other domains exist" },
+				{ xen_hvm                , 0x0000'0008ui32, "VCPU"    , "VCPU ID is present"                      },
 			}}
 		}}
 	}},
 	{ leaf_t::kvm_features, {
 		{ subleaf_t::main, {
 			{ eax, {
-				{ kvm                    , 0x0000'0001ui32, "CLOCKSOURCE"            , "kvmclock MSRs available"               },
-				{ kvm                    , 0x0000'0002ui32, "NOP_IO_DELAY"           , "Don't delay PIO operations"            },
-				{ kvm                    , 0x0000'0004ui32, "MMU_OP"                 , "Deprecated"                            },
-				{ kvm                    , 0x0000'0008ui32, "CLOCKSOURCE_2"          , "More kvmclock MSRs available"          },
-				{ kvm                    , 0x0000'0010ui32, "ASYNC_PF"               , "Async PF supported"                    },
-				{ kvm                    , 0x0100'0000ui32, "CLOCKSOURCE_STABLE"     , "Guest-side clock should not be warped" },
+				{ kvm                    , 0x0000'0001ui32, "CLOCKSOURCE"        , "kvmclock MSRs available"               },
+				{ kvm                    , 0x0000'0002ui32, "NOP_IO_DELAY"       , "Don't delay PIO operations"            },
+				{ kvm                    , 0x0000'0004ui32, "MMU_OP"             , "Deprecated"                            },
+				{ kvm                    , 0x0000'0008ui32, "CLOCKSOURCE_2"      , "More kvmclock MSRs available"          },
+				{ kvm                    , 0x0000'0010ui32, "ASYNC_PF"           , "Async PF supported"                    },
+				{ kvm                    , 0x0100'0000ui32, "CLOCKSOURCE_STABLE" , "Guest-side clock should not be warped" },
 			}}
 		}}
 	}},
 	{ leaf_t::extended_signature_and_features, {
 		{ subleaf_t::main, {
 			{ ecx, {
-				{ intel | amd            , 0x0000'0001ui32, "LahfSahf"               , "LAHF/SAHF supported in 64-bit mode"   },
-				{         amd            , 0x0000'0002ui32, "CmpLegacy"              , "Core multi-processing legacy mode"    },
-				{         amd            , 0x0000'0004ui32, "SVM"                    , "Secure Virtual Machine Mode"          },
-				{         amd            , 0x0000'0008ui32, "ExtApicSpace"           , "Extended APIC register space"         },
-				{         amd            , 0x0000'0010ui32, "AltMovCr8"              , "LOCK MOV CR0 is MOV CR8"              },
-				{ intel                  , 0x0000'0020ui32, "LZCNT"                  , "LZCNT instruction"                    },
-				{         amd            , 0x0000'0020ui32, "ABM"                    , "Advanced Bit Manipulation"            },
-				{         amd            , 0x0000'0040ui32, "SSE4A"                  , "SSE4A instructions"                   },
-				{         amd            , 0x0000'0080ui32, "MisAlignSse"            , "Misaligned SSE Mode"                  },
-				{ intel                  , 0x0000'0100ui32, "PREFETCHW"              , "PREFETCHW instruction"                },
-				{         amd            , 0x0000'0100ui32, "ThreeDNowPrefetch"      , "PREFETCH and PREFETCHW instructions"  },
-				{         amd            , 0x0000'0200ui32, "OSVW"                   , "OS Visible Work-around"               },
-				{         amd            , 0x0000'0400ui32, "IBS"                    , "Instruction Based Sampling"           },
-				{         amd            , 0x0000'0800ui32, "XOP"                    , "Extended Operation support"           },
-				{         amd            , 0x0000'1000ui32, "SKINIT"                 , "SKINIT/STGI instructions"             },
-				{         amd            , 0x0000'2000ui32, "WDT"                    , "Watchdog Timer Support"               },
-				{         amd            , 0x0000'8000ui32, "LWP"                    , "Lightweight Profiling Support"        },
-				{         amd            , 0x0001'0000ui32, "FMA4"                   , "4-operand FMA instruction"            },
-				{         amd            , 0x0002'0000ui32, "TCE"                    , "Translation Cache Extension"          },
-				{         amd            , 0x0020'0000ui32, "TBM"                    , "Trailing Bit Manipulation"            },
-				{         amd            , 0x0040'0000ui32, "TopologyExtensions"     , "Topology Extensions"                  },
-				{         amd            , 0x0080'0000ui32, "PerfCtrExtCore"         , "Core Performance Counter Extensions"  },
-				{         amd            , 0x0100'0000ui32, "PerfCtrExtNB"           , "NB Performance Counter Extensions"    },
-				{         amd            , 0x0400'0000ui32, "DataBreakpointExtension", "Data Breakpoint support"              },
-				{         amd            , 0x0400'0000ui32, "PerfTsc"                , "Performance Time Stamp Counter"       },
-				{         amd            , 0x1000'0000ui32, "PerfCtrExtL3"           , "L3 performance counter extensions"    },
-				{         amd            , 0x2000'0000ui32, "MwaitExtended"          , "MWAITX and MONITORX"                  },
+				{ intel | amd            , 0x0000'0001ui32, "LahfSahf"                , "LAHF/SAHF supported in 64-bit mode"   },
+				{         amd            , 0x0000'0002ui32, "CmpLegacy"               , "Core multi-processing legacy mode"    },
+				{         amd            , 0x0000'0004ui32, "SVM"                     , "Secure Virtual Machine Mode"          },
+				{         amd            , 0x0000'0008ui32, "ExtApicSpace"            , "Extended APIC register space"         },
+				{         amd            , 0x0000'0010ui32, "AltMovCr8"               , "LOCK MOV CR0 is MOV CR8"              },
+				{ intel                  , 0x0000'0020ui32, "LZCNT"                   , "LZCNT instruction"                    },
+				{         amd            , 0x0000'0020ui32, "ABM"                     , "Advanced Bit Manipulation"            },
+				{         amd            , 0x0000'0040ui32, "SSE4A"                   , "SSE4A instructions"                   },
+				{         amd            , 0x0000'0080ui32, "MisAlignSse"             , "Misaligned SSE Mode"                  },
+				{ intel                  , 0x0000'0100ui32, "PREFETCHW"               , "PREFETCHW instruction"                },
+				{         amd            , 0x0000'0100ui32, "ThreeDNowPrefetch"       , "PREFETCH and PREFETCHW instructions"  },
+				{         amd            , 0x0000'0200ui32, "OSVW"                    , "OS Visible Work-around"               },
+				{         amd            , 0x0000'0400ui32, "IBS"                     , "Instruction Based Sampling"           },
+				{         amd            , 0x0000'0800ui32, "XOP"                     , "Extended Operation support"           },
+				{         amd            , 0x0000'1000ui32, "SKINIT"                  , "SKINIT/STGI instructions"             },
+				{         amd            , 0x0000'2000ui32, "WDT"                     , "Watchdog Timer Support"               },
+				{         amd            , 0x0000'8000ui32, "LWP"                     , "Lightweight Profiling Support"        },
+				{         amd            , 0x0001'0000ui32, "FMA4"                    , "4-operand FMA instruction"            },
+				{         amd            , 0x0002'0000ui32, "TCE"                     , "Translation Cache Extension"          },
+				{         amd            , 0x0020'0000ui32, "TBM"                     , "Trailing Bit Manipulation"            },
+				{         amd            , 0x0040'0000ui32, "TopologyExtensions"      , "Topology Extensions"                  },
+				{         amd            , 0x0080'0000ui32, "PerfCtrExtCore"          , "Core Performance Counter Extensions"  },
+				{         amd            , 0x0100'0000ui32, "PerfCtrExtNB"            , "NB Performance Counter Extensions"    },
+				{         amd            , 0x0400'0000ui32, "DataBreakpointExtension" , "Data Breakpoint support"              },
+				{         amd            , 0x0400'0000ui32, "PerfTsc"                 , "Performance Time Stamp Counter"       },
+				{         amd            , 0x1000'0000ui32, "PerfCtrExtL3"            , "L3 performance counter extensions"    },
+				{         amd            , 0x2000'0000ui32, "MwaitExtended"           , "MWAITX and MONITORX"                  },
 			}},
 			{ edx, {
-				{         amd            , 0x0000'0001ui32, "FPU"                    , "x87 FPU on chip"                      },
-				{         amd            , 0x0000'0002ui32, "VME"                    , "Virtual Mode Enhancements"            },
-				{         amd            , 0x0000'0004ui32, "DE"                     , "Debugging extensions"                 },
-				{         amd            , 0x0000'0008ui32, "PSE"                    , "Page-size extensions"                 },
-				{         amd            , 0x0000'0010ui32, "TSC"                    , "Time Stamp Counter"                   },
-				{         amd            , 0x0000'0020ui32, "MSR"                    , "RDMSR and WRMSR Instructions"         },
-				{         amd            , 0x0000'0040ui32, "PAE"                    , "Physical Address Extension"           },
-				{         amd            , 0x0000'0080ui32, "MCE"                    , "Machine Check Exception"              },
-				{         amd            , 0x0000'0100ui32, "CX8"                    , "CMPXCHG8B Instruction"                },
-				{         amd            , 0x0000'0200ui32, "APIC"                   , "APIC On-Chip"                         },
-				{ intel | amd            , 0x0000'0800ui32, "SysCallSysRet"          , "SYSENTER and SYSEXIT Instructions"    },
-				{         amd            , 0x0000'1000ui32, "MTRR"                   , "Memory Type Range Registers"          },
-				{         amd            , 0x0000'2000ui32, "PGE"                    , "Page Global Bit"                      },
-				{         amd            , 0x0000'4000ui32, "MCA"                    , "Machine Check Architecture"           },
-				{         amd            , 0x0000'8000ui32, "CMOV"                   , "Conditional Move Instructions"        },
-				{         amd            , 0x0001'0000ui32, "PAT"                    , "Page Attribute Table"                 },
-				{         amd            , 0x0002'0000ui32, "PSE36"                  , "36-bit Page Size Extension"           },
-				{ intel                  , 0x0010'0000ui32, "XD"                     , "Execute Disable Bit available"        },
-				{         amd            , 0x0010'0000ui32, "NX"                     , "No-Execute page protection"           },
-				{         amd            , 0x0040'0000ui32, "MmxExt"                 , "AMD extensions to MMX instructions"   },
-				{         amd            , 0x0080'0000ui32, "MMX"                    , "MMX instructions"                     },
-				{         amd            , 0x0100'0000ui32, "FXSR"                   , "FXSAVE and FXRSTOR instructions"      },
-				{         amd            , 0x0200'0000ui32, "FFXSR"                  , "Fast FXSAVE and FXRSTOR"              },
-				{ intel | amd            , 0x0400'0000ui32, "Page1GB"                , "1 GB large page support"              },
-				{ intel | amd            , 0x0800'0000ui32, "RDTSCP"                 , "RDTSCP instruction"                   },
-				{ intel                  , 0x2000'0000ui32, "EM64T"                  , "Intel 64 Architecture (Long Mode)"    },
-				{         amd            , 0x2000'0000ui32, "LM"                     , "Long mode"                            },
-				{         amd            , 0x4000'0000ui32, "ThreeDNowExt"           , "AMD extensions to 3DNow! instructions"},
-				{         amd            , 0x8000'0000ui32, "ThreeDNow"              , "3DNow! instructions"                  },
+				{         amd            , 0x0000'0001ui32, "FPU"           , "x87 FPU on chip"                      },
+				{         amd            , 0x0000'0002ui32, "VME"           , "Virtual Mode Enhancements"            },
+				{         amd            , 0x0000'0004ui32, "DE"            , "Debugging extensions"                 },
+				{         amd            , 0x0000'0008ui32, "PSE"           , "Page-size extensions"                 },
+				{         amd            , 0x0000'0010ui32, "TSC"           , "Time Stamp Counter"                   },
+				{         amd            , 0x0000'0020ui32, "MSR"           , "RDMSR and WRMSR Instructions"         },
+				{         amd            , 0x0000'0040ui32, "PAE"           , "Physical Address Extension"           },
+				{         amd            , 0x0000'0080ui32, "MCE"           , "Machine Check Exception"              },
+				{         amd            , 0x0000'0100ui32, "CX8"           , "CMPXCHG8B Instruction"                },
+				{         amd            , 0x0000'0200ui32, "APIC"          , "APIC On-Chip"                         },
+				{ intel | amd            , 0x0000'0800ui32, "SysCallSysRet" , "SYSENTER and SYSEXIT Instructions"    },
+				{         amd            , 0x0000'1000ui32, "MTRR"          , "Memory Type Range Registers"          },
+				{         amd            , 0x0000'2000ui32, "PGE"           , "Page Global Bit"                      },
+				{         amd            , 0x0000'4000ui32, "MCA"           , "Machine Check Architecture"           },
+				{         amd            , 0x0000'8000ui32, "CMOV"          , "Conditional Move Instructions"        },
+				{         amd            , 0x0001'0000ui32, "PAT"           , "Page Attribute Table"                 },
+				{         amd            , 0x0002'0000ui32, "PSE36"         , "36-bit Page Size Extension"           },
+				{ intel                  , 0x0010'0000ui32, "XD"            , "Execute Disable Bit available"        },
+				{         amd            , 0x0010'0000ui32, "NX"            , "No-Execute page protection"           },
+				{         amd            , 0x0040'0000ui32, "MmxExt"        , "AMD extensions to MMX instructions"   },
+				{         amd            , 0x0080'0000ui32, "MMX"           , "MMX instructions"                     },
+				{         amd            , 0x0100'0000ui32, "FXSR"          , "FXSAVE and FXRSTOR instructions"      },
+				{         amd            , 0x0200'0000ui32, "FFXSR"         , "Fast FXSAVE and FXRSTOR"              },
+				{ intel | amd            , 0x0400'0000ui32, "Page1GB"       , "1 GB large page support"              },
+				{ intel | amd            , 0x0800'0000ui32, "RDTSCP"        , "RDTSCP instruction"                   },
+				{ intel                  , 0x2000'0000ui32, "EM64T"         , "Intel 64 Architecture (Long Mode)"    },
+				{         amd            , 0x2000'0000ui32, "LM"            , "Long mode"                            },
+				{         amd            , 0x4000'0000ui32, "ThreeDNowExt"  , "AMD extensions to 3DNow! instructions"},
+				{         amd            , 0x8000'0000ui32, "ThreeDNow"     , "3DNow! instructions"                  },
 			}}
 		}}
 	}},
 	{ leaf_t::ras_advanced_power_management, {
 		{ subleaf_t::main, {
 			{ ebx, {
-				{         amd            , 0x0000'0001ui32, "McaOverflowRecov"       , "MCA overflow recovery support"                         },
-				{         amd            , 0x0000'0002ui32, "SUCCOR"                 , "Software Uncorrectable Error Containment and Recovery" },
-				{         amd            , 0x0000'0004ui32, "HWA"                    , "Hardware Assert supported"                             },
-				{         amd            , 0x0000'0008ui32, "ScalableMca"            , "Scalable MCA supported"                                },
+				{         amd            , 0x0000'0001ui32, "McaOverflowRecov" , "MCA overflow recovery support"                         },
+				{         amd            , 0x0000'0002ui32, "SUCCOR"           , "Software Uncorrectable Error Containment and Recovery" },
+				{         amd            , 0x0000'0004ui32, "HWA"              , "Hardware Assert supported"                             },
+				{         amd            , 0x0000'0008ui32, "ScalableMca"      , "Scalable MCA supported"                                },
 
 			}},
 			{ edx, {
-				{         amd            , 0x0000'0001ui32, "TS"                     , "Temperature Sensor"                      },
-				{         amd            , 0x0000'0002ui32, "FID"                    , "Frequency ID control"                    },
-				{         amd            , 0x0000'0004ui32, "VID"                    , "Voltage ID control"                      },
-				{         amd            , 0x0000'0008ui32, "TTP"                    , "THERMTRIP"                               },
-				{         amd            , 0x0000'0010ui32, "TM"                     , "Hardware thermal control (HTC)"          },
-				{         amd            , 0x0000'0040ui32, "100MHzSteps"            , "100 MHz multiplier control"              },
-				{         amd            , 0x0000'0080ui32, "HwPstate"               , "Hardware P-state control"                },
-				{ intel | amd            , 0x0000'0100ui32, "TscInvariant"           , "TSC invariant"                           },
-				{         amd            , 0x0000'0200ui32, "CPB"                    , "Core performance boost"                  },
-				{         amd            , 0x0000'0400ui32, "EffFreqRO"              , "Read-only effective frequency interface" },
-				{         amd            , 0x0000'0800ui32, "ProcFeedbackInterface"  , "Processor feedback interface"            },
-				{         amd            , 0x0000'1000ui32, "ApmPwrReporting"        , "APM power reporting"                     },
-				{         amd            , 0x0000'2000ui32, "ConnectedStandby"       , "Connected Standby"                       },
-				{         amd            , 0x0000'4000ui32, "RAPL"                   , "Running average power limit"             },
+				{         amd            , 0x0000'0001ui32, "TS"                    , "Temperature Sensor"                      },
+				{         amd            , 0x0000'0002ui32, "FID"                   , "Frequency ID control"                    },
+				{         amd            , 0x0000'0004ui32, "VID"                   , "Voltage ID control"                      },
+				{         amd            , 0x0000'0008ui32, "TTP"                   , "THERMTRIP"                               },
+				{         amd            , 0x0000'0010ui32, "TM"                    , "Hardware thermal control (HTC)"          },
+				{         amd            , 0x0000'0040ui32, "100MHzSteps"           , "100 MHz multiplier control"              },
+				{         amd            , 0x0000'0080ui32, "HwPstate"              , "Hardware P-state control"                },
+				{ intel | amd            , 0x0000'0100ui32, "TscInvariant"          , "TSC invariant"                           },
+				{         amd            , 0x0000'0200ui32, "CPB"                   , "Core performance boost"                  },
+				{         amd            , 0x0000'0400ui32, "EffFreqRO"             , "Read-only effective frequency interface" },
+				{         amd            , 0x0000'0800ui32, "ProcFeedbackInterface" , "Processor feedback interface"            },
+				{         amd            , 0x0000'1000ui32, "ApmPwrReporting"       , "APM power reporting"                     },
+				{         amd            , 0x0000'2000ui32, "ConnectedStandby"      , "Connected Standby"                       },
+				{         amd            , 0x0000'4000ui32, "RAPL"                  , "Running average power limit"             },
 			}}
 		}}
 	}},
 	{ leaf_t::address_limits, {
 		{ subleaf_t::main, {
 			{ ebx, {
-				{         amd            , 0x0000'0001ui32, "CLZERO"                 , "CLZERO instruction"                 },
-				{         amd            , 0x0000'0002ui32, "IRPERF"                 , "Instructions retired count support" },
-				{         amd            , 0x0000'0004ui32, "ASRFPEP"                , "XSAVE (etc.) saves error pointer"   },
-				{ intel                  , 0x0000'0200ui32, "WBNOINVD"               , "WBNOINVD is available"              },
+				{         amd            , 0x0000'0001ui32, "CLZERO"   , "CLZERO instruction"                 },
+				{         amd            , 0x0000'0002ui32, "IRPERF"   , "Instructions retired count support" },
+				{         amd            , 0x0000'0004ui32, "ASRFPEP"  , "XSAVE (etc.) saves error pointer"   },
+				{ intel                  , 0x0000'0200ui32, "WBNOINVD" , "WBNOINVD is available"              },
 			}}
 		}}
 	}},
 	{ leaf_t::secure_virtual_machine, {
 		{ subleaf_t::main, {
 			{ edx, {
-				{         amd            , 0x0000'0001ui32, "NP"                     , "Nested paging"                    },
-				{         amd            , 0x0000'0002ui32, "LBRV"                   , "LBR virtualization"               },
-				{         amd            , 0x0000'0004ui32, "SVML"                   , "SVM lock"                         },
-				{         amd            , 0x0000'0008ui32, "NRIPS"                  , "NRIP Save"                        },
-				{         amd            , 0x0000'0010ui32, "TscRateMsr"             , "MSR-based TSC rate control"       },
-				{         amd            , 0x0000'0020ui32, "VmcbClean"              , "VMCB clean bits"                  },
-				{         amd            , 0x0000'0040ui32, "FlushByAsid"            , "Flush by ASID"                    },
-				{         amd            , 0x0000'0080ui32, "DecodeAssists"          , "Decode assists"                   },
-				{         amd            , 0x0000'0400ui32, "PauseFilter"            , "PAUSE intercept filter"           },
-				{         amd            , 0x0000'1000ui32, "PauseFilterThreshold"   , "PAUSE filter threshold"           },
-				{         amd            , 0x0000'2000ui32, "AVIC"                   , "AMD virtual interrupt controller" },
-				{         amd            , 0x0000'8000ui32, "VLS"                    , "Virtualized VMSAVE/VMLOAD"        },
-				{         amd            , 0x0001'0000ui32, "vGIF"                   , "Virtualized GIF"                  },
+				{         amd            , 0x0000'0001ui32, "NP"                   , "Nested paging"                    },
+				{         amd            , 0x0000'0002ui32, "LBRV"                 , "LBR virtualization"               },
+				{         amd            , 0x0000'0004ui32, "SVML"                 , "SVM lock"                         },
+				{         amd            , 0x0000'0008ui32, "NRIPS"                , "NRIP Save"                        },
+				{         amd            , 0x0000'0010ui32, "TscRateMsr"           , "MSR-based TSC rate control"       },
+				{         amd            , 0x0000'0020ui32, "VmcbClean"            , "VMCB clean bits"                  },
+				{         amd            , 0x0000'0040ui32, "FlushByAsid"          , "Flush by ASID"                    },
+				{         amd            , 0x0000'0080ui32, "DecodeAssists"        , "Decode assists"                   },
+				{         amd            , 0x0000'0400ui32, "PauseFilter"          , "PAUSE intercept filter"           },
+				{         amd            , 0x0000'1000ui32, "PauseFilterThreshold" , "PAUSE filter threshold"           },
+				{         amd            , 0x0000'2000ui32, "AVIC"                 , "AMD virtual interrupt controller" },
+				{         amd            , 0x0000'8000ui32, "VLS"                  , "Virtualized VMSAVE/VMLOAD"        },
+				{         amd            , 0x0001'0000ui32, "vGIF"                 , "Virtualized GIF"                  },
 
 			}}
 		}}
@@ -465,59 +504,59 @@ const feature_map_t all_features = {
 	{ leaf_t::performance_optimization, {
 		{ subleaf_t::main, {
 			{ eax, {
-				{         amd            , 0x0000'0001ui32, "FP128"                  , "Full-width 128-bit SSE instructions" },
-				{         amd            , 0x0000'0002ui32, "MOVU"                   , "Prefer MOVU to MOVL/MOVH"            },
-				{         amd            , 0x0000'0004ui32, "FP256"                  , "Full-width AVX256 instructions"      },
+				{         amd            , 0x0000'0001ui32, "FP128" , "Full-width 128-bit SSE instructions" },
+				{         amd            , 0x0000'0002ui32, "MOVU"  , "Prefer MOVU to MOVL/MOVH"            },
+				{         amd            , 0x0000'0004ui32, "FP256" , "Full-width AVX256 instructions"      },
 			}}
 		}}
 	}},
 	{ leaf_t::instruction_based_sampling, {
 		{ subleaf_t::main, {
 			{ eax, {
-				{         amd            , 0x0000'0001ui32, "IBSFFV"                 , "IBS feature flags valid"                    },
-				{         amd            , 0x0000'0002ui32, "FetchSam"               , "IBS fetch sampling supported"               },
-				{         amd            , 0x0000'0004ui32, "OpSam"                  , "IBS execution sampling supported"           },
-				{         amd            , 0x0000'0008ui32, "RdWrOpCnt"              , "Read/write of op counter supported"         },
-				{         amd            , 0x0000'0010ui32, "OpCnt"                  , "Op counting mode supported"                 },
-				{         amd            , 0x0000'0020ui32, "BrnTarget"              , "Branch target address reporting supported"  },
-				{         amd            , 0x0000'0040ui32, "OpCntExt"               , "Op counters extended by 7 bits"             },
-				{         amd            , 0x0000'0080ui32, "RipInvalidChk"          , "Invalid RIP indication supported"           },
-				{         amd            , 0x0000'0100ui32, "OpBrnFuse"              , "Fused branch micro-op indication supported" },
-				{         amd            , 0x0000'0200ui32, "IbsFetchCtlExtd"        , "IBS fetch control extended MSR supported"   },
-				{         amd            , 0x0000'0400ui32, "IbsOpData4"             , "IBS op data 4 MSR supported"                },
+				{         amd            , 0x0000'0001ui32, "IBSFFV"          , "IBS feature flags valid"                    },
+				{         amd            , 0x0000'0002ui32, "FetchSam"        , "IBS fetch sampling supported"               },
+				{         amd            , 0x0000'0004ui32, "OpSam"           , "IBS execution sampling supported"           },
+				{         amd            , 0x0000'0008ui32, "RdWrOpCnt"       , "Read/write of op counter supported"         },
+				{         amd            , 0x0000'0010ui32, "OpCnt"           , "Op counting mode supported"                 },
+				{         amd            , 0x0000'0020ui32, "BrnTarget"       , "Branch target address reporting supported"  },
+				{         amd            , 0x0000'0040ui32, "OpCntExt"        , "Op counters extended by 7 bits"             },
+				{         amd            , 0x0000'0080ui32, "RipInvalidChk"   , "Invalid RIP indication supported"           },
+				{         amd            , 0x0000'0100ui32, "OpBrnFuse"       , "Fused branch micro-op indication supported" },
+				{         amd            , 0x0000'0200ui32, "IbsFetchCtlExtd" , "IBS fetch control extended MSR supported"   },
+				{         amd            , 0x0000'0400ui32, "IbsOpData4"      , "IBS op data 4 MSR supported"                },
 			}}
 		}}
 	}},
 	{ leaf_t::lightweight_profiling, {
 		{ subleaf_t::main, {
 			{ eax, {
-				{         amd            , 0x0000'0001ui32, "LwpAvail"               , "Lightweight profiling supported"  },
-				{         amd            , 0x0000'0002ui32, "LwpVAL"                 , "LWPVAL instruction supported"     },
-				{         amd            , 0x0000'0004ui32, "LwpIRE"                 , "Instructions retired event"       },
-				{         amd            , 0x0000'0008ui32, "LwpBRE"                 , "Branch retired event"             },
-				{         amd            , 0x0000'0010ui32, "LwpDME"                 , "DC miss event"                    },
-				{         amd            , 0x0000'0020ui32, "LwpCNH"                 , "Core clocks not halted"           },
-				{         amd            , 0x0000'0040ui32, "LwpRNH"                 , "Core reference clocks not halted" },
-				{         amd            , 0x2000'0000ui32, "LwpCont"                , "Samping in continuous mode"       },
-				{         amd            , 0x4000'0000ui32, "LwpPTSC"                , "Performance TSC in event record"  },
-				{         amd            , 0x8000'0000ui32, "LwpInt"                 , "Interrupt on threshold overflow"  },
+				{         amd            , 0x0000'0001ui32, "LwpAvail" , "Lightweight profiling supported"  },
+				{         amd            , 0x0000'0002ui32, "LwpVAL"   , "LWPVAL instruction supported"     },
+				{         amd            , 0x0000'0004ui32, "LwpIRE"   , "Instructions retired event"       },
+				{         amd            , 0x0000'0008ui32, "LwpBRE"   , "Branch retired event"             },
+				{         amd            , 0x0000'0010ui32, "LwpDME"   , "DC miss event"                    },
+				{         amd            , 0x0000'0020ui32, "LwpCNH"   , "Core clocks not halted"           },
+				{         amd            , 0x0000'0040ui32, "LwpRNH"   , "Core reference clocks not halted" },
+				{         amd            , 0x2000'0000ui32, "LwpCont"  , "Samping in continuous mode"       },
+				{         amd            , 0x4000'0000ui32, "LwpPTSC"  , "Performance TSC in event record"  },
+				{         amd            , 0x8000'0000ui32, "LwpInt"   , "Interrupt on threshold overflow"  },
 			}},
 			{ ecx, {
-				{         amd            , 0x0000'0020ui32, "LwpDataAddress"         , "Data cache miss address valid"        },
-				{         amd            , 0x1000'0000ui32, "LwpBranchPrediction"    , "Branch prediction filtering supported"},
-				{         amd            , 0x2000'0000ui32, "LwpIpFiltering"         , "IP filtering supported"               },
-				{         amd            , 0x4000'0000ui32, "LwpCacheLevels"         , "Cache level filtering supported"      },
-				{         amd            , 0x8000'0000ui32, "LwpCacheLatency"        , "Cache latency filtering supported"    },
+				{         amd            , 0x0000'0020ui32, "LwpDataAddress"      , "Data cache miss address valid"        },
+				{         amd            , 0x1000'0000ui32, "LwpBranchPrediction" , "Branch prediction filtering supported"},
+				{         amd            , 0x2000'0000ui32, "LwpIpFiltering"      , "IP filtering supported"               },
+				{         amd            , 0x4000'0000ui32, "LwpCacheLevels"      , "Cache level filtering supported"      },
+				{         amd            , 0x8000'0000ui32, "LwpCacheLatency"     , "Cache latency filtering supported"    },
 			}}
 		}}
 	}},
 	{ leaf_t::encrypted_memory, {
 		{ subleaf_t::main, {
 			{ eax, {
-				{         amd            , 0x0000'0001ui32, "SME"                    , "Secure Memory Encryption supported"        },
-				{         amd            , 0x0000'0002ui32, "SEV"                    , "Secure Encrypted Virtualization supported" },
-				{         amd            , 0x0000'0004ui32, "PageFlushMsr"           , "Page Flush MSR available"                  },
-				{         amd            , 0x0000'0008ui32, "SEV-ES"                 , "SEV Encrypted State available"             },
+				{         amd            , 0x0000'0001ui32, "SME"          , "Secure Memory Encryption supported"        },
+				{         amd            , 0x0000'0002ui32, "SEV"          , "Secure Encrypted Virtualization supported" },
+				{         amd            , 0x0000'0004ui32, "PageFlushMsr" , "Page Flush MSR available"                  },
+				{         amd            , 0x0000'0008ui32, "SEV-ES"       , "SEV Encrypted State available"             },
 			}}
 		}}
 	}}
@@ -540,9 +579,9 @@ void print_features(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t sub
 		for(const feature_t& f : features) {
 			if(cpu.vendor & f.vendor) {
 				if(0 != (value & f.mask)) {
-					w.write("{: >24s}  \x1b[32;1m[+]\x1b[0m {:s}\n", f.mnemonic, f.description);
+					w.write("{: >30s}  \x1b[32;1m[+]\x1b[0m {:s}\n", f.mnemonic, f.description);
 				} else {
-					w.write("{: >24s}  \x1b[31;1m[-]\x1b[0m {:s}\n", f.mnemonic, f.description);
+					w.write("{: >30s}  \x1b[31;1m[-]\x1b[0m {:s}\n", f.mnemonic, f.description);
 				}
 			}
 		}
