@@ -299,25 +299,26 @@ void enumerate_leaf_brute_force(cpu_t& cpu, leaf_t leaf) {
 		regs = { 0 };
 		cpuid(regs, leaf, subleaf);
 		if(regs[eax] == 0ui32
-			&& regs[ebx] == 0ui32
-			&& (regs[ecx] == 0ui32 || regs[ecx] == static_cast<std::uint32_t>(subleaf))
-			&& regs[edx] == 0ui32) {
+		&& regs[ebx] == 0ui32
+		&& (regs[ecx] == 0ui32 || regs[ecx] == static_cast<std::uint32_t>(subleaf))
+		&& regs[edx] == 0ui32) {
 			break;
 		}
 		if(regs[eax] == previous[eax]
-			&& regs[ebx] == previous[ebx]
-			&& regs[ecx] == previous[ecx]
-			&& regs[edx] == previous[edx]) {
+		&& regs[ebx] == previous[ebx]
+		&& regs[ecx] == previous[ecx]
+		&& regs[edx] == previous[edx]) {
 			break;
 		}
 		cpu.leaves[leaf][subleaf] = regs;
 	}
 }
 
-void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool skip_vendor_check, bool skip_feature_check) {
+void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool brute_force, bool skip_vendor_check, bool skip_feature_check) {
 	register_set_t regs = { 0 };
 	const auto it = descriptors.find(leaf);
-	if(it != descriptors.end()) {
+	if(!brute_force
+	&& it != descriptors.end()) {
 		if(skip_vendor_check
 		|| it->second.vendor & cpu.vendor) {
 			const filter_t filter = it->second.filter;
@@ -400,7 +401,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(const std::string& filename) {
 	return logical_cpus;
 }
 
-std::map<std::uint32_t, cpu_t> enumerate_processors(bool skip_vendor_check, bool skip_feature_check) {
+std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_vendor_check, bool skip_feature_check) {
 	std::map<std::uint32_t, cpu_t> logical_cpus;
 	run_on_every_core([=, &logical_cpus]() {
 		cpu_t cpu = {};
@@ -414,7 +415,7 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool skip_vendor_check, bool
 		cpu.model = get_model(cpu.vendor, regs);
 
 		for(leaf_t leaf = leaf_t::basic_info; leaf <= highest_leaf; ++leaf) {
-			enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
+			enumerate_leaf(cpu, leaf, brute_force, skip_vendor_check, skip_feature_check);
 		}
 
 		cpuid(regs, leaf_t::hypervisor_limit, subleaf_t::main);
@@ -426,7 +427,7 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool skip_vendor_check, bool
 				const leaf_t highest_hypervisor_leaf = leaf_t{ regs[eax] };
 
 				for(leaf_t leaf = leaf_t::hypervisor_limit; leaf <= highest_hypervisor_leaf; ++leaf) {
-					enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
+					enumerate_leaf(cpu, leaf, brute_force, skip_vendor_check, skip_feature_check);
 				}
 
 				if(hypervisor & hyper_v) {
@@ -440,7 +441,7 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool skip_vendor_check, bool
 						const leaf_t highest_xen_leaf = leaf_t{ regs[eax] };
 
 						for(leaf_t leaf = xen_base; leaf <= highest_xen_leaf; ++leaf) {
-							enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
+							enumerate_leaf(cpu, leaf, brute_force, skip_vendor_check, skip_feature_check);
 						}
 					}
 				}
@@ -450,7 +451,7 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool skip_vendor_check, bool
 		const leaf_t highest_extended_leaf = leaf_t{ regs[eax] };
 
 		for(leaf_t leaf = leaf_t::extended_limit; leaf <= highest_extended_leaf; ++leaf) {
-			enumerate_leaf(cpu, leaf, skip_vendor_check, skip_feature_check);
+			enumerate_leaf(cpu, leaf, brute_force, skip_vendor_check, skip_feature_check);
 		}
 		
 		cpu.apic_id = get_apic_id(cpu);
@@ -619,7 +620,7 @@ void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag
 	}
 }
 
-void print_flags(fmt::Writer& w, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check) {
+void print_leaves(fmt::Writer& w, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check) {
 	for(const auto& leaf : cpu.leaves) {
 		const auto range = descriptors.equal_range(leaf.first);
 		if(range.first != range.second) {
@@ -648,7 +649,7 @@ static const char usage_message[] =
 R"(cpuid.
 
 	Usage:
-		cpuid [--read-dump <filename>] [--all-cpus | --cpu <id>] [--ignore-vendor] [--ignore-feature-bits] [--dump | --single-value <spec>]
+		cpuid [--read-dump <filename>] [--all-cpus | --cpu <id>] [--ignore-vendor] [--ignore-feature-bits] [--brute-force] [--dump | --single-value <spec>] [--no-topology | --only-topology]
 		cpuid --list-ids
 		cpuid --help
 		cpuid --version
@@ -662,6 +663,9 @@ R"(cpuid.
 		                        Handles most of the wild inconsistencies found in Intel's documentation.
 		--ignore-vendor         Ignore vendor constraints
 		--ignore-feature-bits   Ignore feature bit constraints
+		--brute-force           Ignore constraints, and enumerate even reserved leaves
+		--no-topology           Don't print the processor and cache topology
+		--only-topology         Only print the processor and cache topology
 		--list-ids              List all core IDs
 		--help                  Show this text
 		--version               Show the version
@@ -685,12 +689,15 @@ int main(int argc, char* argv[]) try {
 	const bool raw_dump           = std::get<bool>(args.at("--dump"));
 	const bool all_cpus           = std::get<bool>(args.at("--all-cpus"));
 	const bool list_ids           = std::get<bool>(args.at("--list-ids"));
+	const bool brute_force        = std::get<bool>(args.at("--brute-force"));
+	const bool no_topology        = std::get<bool>(args.at("--no-topology"));
+	const bool only_topology      = std::get<bool>(args.at("--only-topology"));
 
 	std::map<std::uint32_t, cpu_t> logical_cpus;
 	if(std::holds_alternative<std::string>(args.at("--read-dump"))) {
 		logical_cpus = enumerate_file(std::get<std::string>(args.at("--read-dump")));
 	} else {
-		logical_cpus = enumerate_processors(skip_vendor_check, skip_feature_check);
+		logical_cpus = enumerate_processors(brute_force, skip_vendor_check, skip_feature_check);
 	}
 
 	if(logical_cpus.size() == 0) {
@@ -708,7 +715,7 @@ int main(int argc, char* argv[]) try {
 
 	if(raw_dump) {
 		fmt::MemoryWriter w;
-		w.write("#apic eax ecx: eax ebx ecx edx");
+		w.write("#apic eax ecx: eax ebx ecx edx\n");
 		for(const auto& p : logical_cpus) {
 			print_generic(w, p.second);
 			w.write("\n");
@@ -732,19 +739,22 @@ int main(int argc, char* argv[]) try {
 		cpu_ids.push_back(chosen_id);
 	}
 
-	for(const std::uint32_t chosen_id : cpu_ids) {
-		const cpu_t& cpu = logical_cpus.at(chosen_id);
-		fmt::MemoryWriter w;
-		if(std::holds_alternative<std::string>(args.at("--single-value"))) {
-			const std::string flag_spec = std::get<std::string>(args.at("--single-value"));
-			print_single_flag(w, cpu, flag_spec);
-		} else  {
-			print_flags(w, cpu, skip_vendor_check, skip_feature_check);
+	if(!only_topology) {
+		for(const std::uint32_t chosen_id : cpu_ids) {
+			const cpu_t& cpu = logical_cpus.at(chosen_id);
+			fmt::MemoryWriter w;
+			if(std::holds_alternative<std::string>(args.at("--single-value"))) {
+				const std::string flag_spec = std::get<std::string>(args.at("--single-value"));
+				print_single_flag(w, cpu, flag_spec);
+			} else {
+				print_leaves(w, cpu, skip_vendor_check, skip_feature_check);
+			}
+			std::cout << w.str() << std::flush;
 		}
-		std::cout << w.str() << std::flush;
 	}
 
-	if(!std::holds_alternative<std::string>(args.at("--single-value"))) {
+	if(!std::holds_alternative<std::string>(args.at("--single-value"))
+	&& !no_topology) {
 		fmt::MemoryWriter w;
 		system_t machine = build_topology(logical_cpus);
 		print_topology(w, machine);
