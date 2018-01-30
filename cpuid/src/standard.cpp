@@ -388,15 +388,19 @@ void enumerate_extended_state(cpu_t& cpu) {
 	register_set_t regs = { 0 };
 	cpuid(regs, leaf_t::extended_state, subleaf_t::extended_state_main);
 	cpu.leaves[leaf_t::extended_state][subleaf_t::extended_state_main] = regs;
+	const std::uint64_t valid_bits = regs[eax] | (gsl::narrow_cast<std::uint64_t>(regs[edx]) << 32ui64);
+
 	cpuid(regs, leaf_t::extended_state, subleaf_t::extended_state_sub);
 	cpu.leaves[leaf_t::extended_state][subleaf_t::extended_state_sub] = regs;
 
-	const std::uint64_t valid_bits = regs[eax] | (gsl::narrow_cast<std::uint64_t>(regs[edx]) << 32ui64);
-	std::uint64_t mask = 0x1ui64 << 2ui64;
-	for(subleaf_t i = subleaf_t{ 2ui32 }; i < subleaf_t{ 63ui32 }; ++i, mask <<= 1ui64) {
-		if(valid_bits & mask) {
+	std::uint64_t mask = 0x1ui64;
+	for(subleaf_t i = subleaf_t{ 2ui32 }; i < subleaf_t{ 63ui32 }; ++i) {
+		if(valid_bits & (mask << static_cast<std::uint32_t>(i))) {
 			cpuid(regs, leaf_t::extended_state, i);
-			if(regs[ebx] != 0ui32) {
+			if(regs[eax] != 0ui32
+			|| regs[ebx] != 0ui32
+			|| regs[ecx] != 0ui32
+			|| regs[edx] != 0ui32) {
 				cpu.leaves[leaf_t::extended_state][i] = regs;
 			}
 		}
@@ -410,26 +414,6 @@ void enumerate_extended_state(cpu_t& cpu) {
 }
 
 void print_extended_state(fmt::Writer& w, const cpu_t& cpu) {
-	static const std::vector<feature_t> saveables = {
-		{ intel | amd, 0x0000'0001ui32, "x87"         , "Legacy x87 floating point"    },
-		{ intel | amd, 0x0000'0002ui32, "SSE"         , "128-bit SSE XMM"              },
-		{ intel | amd, 0x0000'0004ui32, "AVX"         , "256-bit AVX YMM"              },
-		{ intel      , 0x0000'0008ui32, "MPX_bounds"  , "MPX bounds registers"         },
-		{ intel      , 0x0000'0010ui32, "MPX_CSR"     , "MPX CSR"                      },
-		{ intel      , 0x0000'0020ui32, "AVX512_mask" , "AVX-512 OpMask"               },
-		{ intel      , 0x0000'0040ui32, "AVX512_hi256", "AVX-512 ZMM0-15 upper bits"   },
-		{ intel      , 0x0000'0080ui32, "AVX512_hi16" , "AVX-512 ZMM16-31"             },
-		{ intel      , 0x0000'0100ui32, "XSS"         , "Processor Trace"              },
-		{ intel      , 0x0000'0200ui32, "PKRU"        , "Protection Keys User Register"},
-	};
-
-	static const std::vector<feature_t> optional_features = {
-		{ intel | amd, 0x0000'0001ui32, "XSAVEOPT"    , "XSAVEOPT available"           },
-		{ intel | amd, 0x0000'0002ui32, "XSAVEC"      , "XSAVEC and compacted XRSTOR"  },
-		{ intel | amd, 0x0000'0004ui32, "XG1"         , "XGETBV"                       },
-		{ intel | amd, 0x0000'0008ui32, "XSSS"        , "XSAVES/XRSTORS"               },
-	};
-
 	for(const auto& sub : cpu.leaves.at(leaf_t::extended_state)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -437,13 +421,7 @@ void print_extended_state(fmt::Writer& w, const cpu_t& cpu) {
 			{
 				w.write("Extended states\n");
 				w.write("\tFeatures supported by XSAVE: \n");
-				for(const feature_t& feature : saveables) {
-					if(cpu.vendor & feature.vendor) {
-						if(regs[eax] & feature.mask) {
-							w.write("\t\t{:s}\n", feature.description);
-						}
-					}
-				}
+				print_features(w, cpu, leaf_t::extended_state, subleaf_t::extended_state_main, eax);
 				w.write("\n");
 
 				w.write("\tMaximum size for all enabled features/bytes  : {:d}\n", regs[ebx]);
@@ -475,6 +453,7 @@ void print_extended_state(fmt::Writer& w, const cpu_t& cpu) {
 				} c = { regs[ecx] };
 
 				const std::uint32_t idx = static_cast<std::uint32_t>(sub.first);
+				const auto& saveables = all_features.equal_range(leaf_t::extended_state).first->second.at(subleaf_t::extended_state_main).at(eax);
 				const std::string& description = idx < saveables.size() ? saveables[idx].description
 				                               : idx == 0xe3ui32        ? "Lightweight Profiling"
 				                               :                          "(unknown)";
