@@ -19,6 +19,12 @@
 #define _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING 1
 #endif
 
+#if !defined(_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING)
+#define _SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING 1
+#endif
+
+#define DOCTOPT_USE_BOOST_REGEX 1
+
 #define STRICT
 #define NOMINMAX
 
@@ -104,6 +110,7 @@
 #pragma warning(push)
 #pragma warning(disable: 4365) // warning C4365: '%s': conversion from '%s' to '%s', signed/unsigned mismatch
 #pragma warning(disable: 4371) // warning C4371: '%s': layout of class may have changed from a previous version of the compiler due to better packing of member '%s'
+#pragma warning(disable: 4571) // warning C4571: Informational: catch(...) semantics changed since Visual C++ 7.1; structured exceptions (SEH) are no longer caught
 #pragma warning(disable: 4619) // warning C4619: #pragma warning: there is no warning number '%d'
 #pragma warning(disable: 5031) // warning C5031: #pragma warning(pop): likely mismatch, popping warning state pushed in different file
 #pragma warning(disable: 26429) // warning C26429: Symbol '%s' is never tested for nullness, it can be marked as not_null (f.23: http://go.microsoft.com/fwlink/?linkid=853921).
@@ -112,10 +119,14 @@
 #pragma warning(disable: 26439) // warning C26439: This kind of function may not throw. Declare it 'noexcept' (f.6: http://go.microsoft.com/fwlink/?linkid=853927).
 #pragma warning(disable: 26440) // warning C26440: Function '%s' can be declared 'noexcept' (f.6: http://go.microsoft.com/fwlink/?linkid=853927).
 #pragma warning(disable: 26472) // warning C26472: Don't use a static_cast for arithmetic conversions. Use brace initialization, gsl::narrow_cast or gsl::narow (type.1: http://go.microsoft.com/fwlink/p/?LinkID=620417).
+#pragma warning(disable: 26491) // warning C26491: Don't use static_cast downcasts (type.2: http://go.microsoft.com/fwlink/p/?LinkID=620418).
 
 #ifndef BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE
 #define BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE
 #endif
+
+#include <boost/algorithm/string.hpp>
+#include <boost/regex.hpp>
 
 #include <gsl/gsl>
 

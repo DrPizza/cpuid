@@ -6,8 +6,6 @@
 #include <map>
 #include <vector>
 
-using feature_map_t = std::multimap<leaf_t, std::map<subleaf_t, std::map<register_t, std::vector<feature_t>>>>;
-
 const feature_map_t all_features = {
 	{ leaf_t::version_info, {
 		{ subleaf_t::main, {
@@ -158,6 +156,7 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'1000ui32, "AVX512_BITALG"     , "AVX512 Bitwise Algorithms"                     },
 				{ intel                  , 0x0000'4000ui32, "AVX512_VPOPCNTDQ"  , "AVX512 VPOPCNTDQ"                              },
 				{ intel                  , 0x0001'0000ui32, "LA57"              , "5-level page tables/57-bit virtual addressing" },
+				{ intel                  , 0x003e'0000ui32, "MAWAU"             , "MPX Address Width Adjust for User addresses"   },
 				{ intel                  , 0x0040'0000ui32, "RDPID"             , "Read Processor ID"                             },
 				{ intel                  , 0x4000'0000ui32, "SGX_LC"            , "SGX Launch Configuration"                      },
 			}},
@@ -168,6 +167,16 @@ const feature_map_t all_features = {
 				{ intel | amd            , 0x0400'0000ui32, "IBRS"              , "Indirect Branch Restricted Speculation and Indirect Branch Predictor Barrier" },
 				{ intel | amd            , 0x0800'0000ui32, "STIBP"             , "Single Thread Indirect Branch Predictors"                                     },
 				{ intel                  , 0x2000'0000ui32, "ARCH_CAPS"         , "ARCH_CAPABILITIES MSR"                                                        },
+			}}
+		}}
+	}},
+	{ leaf_t::extended_state, {
+		{ subleaf_t::extended_state_sub, {
+			{ eax, {
+				{ intel | amd            , 0x0000'0001ui32, "XSAVEOPT"          , "XSAVEOPT available"          },
+				{ intel | amd            , 0x0000'0002ui32, "XSAVEC"            , "XSAVEC and compacted XRSTOR" },
+				{ intel | amd            , 0x0000'0004ui32, "XG1"               , "XGETBV"                      },
+				{ intel | amd            , 0x0000'0008ui32, "XSSS"              , "XSAVES/XRSTORS"              },
 			}}
 		}}
 	}},
@@ -383,7 +392,7 @@ const feature_map_t all_features = {
 	{ leaf_t::extended_signature_and_features, {
 		{ subleaf_t::main, {
 			{ ecx, {
-				{ intel | amd            , 0x0000'0001ui32, "LahfSahf"                , "LAHF/SAHF supported in 64-bit mode"   },
+				{ intel | amd            , 0x0000'0001ui32, "LAHF-SAHF"               , "LAHF/SAHF supported in 64-bit mode"   },
 				{         amd            , 0x0000'0002ui32, "CmpLegacy"               , "Core multi-processing legacy mode"    },
 				{         amd            , 0x0000'0004ui32, "SVM"                     , "Secure Virtual Machine Mode"          },
 				{         amd            , 0x0000'0008ui32, "ExtApicSpace"            , "Extended APIC register space"         },
@@ -577,11 +586,13 @@ void print_features(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t sub
 		const std::uint32_t value = cpu.leaves.at(leaf).at(sub).at(reg);
 
 		for(const feature_t& f : features) {
-			if(cpu.vendor & f.vendor) {
-				if(0 != (value & f.mask)) {
-					w.write("{: >30s}  \x1b[32;1m[+]\x1b[0m {:s}\n", f.mnemonic, f.description);
-				} else {
-					w.write("{: >30s}  \x1b[31;1m[-]\x1b[0m {:s}\n", f.mnemonic, f.description);
+			if(__popcnt(f.mask) == 1ui32) {
+				if(cpu.vendor & f.vendor) {
+					if(0 != (value & f.mask)) {
+						w.write("{: >32s} \x1b[32;1m[+]\x1b[0m {:s}\n", f.mnemonic, f.description);
+					} else {
+						w.write("{: >32s} \x1b[31;1m[-]\x1b[0m {:s}\n", f.mnemonic, f.description);
+					}
 				}
 			}
 		}

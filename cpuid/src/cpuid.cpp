@@ -15,6 +15,8 @@
 #include <tuple>
 #include <regex>
 
+#include <boost/algorithm/string.hpp>    
+
 #include <gsl/gsl>
 
 #include <fmt/format.h>
@@ -458,24 +460,212 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool skip_vendor_check, bool
 	return logical_cpus;
 }
 
+void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag_spec) {
+	const std::vector<std::string> samples = {
+		"CPUID.01:ECX[SSE4.2]",
+		"CPUID.01:ECX.MOVBE[bit 22]",
+		"CPUID.01H.EDX.SSE[bit 25]",
+		"CPUID.(EAX=07H, ECX=0H):EBX.BMI1[bit 3]",
+		"CPUID.EAX=80000001H:ECX.LZCNT[bit 5]",
+		"CPUID.(EAX=07H, ECX=0H):EBX[bit 9]",
+		"CPUID.(EAX=0DH,ECX=0):EAX[4:3]",
+		"CPUID.(EAX=0DH,ECX=0):EAX[9]",
+		"CPUID.1:ECX.OSXSAVE[bit 27]",
+		"CPUID.1:ECX.OSXSAVE",
+		"CPUID.(EAX=0DH,ECX=0):EBX",
+		"CPUID.0x7.0:EBX.AVX512PF[bit 26]",
+		"CPUID.(EAX=0DH, ECX=04H).EBX[31:0]",
+		"CPUID.(EAX=07H,ECX=0H):ECX.MAWAU[bits 21:17]",
+		"CPUID.(EAX=07H, ECX=0H).EBX.MPX ",
+		"CPUID.1.ECX",
+		"CPUID.(EAX=07H, ECX=0H):EBX[SGX]",
+		"CPUID.80000008H:EAX[7:0]",
+		"CPUID.1.EBX[23:16]",
+		"CPUID.(EAX=07H, ECX=0H):EBX.INVPCID (bit 10)",
+		"CPUID.80000001H:ECX.LAHF-SAHF[bit 0]",
+		"CPUID.01H:ECX.POPCNT [Bit 23]",
+		"CPUID.(EAX=0DH,ECX=1):EAX.XSS[bit 3]",
+		"CPUID.80000008H:EAX[bits 7-0]",
+	};
+
+	const std::string hex_number       = "(?:0x)?([[:xdigit:]]+)H?";
+
+	const std::string simple_selector  = "(?:(?:EAX=)?{hex_number:s})";
+	const std::string complex_selector = R"((?:(?:\(EAX={hex_number:s}, ?ECX={hex_number:s}\))|(?:{hex_number:s}\.{hex_number:s})))";
+	const std::string selector         = "(?:{simple_selector:s}|{complex_selector:s})";
+	const std::string full_selector    = fmt::format(fmt::format(selector, fmt::arg("simple_selector", simple_selector),
+	                                                                       fmt::arg("complex_selector", complex_selector)), fmt::arg("hex_number", hex_number));
+
+	const std::string reg              = "(EAX|EBX|ECX|EDX)";
+
+	const std::string flagname         = "([[:alnum:]\\._-]+)";
+	const std::string single_bit       = "(?:bit )?([[:digit:]]+)";
+	const std::string bit_range        = "(?:bits )?([[:digit:]]+)[-:]([[:digit:]]+)";
+	const std::string bitspec          = "(?:{single_bit:s}|{bit_range:s})";
+	const std::string full_bitspec     = fmt::format(bitspec, fmt::arg("single_bit", single_bit), fmt::arg("bit_range", bit_range));
+	const std::string open_bracket     = R"((?:\(|\[))";
+	const std::string close_bracket    = R"((?:\)|\]))";
+	const std::string field            = R"((?:(\.{flagname:s} ?{open_bracket:s}{bitspec:s}{close_bracket:s})|(?:\.{flagname:s})|({open_bracket:s}{bitspec:s}{close_bracket:s})|(?:{open_bracket:s}{flagname:s}{close_bracket:s}))?)";
+	const std::string full_field       = fmt::format(field, fmt::arg("flagname", flagname), fmt::arg("bitspec", full_bitspec), fmt::arg("open_bracket", open_bracket), fmt::arg("close_bracket", close_bracket));
+
+	const std::string full             = R"(CPUID\.{selector:s}(?:\.|:){reg:s}{field:s})";
+
+	const std::string full_pattern     = fmt::format(full, fmt::arg("selector", full_selector), fmt::arg("reg", reg), fmt::arg("field", full_field));
+
+	std::regex pattern(full_pattern, std::regex::optimize | std::regex::icase);
+	std::smatch m;
+	if(!std::regex_search(flag_spec, m, pattern)) {
+		std::cerr << "Bad pattern " << flag_spec << std::endl;
+	}
+
+	std::uint32_t selector_eax  = 0ui32;
+	std::uint32_t selector_ecx  = 0ui32;
+	register_t    flag_register = eax;
+	std::string   flag_name     = "";
+	std::uint32_t flag_start    = 0xffff'ffffui32;
+	std::uint32_t flag_end      = 0xffff'ffffui32;
+
+	if(m[1].matched) {
+		selector_eax = std::stoul(m[1].str(), nullptr, 16);
+	} else if(m[2].matched) {
+		selector_eax = std::stoul(m[2].str(), nullptr, 16);
+		selector_ecx = m[3].matched ? std::stoul(m[3].str(), nullptr, 16) : 0ui32;
+	} else if(m[4].matched) {
+		selector_eax = std::stoul(m[4].str(), nullptr, 16);
+		selector_ecx = m[5].matched ? std::stoul(m[5].str(), nullptr, 16) : 0ui32;
+	}
+
+	const std::string reg_name = boost::algorithm::to_lower_copy(m[6].str());
+	if(reg_name == "eax") {
+		flag_register = eax;
+	} else if(reg_name == "ebx") {
+		flag_register = ebx;
+	} else if(reg_name == "ecx") {
+		flag_register = ecx;
+	} else if(reg_name == "edx") {
+		flag_register = edx;
+	}
+
+	if(m[7].matched) {
+		flag_name = m[8].str();
+		if(m[9].matched) {
+			flag_start = std::stoul(m[9].str());
+			flag_end   = flag_start;
+		} else if(m[10].matched) {
+			flag_start = std::stoul(m[11].str());
+			flag_end   = std::stoul(m[10].str());
+		}
+	} else if(m[12].matched) {
+		flag_name = m[12].str();
+	} else if(m[13].matched) {
+		if(m[14].matched) {
+			flag_start = std::stoul(m[14].str());
+			flag_end   = flag_start;
+		} else if(m[15].matched) {
+			flag_start = std::stoul(m[16].str());
+			flag_end   = std::stoul(m[15].str());
+		}
+	}
+	else if(m[17].matched) {
+		flag_name = m[17].str();
+	}
+	boost::algorithm::to_lower(flag_name);
+	boost::algorithm::replace_all(flag_name, "_", ".");
+
+	const leaf_t    leaf    = static_cast<leaf_t   >(selector_eax);
+	const subleaf_t subleaf = static_cast<subleaf_t>(selector_ecx);
+	bool handled = false;
+	if(cpu.leaves.find(leaf) != cpu.leaves.end()
+	&& cpu.leaves.at(leaf).find(subleaf) != cpu.leaves.at(leaf).end()) {
+		const std::uint32_t value = cpu.leaves.at(leaf).at(subleaf).at(flag_register);
+		if(flag_name == "" && flag_start == 0xffff'ffffui32 && flag_end == 0xffff'ffffui32) {
+			w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_spec, value);
+			handled = true;
+		}
+		if(flag_name != "") {
+			const auto range = all_features.equal_range(leaf);
+			for(auto it = range.first; it != range.second; ++it) {
+				if(it->second.find(subleaf) == it->second.end()) {
+					continue;
+				}
+				auto sub = it->second.at(subleaf);
+				if(sub.find(flag_register) == sub.end()) {
+					continue;
+				}
+				for(const feature_t& feature : sub.at(flag_register)) {
+					if(boost::algorithm::to_lower_copy(feature.mnemonic) == flag_name) {
+						DWORD shift_amount = 0;
+						_BitScanForward(&shift_amount, feature.mask);
+						const std::uint32_t result = (value & feature.mask) >> shift_amount;
+
+						w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_spec, result);
+						handled = true;
+						break;
+					}
+				}
+			}
+		}
+		if(!handled && flag_start != 0xffff'ffffui32 && flag_end != 0xffff'ffffui32) {
+			const std::uint32_t mask = range_mask(flag_start, flag_end);
+			DWORD shift_amount = 0;
+			_BitScanForward(&shift_amount, mask);
+			const std::uint32_t result = (value & mask) >> shift_amount;
+			w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_spec, result);
+			handled = true;
+		}
+	}
+	
+	if(!handled) {
+		w.write("No data found for {:s}\n", flag_spec);
+	}
+}
+
+void print_flags(fmt::Writer& w, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check) {
+	for(const auto& leaf : cpu.leaves) {
+		const auto range = descriptors.equal_range(leaf.first);
+		if(range.first != range.second) {
+			for(auto it = range.first; it != range.second; ++it) {
+				if(skip_vendor_check || (it->second.vendor & cpu.vendor)) {
+					const filter_t filter = it->second.filter;
+					if(skip_feature_check
+						|| filter == no_filter
+						|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
+						if(it->second.printer) {
+							it->second.printer(w, cpu);
+						} else {
+							print_generic(w, cpu, leaf.first);
+						}
+					}
+				}
+			}
+		} else {
+			print_generic(w, cpu, leaf.first);
+			w.write("\n");
+		}
+	}
+}
+
 static const char usage_message[] =
 R"(cpuid.
 
 	Usage:
-		cpuid [--cpu <id> | --read-dump <filename>] [--dump] [--ignore-vendor] [--ignore-feature-bits]
+		cpuid [--read-dump <filename>] [--all-cpus | --cpu <id>] [--ignore-vendor] [--ignore-feature-bits] [--dump | --single-value <spec>]
 		cpuid --list-ids
 		cpuid --help
 		cpuid --version
 
 	Options:
-		--cpu <id>              ID of logical core to print info from
-		--read-dump <filename>  Filename to get info from
+		--read-dump <filename>  Read from a file rather than the current processors
+		--all-cpus              Show output from every CPU
+		--cpu <id>              Show output from CPU with APIC ID <id>
 		--dump                  Print unparsed output
+		--single-value <spec>   Print specific flag value, using Intel syntax (e.g. CPUID.01H.EDX.SSE[bit 25])
 		--ignore-vendor         Ignore vendor constraints
 		--ignore-feature-bits   Ignore feature bit constraints
 		--list-ids              List all core IDs
 		--help                  Show this text
 		--version               Show the version
+
 )";
 
 int main(int argc, char* argv[]) {
@@ -493,6 +683,7 @@ int main(int argc, char* argv[]) {
 	const bool skip_vendor_check  = std::get<bool>(args.at("--ignore-vendor"));
 	const bool skip_feature_check = std::get<bool>(args.at("--ignore-feature-bits"));
 	const bool raw_dump           = std::get<bool>(args.at("--dump"));
+	const bool all_cpus           = std::get<bool>(args.at("--all-cpus"));
 	const bool list_ids           = std::get<bool>(args.at("--list-ids"));
 
 	std::map<std::uint32_t, cpu_t> logical_cpus;
@@ -502,10 +693,14 @@ int main(int argc, char* argv[]) {
 		logical_cpus = enumerate_processors(skip_vendor_check, skip_feature_check);
 	}
 
+	if(logical_cpus.size() == 0) {
+		return 0;
+	}
+
 	if(list_ids) {
 		fmt::MemoryWriter w;
 		for(const auto& p : logical_cpus) {
-			w.write("{:04x}\n", p.first);
+			w.write("{:#04x}\n", p.first);
 		}
 		std::cout << w.str() << std::flush;
 		return 0;
@@ -522,38 +717,43 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 
-	if(logical_cpus.size() > 0) {
-		const cpu_t& cpu = logical_cpus.begin()->second;
-		for(const auto& leaf : cpu.leaves) {
-			fmt::MemoryWriter w;
-			const auto range = descriptors.equal_range(leaf.first);
-			if(range.first != range.second) {
-				for(auto it = range.first; it != range.second; ++it) {
-					if(skip_vendor_check || (it->second.vendor & cpu.vendor)) {
-						const filter_t filter = it->second.filter;
-						if(skip_feature_check
-						|| filter      == no_filter
-						|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
-							if(it->second.printer) {
-								it->second.printer(w, cpu);
-							} else {
-								print_generic(w, cpu, leaf.first);
-							}
-						}
-					}
-				}
-			} else {
-				print_generic(w, cpu, leaf.first);
-				w.write("\n");
-			}
-			std::cout << w.str() << std::flush;
-		}
+	std::vector<std::uint32_t> cpu_ids;
 
+	if(all_cpus) {
+		for(const auto& p : logical_cpus) {
+			cpu_ids.push_back(p.first);
+		}
+	} else {
+		const std::uint32_t chosen_id = std::holds_alternative<std::string>(args.at("--cpu")) ? std::stoul(std::get<std::string>(args.at("--cpu")), nullptr, 16)
+		                                                                                      : logical_cpus.begin()->first;
+
+		if(logical_cpus.find(chosen_id) == logical_cpus.end()) {
+			fmt::MemoryWriter w;
+			w.write("No such CPU ID: {:#04x}\n", chosen_id);
+			std::cout << w.str() << std::flush;
+			return 0;
+		}
+		cpu_ids.push_back(chosen_id);
+	}
+
+	for(const std::uint32_t chosen_id : cpu_ids) {
+		const cpu_t& cpu = logical_cpus.at(chosen_id);
+		fmt::MemoryWriter w;
+		if(std::holds_alternative<std::string>(args.at("--single-value"))) {
+			const std::string flag_spec = std::get<std::string>(args.at("--single-value"));
+			print_single_flag(w, cpu, flag_spec);
+		} else  {
+			print_flags(w, cpu, skip_vendor_check, skip_feature_check);
+		}
+		std::cout << w.str() << std::flush;
+	}
+
+	if(!std::holds_alternative<std::string>(args.at("--single-value"))) {
 		fmt::MemoryWriter w;
 		system_t machine = build_topology(logical_cpus);
 		print_topology(w, machine);
 		std::cout << w.str() << std::flush;
-	} 
+	}
 
 	return 0;
 }

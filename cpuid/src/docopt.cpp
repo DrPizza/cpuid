@@ -37,21 +37,21 @@ namespace {
 		}
 
 		static Tokens from_pattern(std::string const& source) {
-			static const docopt::regex re_separators{
+			static const docopt::regex re_separators(
 				"(?:\\s*)" // any spaces (non-matching subgroup)
 				"("
 				"[\\[\\]\\(\\)\\|]" // one character of brackets or parens or pipe character
 				"|"
 				"\\.\\.\\."  // elipsis
-				")" };
+				")", docopt::regex::optimize );
 
-			static const docopt::regex re_strings{
+			static const docopt::regex re_strings(
 				"(?:\\s*)" // any spaces (non-matching subgroup)
 				"("
 				"\\S*<.*?>"  // strings, but make sure to keep "< >" strings together
 				"|"
 				"[^<>\\s]+"     // string without <>
-				")" };
+				")", docopt::regex::optimize );
 
 			// We do two stages of regex matching. The '[]()' and '...' are strong delimeters
 			// and need to be split out anywhere they occur (even at the end of a token). We
@@ -64,7 +64,7 @@ namespace {
 				docopt::sregex_iterator{},
 				[&](docopt::smatch const& match)
 			{
-				// handle anything before the separator (this is the "stuff" between the delimeters)
+				// handle anything before the separator (this is the "stuff" between the delimiters)
 				if(match.prefix().matched) {
 					std::for_each(docopt::sregex_iterator{ match.prefix().first, match.prefix().second, re_strings },
 						docopt::sregex_iterator{},
@@ -137,9 +137,9 @@ namespace {
 			"(?:^|\\n)"  // anchored at a linebreak (or start of string)
 			"("
 			"[^\\n]*" + name + "[^\\n]*(?=\\n?)" // a line that contains the name
-			"(?:\\n[ \\t].*?(?=\\n|$))*"         // followed by any number of lines that are indented
+			"(?:\\n[[:space:]].*?(?=\\n|$))*"         // followed by any number of lines that are indented
 			")",
-			docopt::regex::icase
+			docopt::regex::icase | docopt::regex::optimize // | docopt::regex::multiline
 		};
 
 		std::vector<std::string> ret;
@@ -270,8 +270,7 @@ namespace {
 			}
 
 			if(similar.size() > 1) {
-				std::string error = shortOpt + " is specified ambiguously "
-					+ std::to_string(similar.size()) + " times";
+				std::string error = shortOpt + " is specified ambiguously " + std::to_string(similar.size()) + " times";
 				throw Tokens::OptionError(std::move(error));
 			} else if(similar.empty()) {
 				options.emplace_back(shortOpt, "", 0);

@@ -131,6 +131,11 @@ namespace docopt {
 
 		virtual size_t hash() const = 0;
 
+		Pattern() = default;
+		Pattern(const Pattern&) = default;
+		Pattern(Pattern&&) = default;
+		Pattern& operator=(const Pattern&) = default;
+		Pattern& operator=(Pattern&&) = default;
 		virtual ~Pattern() = default;
 	};
 
@@ -297,6 +302,7 @@ namespace docopt {
 		Option(Option&&) = default;
 		Option& operator=(const Option&) = default;
 		Option& operator=(Option&&) = default;
+		~Option() = default;
 
 		using LeafPattern::setValue;
 
@@ -402,9 +408,7 @@ namespace docopt {
 					group.insert(group.end(), children.begin(), children.end());
 
 					groups.emplace_back(std::move(group));
-				} else { // Required, Optional, OptionsShortcut
-					const BranchPattern* const branch = dynamic_cast<BranchPattern*>(child.get());
-
+				} else if(const BranchPattern* const branch = dynamic_cast<BranchPattern*>(child.get())) { // Required, Optional, OptionsShortcut
 					// child.children + children
 					PatternList group = branch->children();
 					group.insert(group.end(), children.begin(), children.end());
@@ -512,8 +516,8 @@ namespace docopt {
 	inline std::pair<size_t, std::shared_ptr<LeafPattern>> Argument::single_match(PatternList const& left) const
 	{
 		std::pair<size_t, std::shared_ptr<LeafPattern>> ret{};
-
-		for(size_t i = 0, size = left.size(); i < size; ++i)
+		const size_t size = left.size();
+		for(size_t i = 0; i < size; ++i)
 		{
 			auto arg = dynamic_cast<Argument const*>(left[i].get());
 			if(arg) {
@@ -529,8 +533,8 @@ namespace docopt {
 	inline std::pair<size_t, std::shared_ptr<LeafPattern>> Command::single_match(PatternList const& left) const
 	{
 		std::pair<size_t, std::shared_ptr<LeafPattern>> ret{};
-
-		for(size_t i = 0, size = left.size(); i < size; ++i)
+		const size_t size = left.size();
+		for(size_t i = 0; i < size; ++i)
 		{
 			auto arg = dynamic_cast<Argument const*>(left[i].get());
 			if(arg) {

@@ -27,6 +27,20 @@ void run_on_every_core(Fn&& f) {
 	bouncer.join();
 }
 
+inline std::uint32_t simple_mask(const std::uint32_t length) noexcept {
+	if(length == 32ui32) {
+		return 0xffff'ffffui32;
+	} else if(length == 0ui32) {
+		return 0ui32;
+	} else {
+		return (1ui32 << length) - 1ui32;
+	}
+};
+
+inline std::uint32_t range_mask(const std::uint32_t start, const std::uint32_t end) noexcept {
+	return simple_mask(end + 1ui32) ^ simple_mask(start);
+};
+
 namespace fmt {
 	template<size_t N>
 	void format_arg(fmt::BasicFormatter<char>& f, const char*&, const std::array<char, N>& arr) {

@@ -134,7 +134,9 @@ void print_serial_number(fmt::Writer& w, const cpu_t& cpu) {
 			const std::uint32_t top = cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main)[eax];
 			const std::uint32_t middle = regs[edx];
 			const std::uint32_t bottom = regs[ecx];
-			w.write("Serial number: {:04x}-{:04x}-{:04x}-{:04x}-{:04x}-{:04x}", top >> 16ui32, top & 0xffffui32, middle >> 16ui32, middle & 0xffffui32, bottom >> 16ui32, bottom & 0xffffui32);
+			w.write("Serial number: {:04x}-{:04x}-{:04x}-{:04x}-{:04x}-{:04x}", top    >> 16ui32, top    & 0xffffui32,
+			                                                                    middle >> 16ui32, middle & 0xffffui32,
+			                                                                    bottom >> 16ui32, bottom & 0xffffui32);
 		}
 		break;
 	case transmeta:
@@ -424,8 +426,8 @@ void print_extended_state(fmt::Writer& w, const cpu_t& cpu) {
 	static const std::vector<feature_t> optional_features = {
 		{ intel | amd, 0x0000'0001ui32, "XSAVEOPT"    , "XSAVEOPT available"           },
 		{ intel | amd, 0x0000'0002ui32, "XSAVEC"      , "XSAVEC and compacted XRSTOR"  },
-		{ intel | amd, 0x0000'0004ui32, "XGETBV"      , "XGETBV"                       },
-		{ intel | amd, 0x0000'0008ui32, "XSAVES"      , "XSAVES/XRSTORS"               },
+		{ intel | amd, 0x0000'0004ui32, "XG1"         , "XGETBV"                       },
+		{ intel | amd, 0x0000'0008ui32, "XSSS"        , "XSAVES/XRSTORS"               },
 	};
 
 	for(const auto& sub : cpu.leaves.at(leaf_t::extended_state)) {
@@ -452,13 +454,7 @@ void print_extended_state(fmt::Writer& w, const cpu_t& cpu) {
 		case subleaf_t::extended_state_sub:
 			{
 				w.write("\tXSAVE extended features:\n");
-				for(const feature_t& feature : optional_features) {
-					if(cpu.vendor & feature.vendor) {
-						if(regs[eax] & feature.mask) {
-							w.write("\t\t{:s}\n", feature.description);
-						}
-					}
-				}
+				print_features(w, cpu, leaf_t::extended_state, subleaf_t::extended_state_sub, eax);
 				w.write("\n");
 
 				w.write("\tSize for enabled features/bytes: {:d}\n", regs[ebx]);
@@ -479,9 +475,9 @@ void print_extended_state(fmt::Writer& w, const cpu_t& cpu) {
 				} c = { regs[ecx] };
 
 				const std::uint32_t idx = static_cast<std::uint32_t>(sub.first);
-				const char* const description = idx < saveables.size() ? saveables[idx].description
-				                              : idx == 0xe3ui32        ? "Lightweight Profiling"
-				                              :                          "(unknown)";
+				const std::string& description = idx < saveables.size() ? saveables[idx].description
+				                               : idx == 0xe3ui32        ? "Lightweight Profiling"
+				                               :                          "(unknown)";
 
 				w.write("\tExtended state for {:s} ({:#04x}) uses {:d} bytes at offset {:#010x}\n", description, static_cast<std::uint32_t>(sub.first), regs[eax], regs[ebx]);
 				if(c.split.set_in_xss) {
