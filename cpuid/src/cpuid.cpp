@@ -338,10 +338,9 @@ void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool skip_vendor_check, bool skip_f
 }
 
 std::map<std::uint32_t, cpu_t> enumerate_file(const std::string& filename) {
-	using namespace fmt::literals;
 	const std::regex comment_line("#.*");
 	const std::string single_element = "(0[xX][[:xdigit:]]{1,8})";
-	const std::string multiple_elements = "{} {} {}: {} {} {} {}"_format(single_element, single_element, single_element, single_element, single_element, single_element, single_element);
+	const std::string multiple_elements = fmt::format("{} {} {}: {} {} {} {}", single_element, single_element, single_element, single_element, single_element, single_element, single_element);
 	const std::regex data_line(multiple_elements);
 
 	std::map<std::uint32_t, cpu_t> logical_cpus;
@@ -508,14 +507,14 @@ void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag
 	const std::string field            = R"((?:(\.{flagname:s} ?{open_bracket:s}{bitspec:s}{close_bracket:s})|(?:\.{flagname:s})|({open_bracket:s}{bitspec:s}{close_bracket:s})|(?:{open_bracket:s}{flagname:s}{close_bracket:s}))?)";
 	const std::string full_field       = fmt::format(field, fmt::arg("flagname", flagname), fmt::arg("bitspec", full_bitspec), fmt::arg("open_bracket", open_bracket), fmt::arg("close_bracket", close_bracket));
 
-	const std::string full             = R"(CPUID\.{selector:s}(?:\.|:){reg:s}{field:s})";
+	const std::string pattern          = R"(CPUID\.{selector:s}(?:\.|:){reg:s}{field:s})";
 
-	const std::string full_pattern     = fmt::format(full, fmt::arg("selector", full_selector), fmt::arg("reg", reg), fmt::arg("field", full_field));
+	const std::string full_pattern     = fmt::format(pattern, fmt::arg("selector", full_selector), fmt::arg("reg", reg), fmt::arg("field", full_field));
 
-	std::regex pattern(full_pattern, std::regex::optimize | std::regex::icase);
+	std::regex re_pattern(full_pattern, std::regex::optimize | std::regex::icase);
 	std::smatch m;
-	if(!std::regex_search(flag_spec, m, pattern)) {
-		std::cerr << "Bad pattern " << flag_spec << std::endl;
+	if(!std::regex_search(flag_spec, m, re_pattern)) {
+		throw std::runtime_error(fmt::format("Bad pattern: {:s}", flag_spec));
 	}
 
 	std::uint32_t selector_eax  = 0ui32;
@@ -660,6 +659,7 @@ R"(cpuid.
 		--cpu <id>              Show output from CPU with APIC ID <id>
 		--dump                  Print unparsed output
 		--single-value <spec>   Print specific flag value, using Intel syntax (e.g. CPUID.01H.EDX.SSE[bit 25])
+		                        Handles most of the wild inconsistencies found in Intel's documentation.
 		--ignore-vendor         Ignore vendor constraints
 		--ignore-feature-bits   Ignore feature bit constraints
 		--list-ids              List all core IDs
@@ -668,7 +668,7 @@ R"(cpuid.
 
 )";
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) try {
 	HANDLE output = ::GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD mode = 0;
 	::GetConsoleMode(output, &mode);
@@ -726,12 +726,8 @@ int main(int argc, char* argv[]) {
 	} else {
 		const std::uint32_t chosen_id = std::holds_alternative<std::string>(args.at("--cpu")) ? std::stoul(std::get<std::string>(args.at("--cpu")), nullptr, 16)
 		                                                                                      : logical_cpus.begin()->first;
-
 		if(logical_cpus.find(chosen_id) == logical_cpus.end()) {
-			fmt::MemoryWriter w;
-			w.write("No such CPU ID: {:#04x}\n", chosen_id);
-			std::cout << w.str() << std::flush;
-			return 0;
+			throw std::runtime_error(fmt::format("No such CPU ID: {:#04x}\n", chosen_id));
 		}
 		cpu_ids.push_back(chosen_id);
 	}
@@ -756,4 +752,8 @@ int main(int argc, char* argv[]) {
 	}
 
 	return 0;
+}
+catch(std::exception& e) {
+	std::cerr << e.what() << std::endl;
+	return -1;
 }
