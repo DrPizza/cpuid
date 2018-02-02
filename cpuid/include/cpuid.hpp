@@ -6,6 +6,7 @@
 #include <map>
 
 #include <gsl/gsl>
+#include <fmt/format.h>
 
 enum struct leaf_t : std::uint32_t
 {

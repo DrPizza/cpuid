@@ -1,6 +1,8 @@
 #ifndef STDAFX__H
 #define STDAFX__H
 
+#ifdef _WIN32
+
 #include <SDKDDKVer.h>
 
 #if !defined(_STL_EXTRA_DISABLED_WARNINGS)
@@ -22,8 +24,6 @@
 #if !defined(_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING)
 #define _SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING 1
 #endif
-
-#define DOCTOPT_USE_BOOST_REGEX 1
 
 #define STRICT
 #define NOMINMAX
@@ -135,5 +135,13 @@
 #pragma warning(pop)
 
 #pragma warning(pop)
+
+#else
+
+// linux includes go here
+
+#endif
+
+#define DOCTOPT_USE_BOOST_REGEX 1
 
 #endif

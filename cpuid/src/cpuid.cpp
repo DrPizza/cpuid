@@ -15,7 +15,7 @@
 #include <tuple>
 #include <regex>
 
-#include <boost/algorithm/string.hpp>    
+#include <boost/algorithm/string.hpp>
 
 #include <gsl/gsl>
 
@@ -338,32 +338,82 @@ void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool brute_force, bool skip_vendor_
 	}
 }
 
-std::map<std::uint32_t, cpu_t> enumerate_file(const std::string& filename) {
-	const std::regex comment_line("#.*");
-	const std::string single_element = "(0[xX][[:xdigit:]]{1,8})";
-	const std::string multiple_elements = fmt::format("{} {} {}: {} {} {} {}", single_element, single_element, single_element, single_element, single_element, single_element, single_element);
-	const std::regex data_line(multiple_elements);
+enum struct file_format
+{
+	native,
+	etallen
+};
 
+std::map<std::uint32_t, cpu_t> enumerate_file(const std::string& filename, file_format format) {
 	std::map<std::uint32_t, cpu_t> logical_cpus;
 	std::ifstream fin(filename);
-	std::string line;
-	while(std::getline(fin, line)) {
-		std::smatch m;
-		if(std::regex_search(line, m, data_line)) {
-			const std::uint32_t apic_id =                        std::stoul(m[1].str(), nullptr, 16) ;
-			const leaf_t        leaf    = static_cast<leaf_t   >(std::stoul(m[2].str(), nullptr, 16));
-			const subleaf_t     subleaf = static_cast<subleaf_t>(std::stoul(m[3].str(), nullptr, 16));
-			const register_set_t regs   = {
-				std::stoul(m[4].str(), nullptr, 16),
-				std::stoul(m[5].str(), nullptr, 16),
-				std::stoul(m[6].str(), nullptr, 16),
-				std::stoul(m[7].str(), nullptr, 16)
-			};
-			logical_cpus[apic_id].leaves[leaf][subleaf] = regs;
-		} else if(!std::regex_search(line, m, comment_line) && line != "") {
-			std::cerr << "Unrecognized line: " << line << std::endl;
-		}
+	if(!fin) {
+		throw std::runtime_error(fmt::format("Dump file not found: {:s}", filename));
 	}
+
+	switch(format) {
+	case file_format::native:
+		{
+			const std::regex comment_line("#.*");
+			const std::string single_element = "(0[xX][[:xdigit:]]{1,8})";
+			const std::string multiple_elements = fmt::format("{} {} {}: {} {} {} {}", single_element, single_element, single_element, single_element, single_element, single_element, single_element);
+			const std::regex data_line(multiple_elements);
+
+			std::string line;
+			while(std::getline(fin, line)) {
+				std::smatch m;
+				if(std::regex_search(line, m, comment_line) || line == "") {
+					continue;
+				} else if(std::regex_search(line, m, data_line)) {
+					const std::uint32_t apic_id =                        std::stoul(m[1].str(), nullptr, 16) ;
+					const leaf_t        leaf    = static_cast<leaf_t   >(std::stoul(m[2].str(), nullptr, 16));
+					const subleaf_t     subleaf = static_cast<subleaf_t>(std::stoul(m[3].str(), nullptr, 16));
+					const register_set_t regs   = {
+						std::stoul(m[4].str(), nullptr, 16),
+						std::stoul(m[5].str(), nullptr, 16),
+						std::stoul(m[6].str(), nullptr, 16),
+						std::stoul(m[7].str(), nullptr, 16)
+					};
+					logical_cpus[apic_id].leaves[leaf][subleaf] = regs;
+				} else {
+					std::cerr << "Unrecognized line: " << line << std::endl;
+				}
+			}
+		}
+		break;
+	case file_format::etallen:
+		{
+			const std::regex comment_line("#.*");
+			const std::regex cpu_line("CPU ([[:digit:]]+)");
+			const std::string single_element = "(0[xX][[:xdigit:]]{1,8})";
+			const std::string multiple_elements = fmt::format("   {} {}: eax={} ebx={} ecx={} edx={}", single_element, single_element, single_element, single_element, single_element, single_element, single_element);
+			const std::regex data_line(multiple_elements);
+			std::string line;
+			std::uint32_t current_cpu = 0xffff'ffffui32;
+			while(std::getline(fin, line)) {
+				std::smatch m;
+				if(std::regex_search(line, m, comment_line) || line == "") {
+					continue;
+				} else if(std::regex_search(line, m, cpu_line)) {
+					current_cpu = std::stoul(m[1].str());
+				} else if(std::regex_search(line, m, data_line)) {
+					const leaf_t        leaf    = static_cast<leaf_t   >(std::stoul(m[1].str(), nullptr, 16));
+					const subleaf_t     subleaf = static_cast<subleaf_t>(std::stoul(m[2].str(), nullptr, 16));
+					const register_set_t regs   = {
+						std::stoul(m[3].str(), nullptr, 16),
+						std::stoul(m[4].str(), nullptr, 16),
+						std::stoul(m[5].str(), nullptr, 16),
+						std::stoul(m[6].str(), nullptr, 16)
+					};
+					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
+				} else {
+					std::cerr << "Unrecognized line: " << line << std::endl;
+				}
+			}
+		}
+		break;
+	}
+
 	for(auto& c: logical_cpus) {
 		cpu_t& cpu = c.second;
 		register_set_t regs = {};
@@ -397,6 +447,13 @@ std::map<std::uint32_t, cpu_t> enumerate_file(const std::string& filename) {
 			}
 		}
 		cpu.apic_id = get_apic_id(cpu);
+	}
+	if(format != file_format::native) {
+		std::map<std::uint32_t, cpu_t> corrected_ids;
+		for(const auto& p : logical_cpus) {
+			corrected_ids[p.second.apic_id] = p.second;
+		}
+		logical_cpus.swap(corrected_ids);
 	}
 	return logical_cpus;
 }
@@ -453,7 +510,7 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_
 		for(leaf_t leaf = leaf_t::extended_limit; leaf <= highest_extended_leaf; ++leaf) {
 			enumerate_leaf(cpu, leaf, brute_force, skip_vendor_check, skip_feature_check);
 		}
-		
+
 		cpu.apic_id = get_apic_id(cpu);
 		logical_cpus[cpu.apic_id] = cpu;
 	});
@@ -614,7 +671,7 @@ void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag
 			handled = true;
 		}
 	}
-	
+
 	if(!handled) {
 		w.write("No data found for {:s}\n", flag_spec);
 	}
@@ -645,30 +702,67 @@ void print_leaves(fmt::Writer& w, const cpu_t& cpu, bool skip_vendor_check, bool
 	}
 }
 
+void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, file_format format) {
+	switch(format) {
+	case file_format::native:
+		w.write("#apic eax ecx: eax ebx ecx edx\n");
+		for(const auto& p : logical_cpus) {
+			print_generic(w, p.second);
+			w.write("\n");
+		}
+		break;
+	case file_format::etallen:
+		{
+			const std::uint32_t count = 0ui32;
+			for(const auto& c : logical_cpus) {
+				w.write("CPU: {:d}\n", count);
+				for(const auto& l : c.second.leaves) {
+					for(const auto& s : l.second) {
+						const cpu_t& cpu = c.second;
+						const leaf_t leaf = l.first;
+						const subleaf_t subleaf = s.first;
+						const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf);
+						w.write("   {:#010x} {:#04x}: eax={:#010x} ebx={:#010x} ecx={:#010x} edx={:#010x}\n", static_cast<std::uint32_t>(leaf),
+						                                                                                      static_cast<std::uint32_t>(subleaf),
+						                                                                                      regs[eax],
+						                                                                                      regs[ebx],
+						                                                                                      regs[ecx],
+						                                                                                      regs[edx]);
+					}
+				}
+			}
+		}
+		break;
+	}
+}
+
 static const char usage_message[] =
 R"(cpuid.
 
 	Usage:
-		cpuid [--read-dump <filename>] [--all-cpus | --cpu <id>] [--ignore-vendor] [--ignore-feature-bits] [--brute-force] [--dump | --single-value <spec>] [--no-topology | --only-topology]
+		cpuid [--read-dump <filename> [--read-format <format>]] [--all-cpus | --cpu <id>] [--ignore-vendor] [--ignore-feature-bits] [--brute-force]
+		      [--dump [--write-format <format>] | --single-value <spec>] [--no-topology | --only-topology]
 		cpuid --list-ids
 		cpuid --help
 		cpuid --version
 
 	Options:
-		--read-dump <filename>  Read from a file rather than the current processors
-		--all-cpus              Show output from every CPU
-		--cpu <id>              Show output from CPU with APIC ID <id>
-		--dump                  Print unparsed output
-		--single-value <spec>   Print specific flag value, using Intel syntax (e.g. CPUID.01H.EDX.SSE[bit 25])
-		                        Handles most of the wild inconsistencies found in Intel's documentation.
-		--ignore-vendor         Ignore vendor constraints
-		--ignore-feature-bits   Ignore feature bit constraints
-		--brute-force           Ignore constraints, and enumerate even reserved leaves
-		--no-topology           Don't print the processor and cache topology
-		--only-topology         Only print the processor and cache topology
-		--list-ids              List all core IDs
-		--help                  Show this text
-		--version               Show the version
+		--read-dump <filename>   Read from a file rather than the current processors
+		--read-format <format>   Dump format to read: native, etallen. [default: native]
+		--all-cpus               Show output from every CPU
+		--cpu <id>               Show output from CPU with APIC ID <id>
+		--dump                   Print unparsed output
+		--write-format <format>  Dump format to write: native, etallen. [default: native]
+		--single-value <spec>    Print specific flag value, using Intel syntax (e.g. CPUID.01H.EDX.SSE[bit 25])
+		                         Handles most of the wild inconsistencies found in Intel's documentation.
+		--ignore-vendor          Ignore vendor constraints
+		--ignore-feature-bits    Ignore feature bit constraints
+		--brute-force            Ignore constraints, and enumerate even reserved leaves
+		--no-topology            Don't print the processor and cache topology
+		--only-topology          Only print the processor and cache topology
+		--list-ids               List all core IDs
+		--help                   Show this text
+		--version                Show the version
 
 )";
 
@@ -695,13 +789,17 @@ int main(int argc, char* argv[]) try {
 
 	std::map<std::uint32_t, cpu_t> logical_cpus;
 	if(std::holds_alternative<std::string>(args.at("--read-dump"))) {
-		logical_cpus = enumerate_file(std::get<std::string>(args.at("--read-dump")));
+		file_format format = file_format::native;
+		if("etallen" == std::get<std::string>(args.at("--read-format"))) {
+			format = file_format::etallen;
+		}
+		logical_cpus = enumerate_file(std::get<std::string>(args.at("--read-dump")), format);
 	} else {
 		logical_cpus = enumerate_processors(brute_force, skip_vendor_check, skip_feature_check);
 	}
 
 	if(logical_cpus.size() == 0) {
-		return 0;
+		throw std::runtime_error("No processors found, which is implausible.");
 	}
 
 	if(list_ids) {
@@ -714,12 +812,12 @@ int main(int argc, char* argv[]) try {
 	}
 
 	if(raw_dump) {
-		fmt::MemoryWriter w;
-		w.write("#apic eax ecx: eax ebx ecx edx\n");
-		for(const auto& p : logical_cpus) {
-			print_generic(w, p.second);
-			w.write("\n");
+		file_format format = file_format::native;
+		if("etallen" == std::get<std::string>(args.at("--write-format"))) {
+			format = file_format::etallen;
 		}
+		fmt::MemoryWriter w;
+		print_dump(w, logical_cpus, format);
 		std::cout << w.str() << std::flush;
 		return 0;
 	}
@@ -728,7 +826,7 @@ int main(int argc, char* argv[]) try {
 
 	if(all_cpus) {
 		for(const auto& p : logical_cpus) {
-			cpu_ids.push_back(p.first);
+			cpu_ids.push_back(p.second.apic_id);
 		}
 	} else {
 		const std::uint32_t chosen_id = std::holds_alternative<std::string>(args.at("--cpu")) ? std::stoul(std::get<std::string>(args.at("--cpu")), nullptr, 16)

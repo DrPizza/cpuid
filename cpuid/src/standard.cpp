@@ -393,9 +393,9 @@ void enumerate_extended_state(cpu_t& cpu) {
 	cpuid(regs, leaf_t::extended_state, subleaf_t::extended_state_sub);
 	cpu.leaves[leaf_t::extended_state][subleaf_t::extended_state_sub] = regs;
 
-	std::uint64_t mask = 0x1ui64;
-	for(subleaf_t i = subleaf_t{ 2ui32 }; i < subleaf_t{ 63ui32 }; ++i) {
-		if(valid_bits & (mask << static_cast<std::uint32_t>(i))) {
+	std::uint64_t mask = 0x1ui64 << 2ui32;
+	for(subleaf_t i = subleaf_t{ 2ui32 }; i < subleaf_t{ 63ui32 }; ++i, mask <<= 1ui64) {
+		if(valid_bits & mask) {
 			cpuid(regs, leaf_t::extended_state, i);
 			if(regs[eax] != 0ui32
 			|| regs[ebx] != 0ui32

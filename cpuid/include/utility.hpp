@@ -1,11 +1,17 @@
 #ifndef UTILITY_HPP
 #define UTILITY_HPP
 
+#ifdef _WIN32
 #include <SDKDDKVer.h>
 
 #define STRICT
 #define NOMINMAX
 #include <Windows.h>
+#else
+#include <unistd.h>
+#include <sched.h>
+#include <pthread.h>
+#endif
 
 #include <thread>
 
@@ -14,6 +20,7 @@
 template<typename Fn>
 void run_on_every_core(Fn&& f) {
 	std::thread bouncer = std::thread([&]() {
+#ifdef _WIN32
 		const WORD total_processor_groups = ::GetMaximumProcessorGroupCount();
 		for(WORD group_id = 0; group_id < total_processor_groups; ++group_id) {
 			const DWORD processors_in_group = ::GetMaximumProcessorCount(group_id);
@@ -23,6 +30,19 @@ void run_on_every_core(Fn&& f) {
 				f();
 			}
 		}
+#else
+        long int total_cores = sysconf(_SC_NPROCESSORS_CONF);
+		cpu_set_t* cpus = CPU_ALLOC(total_cores);
+		std::size_t cpu_size = CPU_SIZE(total_cores);
+
+		CPU_ZERO_S(cpu_size, cpus);
+		for(long int i = 0; i < total_cores; ++i) {
+			CPU_SET_S(i, cpu_size, cpus);
+			pthread_setaffinity_np(pthread_self(), cpu_size, cpus);
+			f();
+			CPU_CLEAR_S(i, cpu_size, cpus);
+		}
+#endif
 	});
 	bouncer.join();
 }

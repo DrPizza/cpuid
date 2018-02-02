@@ -98,6 +98,9 @@
     <ClInclude Include="include\stdafx.h" />
     <ClInclude Include="include\utility.hpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Makefile" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
