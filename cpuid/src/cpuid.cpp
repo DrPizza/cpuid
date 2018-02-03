@@ -713,7 +713,7 @@ void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, fil
 		break;
 	case file_format::etallen:
 		{
-			const std::uint32_t count = 0ui32;
+			std::uint32_t count = 0ui32;
 			for(const auto& c : logical_cpus) {
 				w.write("CPU: {:d}\n", count);
 				for(const auto& l : c.second.leaves) {
@@ -730,6 +730,7 @@ void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, fil
 						                                                                                      regs[edx]);
 					}
 				}
+				++count;
 			}
 		}
 		break;
@@ -739,30 +740,34 @@ void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, fil
 static const char usage_message[] =
 R"(cpuid.
 
-	Usage:
-		cpuid [--read-dump <filename> [--read-format <format>]] [--all-cpus | --cpu <id>] [--ignore-vendor] [--ignore-feature-bits] [--brute-force]
-		      [--dump [--write-format <format>] | --single-value <spec>] [--no-topology | --only-topology]
-		cpuid --list-ids
-		cpuid --help
-		cpuid --version
+Usage:
+	cpuid [--read-dump <filename>] [--read-format <format>] [--all-cpus | --cpu <id>] [--ignore-vendor] [--ignore-feature-bits] [--brute-force] [--raw] [--write-dump <filename>] [--write-format <format>] [--single-value <spec>] [--no-topology | --only-topology]
+	cpuid --list-ids
+	cpuid --help
+	cpuid --version
 
-	Options:
-		--read-dump <filename>   Read from a file rather than the current processors
-		--read-format <format>   Dump format to read: native, etallen. [default: native]
-		--all-cpus               Show output from every CPU
-		--cpu <id>               Show output from CPU with APIC ID <id>
-		--dump                   Print unparsed output
-		--write-format <format>  Dump format to write: native, etallen. [default: native]
-		--single-value <spec>    Print specific flag value, using Intel syntax (e.g. CPUID.01H.EDX.SSE[bit 25])
-		                         Handles most of the wild inconsistencies found in Intel's documentation.
-		--ignore-vendor          Ignore vendor constraints
-		--ignore-feature-bits    Ignore feature bit constraints
-		--brute-force            Ignore constraints, and enumerate even reserved leaves
-		--no-topology            Don't print the processor and cache topology
-		--only-topology          Only print the processor and cache topology
-		--list-ids               List all core IDs
-		--help                   Show this text
-		--version                Show the version
+Input options:
+	--read-dump=<filename>     Read from <filename> rather than the current processors
+	--read-format=<format>     Dump format to read: native, etallen. [default: native]
+	--all-cpus                 Show output from every CPU
+	--cpu <id>                 Show output from CPU with APIC ID <id>
+	--single-value <spec>      Print specific flag value, using Intel syntax (e.g. CPUID.01H.EDX.SSE[bit 25]).
+	                           Handles most of the wild inconsistencies found in Intel's documentation.
+	--ignore-vendor            Ignore vendor constraints
+	--ignore-feature-bits      Ignore feature bit constraints
+	--brute-force              Ignore constraints, and enumerate even reserved leaves
+
+Output options:
+	--raw                      Write unparsed output to screen
+	--write-dump=<filename>    Write unparsed output to <filename>
+	--write-format=<format>    Dump format to write: native, etallen. [default: native]
+	--no-topology              Don't print the processor and cache topology
+	--only-topology            Only print the processor and cache topology
+	--list-ids                 List all core IDs
+
+Other options:
+	--help                     Show this text
+	--version                  Show the version
 
 )";
 
@@ -780,7 +785,7 @@ int main(int argc, char* argv[]) try {
 	const std::map<std::string, docopt::value> args = docopt::docopt(usage_message, { argv + 1, argv + argc }, true, "cpuid 0.1");
 	const bool skip_vendor_check  = std::get<bool>(args.at("--ignore-vendor"));
 	const bool skip_feature_check = std::get<bool>(args.at("--ignore-feature-bits"));
-	const bool raw_dump           = std::get<bool>(args.at("--dump"));
+	const bool raw_dump           = std::get<bool>(args.at("--raw"));
 	const bool all_cpus           = std::get<bool>(args.at("--all-cpus"));
 	const bool list_ids           = std::get<bool>(args.at("--list-ids"));
 	const bool brute_force        = std::get<bool>(args.at("--brute-force"));
@@ -811,14 +816,19 @@ int main(int argc, char* argv[]) try {
 		return 0;
 	}
 
-	if(raw_dump) {
+	if(raw_dump || std::holds_alternative<std::string>(args.at("--write-dump"))) {
 		file_format format = file_format::native;
 		if("etallen" == std::get<std::string>(args.at("--write-format"))) {
 			format = file_format::etallen;
 		}
 		fmt::MemoryWriter w;
 		print_dump(w, logical_cpus, format);
-		std::cout << w.str() << std::flush;
+		if(std::holds_alternative<std::string>(args.at("--write-dump"))) {
+			std::ofstream fout(std::get<std::string>(args.at("--write-dump")));
+			fout << w.str() << std::flush;
+		} else {
+			std::cout << w.str() << std::flush;
+		}
 		return 0;
 	}
 
