@@ -344,12 +344,8 @@ enum struct file_format
 	etallen
 };
 
-std::map<std::uint32_t, cpu_t> enumerate_file(const std::string& filename, file_format format) {
+std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format format) {
 	std::map<std::uint32_t, cpu_t> logical_cpus;
-	std::ifstream fin(filename);
-	if(!fin) {
-		throw std::runtime_error(fmt::format("Dump file not found: {:s}", filename));
-	}
 
 	switch(format) {
 	case file_format::native:
@@ -715,7 +711,7 @@ void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, fil
 		{
 			std::uint32_t count = 0ui32;
 			for(const auto& c : logical_cpus) {
-				w.write("CPU: {:d}\n", count);
+				w.write("CPU {:d}:\n", count);
 				for(const auto& l : c.second.leaves) {
 					for(const auto& s : l.second) {
 						const cpu_t& cpu = c.second;
@@ -771,6 +767,8 @@ Other options:
 
 )";
 
+static const char version[] = "cpuid 0.1";
+
 int main(int argc, char* argv[]) try {
 	HANDLE output = ::GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD mode = 0;
@@ -782,7 +780,7 @@ int main(int argc, char* argv[]) try {
 
 	std::cout.rdbuf()->pubsetbuf(nullptr, 1024);
 
-	const std::map<std::string, docopt::value> args = docopt::docopt(usage_message, { argv + 1, argv + argc }, true, "cpuid 0.1");
+	const std::map<std::string, docopt::value> args = docopt::docopt_parse(usage_message, { argv + 1, argv + argc }, true, true);
 	const bool skip_vendor_check  = std::get<bool>(args.at("--ignore-vendor"));
 	const bool skip_feature_check = std::get<bool>(args.at("--ignore-feature-bits"));
 	const bool raw_dump           = std::get<bool>(args.at("--raw"));
@@ -798,7 +796,15 @@ int main(int argc, char* argv[]) try {
 		if("etallen" == std::get<std::string>(args.at("--read-format"))) {
 			format = file_format::etallen;
 		}
-		logical_cpus = enumerate_file(std::get<std::string>(args.at("--read-dump")), format);
+		const std::string filename = std::get<std::string>(args.at("--read-dump"));
+		std::ifstream fin;
+		if(filename != "-") {
+			fin.open(filename);
+			if(!fin) {
+				throw std::runtime_error(fmt::format("Could not open {:s} for input", filename));
+			}
+		}
+		logical_cpus = enumerate_file(filename != "-" ? fin : std::cin, format);
 	} else {
 		logical_cpus = enumerate_processors(brute_force, skip_vendor_check, skip_feature_check);
 	}
@@ -823,12 +829,18 @@ int main(int argc, char* argv[]) try {
 		}
 		fmt::MemoryWriter w;
 		print_dump(w, logical_cpus, format);
+		std::string filename = "-";
 		if(std::holds_alternative<std::string>(args.at("--write-dump"))) {
-			std::ofstream fout(std::get<std::string>(args.at("--write-dump")));
-			fout << w.str() << std::flush;
-		} else {
-			std::cout << w.str() << std::flush;
+			filename = std::get<std::string>(args.at("--write-dump"));
 		}
+		std::ofstream fout;
+		if(filename != "-") {
+			fout.open(filename);
+			if(!fout) {
+				throw std::runtime_error(fmt::format("Could not open {:s} for output", filename));
+			}
+		}
+		(filename != "-" ? fout : std::cout) << w.str() << std::flush;
 		return 0;
 	}
 
@@ -869,9 +881,23 @@ int main(int argc, char* argv[]) try {
 		std::cout << w.str() << std::flush;
 	}
 
-	return 0;
-}
-catch(std::exception& e) {
+	return EXIT_SUCCESS;
+} catch(const docopt::exit_help&) {
+	std::cout << usage_message << std::endl;
+	return EXIT_SUCCESS;
+} catch(const docopt::exit_version&) {
+	std::cout << version << std::endl;
+	return EXIT_SUCCESS;
+} catch(const docopt::language_error& error) {
+	std::cerr << "Docopt usage string could not be parsed" << std::endl;
+	std::cerr << error.what() << std::endl;
+	return EXIT_FAILURE;
+} catch(const docopt::argument_error& error) {
+	std::cerr << error.what();
+	std::cout << std::endl;
+	std::cout << usage_message << std::endl;
+	return EXIT_FAILURE;
+} catch(std::exception& e) {
 	std::cerr << e.what() << std::endl;
-	return -1;
+	return EXIT_FAILURE;
 }

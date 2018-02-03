@@ -45,16 +45,30 @@
 namespace docopt {
 	
 	// Usage string could not be parsed (ie, the developer did something wrong)
-	struct language_error : std::runtime_error { using runtime_error::runtime_error; };
+	struct language_error : std::logic_error
+	{
+		using logic_error::logic_error;
+	};
 	
 	// Arguments passed by user were incorrect (ie, developer was good, user is wrong)
-	struct argument_error : std::runtime_error { using runtime_error::runtime_error; };
+	struct argument_error : std::runtime_error
+	{
+		using runtime_error::runtime_error;
+	};
 	
 	// Arguments contained '--help' and parsing was aborted early
-	struct exit_help : std::runtime_error { exit_help() noexcept : std::runtime_error("docopt --help argument encountered"){} };
+	struct exit_help : std::runtime_error
+	{
+		exit_help() noexcept : std::runtime_error("docopt --help argument encountered") {
+		}
+	};
 
 	// Arguments contained '--version' and parsing was aborted early
-	struct exit_version : std::runtime_error { exit_version() noexcept : std::runtime_error("docopt --version argument encountered") {} };
+	struct exit_version : std::runtime_error
+	{
+		exit_version() noexcept : std::runtime_error("docopt --version argument encountered") {
+		}
+	};
 	
 	/// A generic type to hold the various types that can be produced by docopt.
 	///
