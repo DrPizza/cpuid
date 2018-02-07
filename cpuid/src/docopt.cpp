@@ -141,7 +141,7 @@ namespace {
 			"(?:^|\\n)"  // anchored at a linebreak (or start of string)
 			"("
 			"[^\\n]*" + name + "[^\\n]*(?=\\n?)" // a line that contains the name
-			"(?:\\n[[:space:]].*?(?=\\n|$))*"         // followed by any number of lines that are indented
+			"(?:\\n[[:space:]].*?(?=\\n|$))*" // followed by any number of lines that are indented
 			")",
 			docopt::regex::icase | docopt::regex::optimize // | docopt::regex::multiline
 		};

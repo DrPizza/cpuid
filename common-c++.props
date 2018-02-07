@@ -26,7 +26,7 @@
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalOptions>/volatile:iso /Zc:strictStrings /vd2 /Zo /utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/volatile:iso /Zc:strictStrings /Zc:throwingNew /Zc:externConstexpr /vd2 /Zo /utf-8 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerOutput>All</AssemblerOutput>
       <SDLCheck>true</SDLCheck>
       <EnablePREfast>true</EnablePREfast>
