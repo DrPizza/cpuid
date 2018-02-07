@@ -4,7 +4,7 @@ Dump and parse cpuid data, and try to infer the system processor and cache topol
 
 Only tested on "modern" processors (Ryzen, Skylake).
 
-##"But there are lots of cpuid printers out there already!"
+## "But there are lots of cpuid printers out there already!"
 
 I wanted a few features in particular:
 
