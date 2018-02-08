@@ -1126,7 +1126,7 @@ void print_address_limits(fmt::Writer& w, const cpu_t& cpu) {
 			std::uint32_t reserved_1      : 4;
 			std::uint32_t apic_id_size    : 4;
 			std::uint32_t perf_tsc_size   : 2;
-			std::uint32_t reserved_2      : 24;
+			std::uint32_t reserved_2      : 16;
 		} split;
 	} c = { regs[ecx] };
 

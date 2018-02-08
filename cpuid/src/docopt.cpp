@@ -579,7 +579,7 @@ namespace {
 			std::transform(uniq_doc_options.begin(),
 			               uniq_doc_options.end(),
 			               std::back_inserter(children),
-			               [](std::shared_ptr<docopt::Option> opt) {
+			               [](std::shared_ptr<docopt::Option> opt) noexcept {
 				return std::static_pointer_cast<docopt::Pattern>(opt);
 			});
 			options_shortcut->setChildren(std::move(children));

@@ -429,7 +429,7 @@ const feature_map_t all_features = {
 				{         amd            , 0x0040'0000ui32, "TopologyExtensions"      , "Topology Extensions"                  },
 				{         amd            , 0x0080'0000ui32, "PerfCtrExtCore"          , "Core Performance Counter Extensions"  },
 				{         amd            , 0x0100'0000ui32, "PerfCtrExtNB"            , "NB Performance Counter Extensions"    },
-				{         amd            , 0x0400'0000ui32, "DataBreakpointExtension" , "Data Breakpoint support"              },
+				{         amd            , 0x0200'0000ui32, "DataBreakpointExtension" , "Data Breakpoint support"              },
 				{         amd            , 0x0400'0000ui32, "PerfTsc"                 , "Performance Time Stamp Counter"       },
 				{         amd            , 0x1000'0000ui32, "PerfCtrExtL3"            , "L3 performance counter extensions"    },
 				{         amd            , 0x2000'0000ui32, "MwaitExtended"           , "MWAITX and MONITORX"                  },
