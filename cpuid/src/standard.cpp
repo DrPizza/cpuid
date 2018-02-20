@@ -46,6 +46,8 @@ void print_version_info(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\t   family: {:#02x}\n" , cpu.model.family);
 	w.write("\t    model: {:#02x}\n" , cpu.model.model);
 	w.write("\t stepping: {:#02x}\n" , cpu.model.stepping);
+	w.write("\n");
+
 	if(cpu.vendor & intel) {
 		w.write("\t");
 		switch(a.split.type) {
@@ -109,7 +111,6 @@ void print_version_info(fmt::Writer& w, const cpu_t& cpu) {
 			w.write("\n");
 		}
 	}
-	w.write("\n");
 	w.write("\tcache line size/bytes: {:d}\n", b.split.cache_line_size * 8);
 	if(0 != (cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main).at(edx) & 0x1000'0000ui32)) {
 		w.write("\tlogical processors per package: {:d}\n", gsl::narrow_cast<std::uint32_t>(b.split.maximum_addressable_ids));
@@ -655,7 +656,7 @@ void enumerate_sgx_info(cpu_t& cpu) {
 
 	for(subleaf_t i = subleaf_t{ 2 }; ; ++i) {
 		cpuid(regs, leaf_t::sgx_info, i);
-		if(0 == (regs[eax] & 0xfui32)) {
+		if((regs[eax] & 0x0000'000fui32) == 0ui32) {
 			break;
 		}
 		cpu.leaves[leaf_t::sgx_info][i] = regs;
@@ -663,13 +664,6 @@ void enumerate_sgx_info(cpu_t& cpu) {
 }
 
 void print_sgx_info(fmt::Writer& w, const cpu_t& cpu) {
-	static const std::vector<feature_t> sgx_features = {
-		{ intel, 0x0000'0001ui32, "SGX1" , "SGX1 functions available"                      },
-		{ intel, 0x0000'0002ui32, "SGX2" , "SGX2 functions available"                      },
-		{ intel, 0x0000'0020ui32, "ENCLV", "EINCVIRTCHILD, EDECVIRTCHILD, and ESETCONTEXT" },
-		{ intel, 0x0000'0040ui32, "ENCLS", "ETRACKC, ERDINFO, ELDBC, and ELDUC"            },
-	};
-
 	for(const auto& sub : cpu.leaves.at(leaf_t::sgx_info)) {
 		const register_set_t& regs = sub.second;
 
@@ -689,15 +683,11 @@ void print_sgx_info(fmt::Writer& w, const cpu_t& cpu) {
 
 				w.write("Intel SGX\n");
 				w.write("\tFeatures:\n");
-				for(const feature_t& f : sgx_features) {
-					if(regs[eax] & f.mask) {
-						w.write("\t\t{:s}\n", f.description);
-					}
-				}
+				print_features(w, cpu, leaf_t::sgx_info, subleaf_t::sgx_capabilities, eax);
 				w.write("\n");
 				w.write("\tMISCSELECT extended features: {:#010x}\n", regs[ebx]);
-				w.write("\tMaximum enclave size in 32-bit mode/bytes: {:d}\n", (2ui64 << d.split.max_enclave_32_bit));
-				w.write("\tMaximum enclave size in 64-bit mode/bytes: {:d}\n", (2ui64 << d.split.max_enclave_64_bit));
+				w.write("\tMaximum enclave size in 32-bit mode/bytes: {:d}\n", (1ui64 << d.split.max_enclave_32_bit));
+				w.write("\tMaximum enclave size in 64-bit mode/bytes: {:d}\n", (1ui64 << d.split.max_enclave_64_bit));
 				w.write("\n");
 			}
 			break;
@@ -750,15 +740,20 @@ void print_sgx_info(fmt::Writer& w, const cpu_t& cpu) {
 					} split;
 				} d = { regs[edx] };
 
-
-				const std::uint64_t physical_address = (gsl::narrow_cast<std::uint64_t>(b.split.epc_physical_address_hi_bits ) << 32ui64)
-				                                     | (gsl::narrow_cast<std::uint64_t>(a.split.epc_physical_address_low_bits) << 12ui64);
-				const std::uint64_t epc_size = (gsl::narrow_cast<std::uint64_t>(d.split.epc_section_size_hi_bits ) << 32ui64)
-				                             | (gsl::narrow_cast<std::uint64_t>(c.split.epc_section_size_low_bits) << 12ui64);
-				w.write("\tEnclave Page Cache section\n");
-				w.write("\t\tEPC physical address: {:0#18x}\n", physical_address);
-				w.write("\t\tEPC size: {:#018x}\n"            , epc_size);
-				w.write("\n");
+				switch(a.split.type) {
+				case 0b0000:
+					break;
+				case 0b0001:
+					const std::uint64_t physical_address = (gsl::narrow_cast<std::uint64_t>(b.split.epc_physical_address_hi_bits ) << 32ui64)
+					                                     | (gsl::narrow_cast<std::uint64_t>(a.split.epc_physical_address_low_bits) << 12ui64);
+					const std::uint64_t epc_size = (gsl::narrow_cast<std::uint64_t>(d.split.epc_section_size_hi_bits ) << 32ui64)
+					                             | (gsl::narrow_cast<std::uint64_t>(c.split.epc_section_size_low_bits) << 12ui64);
+					w.write("\tEnclave Page Cache section\n");
+					w.write("\t\tSection {:s} confidentiality and integrity protection\n", c.split.epc_section_properties == 0b0001ui32 ? "has" : "does not have");
+					w.write("\t\tEPC physical address: {:0#18x}\n", physical_address);
+					w.write("\t\tEPC size: {:#018x}\n"            , epc_size);
+					w.write("\n");
+				}
 			}
 			break;
 		}
@@ -1086,17 +1081,14 @@ void print_ras_advanced_power_management(fmt::Writer& w, const cpu_t& cpu) {
 		w.write("Advanced Power Management information\n");
 		w.write("\tCompute unit power sample time period: {:d}\n", regs[ecx]);
 		print_features(w, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, edx);
-		w.write("\n");
 		break;
 	case intel:
 		w.write("Advanced Power Management information\n");
 		print_features(w, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, edx);
-		w.write("\n");
 		break;
 	default:
 		w.write("Advanced Power Management information\n");
 		print_generic(w, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main);
-		w.write("\n");
 		break;
 	}
 	w.write("\n");
@@ -1144,13 +1136,12 @@ void print_address_limits(fmt::Writer& w, const cpu_t& cpu) {
 		print_features(w, cpu, leaf_t::address_limits, subleaf_t::main, ebx);
 		w.write("\n");
 
-
 		w.write("\tSize identifiers\n");
 		w.write("\t\tThreads in package: {:d}\n", c.split.package_threads + 1ui32);
 		w.write("\t\t{:d} bits of APIC ID denote threads within a package\n", c.split.apic_id_size);
 
 		if(0 != (cpu.leaves.at(leaf_t::extended_signature_and_features).at(subleaf_t::main).at(ecx) & 0x0400'0000ui32)) {
-			w.write("\t\tPerforamnce time-stamp counter size/bits: ");
+			w.write("\t\tPerformance time-stamp counter size/bits: ");
 			switch(c.split.perf_tsc_size) {
 			case 0b00ui32:
 				w.write("40");
@@ -1167,7 +1158,6 @@ void print_address_limits(fmt::Writer& w, const cpu_t& cpu) {
 			}
 			w.write("\n");
 		}
-		w.write("\n");
 		break;
 	case intel:
 		w.write("Address size limits\n");
@@ -1176,12 +1166,10 @@ void print_address_limits(fmt::Writer& w, const cpu_t& cpu) {
 		w.write("\n");
 		w.write("\tExtended features\n");
 		print_features(w, cpu, leaf_t::address_limits, subleaf_t::main, ebx);
-		w.write("\n");
 		break;
 	default:
 		w.write("Address size limits\n");
 		print_generic(w, cpu, leaf_t::address_limits, subleaf_t::main);
-		w.write("\n");
 		break;
 	}
 	w.write("\n");
@@ -1287,6 +1275,6 @@ void print_encrypted_memory(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("\tC-bit position in PTE: {:d}\n", b.split.cbit_position);
 	w.write("\tPhysical address bit reduction: {:d}\n", b.split.physical_address_reduction);
 	w.write("\tNumber of simultaneous encrypted guests: {:d}\n", regs[ecx]);
-	w.write("\tMinimum ASID for an SEV-enabled, SEV-ES-disabled gust: {:#010x}\n", regs[edx]);
+	w.write("\tMinimum ASID for an SEV-enabled, SEV-ES-disabled guest: {:#010x}\n", regs[edx]);
 	w.write("\n");
 }

@@ -194,6 +194,16 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
+	{ leaf_t::sgx_info, {
+		{ subleaf_t::sgx_capabilities, {
+			{ eax, {
+				{ intel                  , 0x0000'0001ui32, "SGX1"              , "SGX1 functions available"                      },
+				{ intel                  , 0x0000'0002ui32, "SGX2"              , "SGX2 functions available"                      },
+				{ intel                  , 0x0000'0020ui32, "ENCLV"             , "EINCVIRTCHILD, EDECVIRTCHILD, and ESETCONTEXT" },
+				{ intel                  , 0x0000'0040ui32, "ENCLS"             , "ETRACKC, ERDINFO, ELDBC, and ELDUC"            },
+			}}
+		}}
+	}},
 	{ leaf_t::processor_trace, {
 		{ subleaf_t::main, {
 			{ ebx, {

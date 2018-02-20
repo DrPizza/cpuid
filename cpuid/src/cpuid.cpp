@@ -341,7 +341,8 @@ void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool brute_force, bool skip_vendor_
 enum struct file_format
 {
 	native,
-	etallen
+	etallen,
+	libcpuid,
 };
 
 std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format format) {
@@ -393,9 +394,9 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 				} else if(std::regex_search(line, m, cpu_line)) {
 					current_cpu = std::stoul(m[1].str());
 				} else if(std::regex_search(line, m, data_line)) {
-					const leaf_t        leaf    = static_cast<leaf_t   >(std::stoul(m[1].str(), nullptr, 16));
-					const subleaf_t     subleaf = static_cast<subleaf_t>(std::stoul(m[2].str(), nullptr, 16));
-					const register_set_t regs   = {
+					const leaf_t         leaf    = static_cast<leaf_t   >(std::stoul(m[1].str(), nullptr, 16));
+					const subleaf_t      subleaf = static_cast<subleaf_t>(std::stoul(m[2].str(), nullptr, 16));
+					const register_set_t regs    = {
 						std::stoul(m[3].str(), nullptr, 16),
 						std::stoul(m[4].str(), nullptr, 16),
 						std::stoul(m[5].str(), nullptr, 16),
@@ -406,6 +407,85 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					std::cerr << "Unrecognized line: " << line << std::endl;
 				}
 			}
+		}
+		break;
+	case file_format::libcpuid:
+		{
+			// this is a crappy file format
+			const std::regex version_line("version=.*");
+			const std::regex build_line("build_date=.*");
+			const std::regex delimiter_line("-{80}");
+			const std::string single_element = "([[:xdigit:]]{8})";
+			const std::string multiple_elements = fmt::format("([[:alnum:]_]+)\\[([[:digit:]]+)\\]={} {} {} {}", single_element, single_element, single_element, single_element);
+			const std::regex data_line(multiple_elements);
+			const std::uint32_t current_cpu = 0xffff'ffffui32;
+			std::string line;
+			while(std::getline(fin, line)) {
+				std::smatch m;
+				if(std::regex_search(line, m, version_line)
+				|| std::regex_search(line, m, build_line)) {
+					continue;
+				} else if(std::regex_search(line, m, data_line)) {
+					std::string section       = m[1].str();
+					std::uint32_t idx         = std::stoul(m[2].str());
+					const register_set_t regs = {
+						std::stoul(m[3].str(), nullptr, 16),
+						std::stoul(m[4].str(), nullptr, 16),
+						std::stoul(m[5].str(), nullptr, 16),
+						std::stoul(m[6].str(), nullptr, 16)
+					};
+					leaf_t       leaf{ idx };
+					subleaf_t subleaf{ idx };
+					if(section == "basic_cpuid") {
+						subleaf = subleaf_t::main;
+					} else if(section == "ext_cpuid") {
+						leaf = leaf_t{ 0x8000'0000ui32 + idx };
+						subleaf = subleaf_t::main;
+					} else if(section == "intel_fn4") {
+						leaf = leaf_t::deterministic_cache;
+						if((regs[eax] & 0x0000'001fui32) == 0) {
+							continue;
+						}
+					} else if(section == "intel_fn11") {
+						leaf = leaf_t::extended_topology;
+						if((regs[ecx] & 0x0000'ff00ui32) == 0ui32) {
+							continue;
+						}
+					} else if(section == "intel_fn12h") {
+						leaf = leaf_t::sgx_info;
+						if((regs[eax] & 0x0000'000fui32) == 0ui32) {
+							continue;
+						}
+					} else if(section == "intel_fn14h") {
+						leaf = leaf_t::processor_trace;
+					}
+					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
+				} else if(std::regex_search(line, m, delimiter_line)) {
+					break;
+				} else {
+					std::cerr << "Unrecognized line: " << line << std::endl;
+				}
+			}
+			const leaf_t highest_leaf          = leaf_t{ logical_cpus[current_cpu].leaves[leaf_t::basic_info    ][subleaf_t::main][eax] };
+			const leaf_t highest_extended_leaf = leaf_t{ logical_cpus[current_cpu].leaves[leaf_t::extended_limit][subleaf_t::main][eax] };
+			leaves_t corrected_leaves;
+			for(leaf_t leaf = leaf_t::basic_info; leaf <= highest_leaf; ++leaf) {
+				corrected_leaves[leaf] = logical_cpus[current_cpu].leaves[leaf];
+			}
+			for(leaf_t leaf = leaf_t::extended_limit; leaf <= highest_extended_leaf; ++leaf) {
+				corrected_leaves[leaf] = logical_cpus[current_cpu].leaves[leaf];
+			}
+			if(corrected_leaves.find(leaf_t::processor_trace) != corrected_leaves.end()) {
+				subleaves_t subleaves = corrected_leaves.at(leaf_t::processor_trace);
+				const subleaf_t limit = subleaf_t{ subleaves[subleaf_t::main][eax] };
+				for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
+					if(subleaves.find(sub) != subleaves.end()) {
+						subleaves[sub] = { 0x0ui32, 0x0ui32, 0x0ui32, 0x0ui32 };
+					}
+				}
+				subleaves.erase(subleaves.lower_bound(limit), subleaves.end());
+			}
+			logical_cpus[current_cpu].leaves.swap(corrected_leaves);
 		}
 		break;
 	}
@@ -730,6 +810,52 @@ void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, fil
 			}
 		}
 		break;
+	case file_format::libcpuid:
+		{
+			// this is a crappy file format
+			w.write("version=0.4.0\n");
+			const cpu_t& cpu = logical_cpus.begin()->second;
+
+			for(std::uint32_t i = 0ui32; i < 32ui32; ++i) {
+				const leaf_t leaf{ i };
+				if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
+					const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
+					w.write("basic_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, regs[eax], regs[ebx], regs[ecx], regs[edx]);
+				} else {
+					w.write("basic_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, 0ui32, 0ui32, 0ui32, 0ui32);
+				}
+			}
+			for(std::uint32_t i = 0ui32; i < 32ui32; ++i) {
+				const leaf_t leaf{ i + 0x8000'0000ui32 };
+				if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
+					const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
+					w.write("ext_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, regs[eax], regs[ebx], regs[ecx], regs[edx]);
+				} else {
+					w.write("ext_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, 0ui32, 0ui32, 0ui32, 0ui32);
+				}
+			}
+
+			const auto print_detailed_leaves = [&w, &cpu](const leaf_t leaf, const std::uint32_t limit, const std::string& label) {
+				if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
+					const subleaves_t& subleaves = cpu.leaves.at(leaf);
+					std::uint32_t i = 0ui32;
+					for(const auto& s : subleaves) {
+						const register_set_t& regs = s.second;
+						w.write("{:s}[{:d}]={:08x} {:08x} {:08x} {:08x}\n", label, i, regs[eax], regs[ebx], regs[ecx], regs[edx]);
+						++i;
+					}
+					for(; i < limit; ++i) {
+						w.write("{:s}[{:d}]={:08x} {:08x} {:08x} {:08x}\n", label, i, 0ui32, 0ui32, 0ui32, 0ui32);
+					}
+				}
+			};
+
+			print_detailed_leaves(leaf_t::deterministic_cache, 8, "intel_fn4");
+			print_detailed_leaves(leaf_t::extended_topology, 4, "intel_fn11");
+			print_detailed_leaves(leaf_t::sgx_info, 4, "intel_fn12h");
+			print_detailed_leaves(leaf_t::processor_trace, 4, "intel_fn14h");
+		}
+		break;
 	}
 }
 
@@ -744,7 +870,7 @@ Usage:
 
 Input options:
 	--read-dump=<filename>     Read from <filename> rather than the current processors
-	--read-format=<format>     Dump format to read: native, etallen. [default: native]
+	--read-format=<format>     Dump format to read: native, etallen, libcpuid. [default: native]
 	--all-cpus                 Show output from every CPU
 	--cpu <id>                 Show output from CPU with APIC ID <id>
 	--single-value <spec>      Print specific flag value, using Intel syntax (e.g. CPUID.01H.EDX.SSE[bit 25]).
@@ -795,6 +921,8 @@ int main(int argc, char* argv[]) try {
 		file_format format = file_format::native;
 		if("etallen" == std::get<std::string>(args.at("--read-format"))) {
 			format = file_format::etallen;
+		} else if("libcpuid" == std::get<std::string>(args.at("--read-format"))) {
+			format = file_format::libcpuid;
 		}
 		const std::string filename = std::get<std::string>(args.at("--read-dump"));
 		std::ifstream fin;

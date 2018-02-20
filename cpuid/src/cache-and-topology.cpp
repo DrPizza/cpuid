@@ -11,13 +11,13 @@
 std::string print_size(std::size_t cache_bytes) {
 	using namespace fmt::literals;
 
-	double printable_cache_size = cache_bytes / 1024.0;
+	double printable_cache_size = cache_bytes / 1'024.0;
 	char   cache_scale = 'K';
 	if(printable_cache_size > 1'024.0) {
 		printable_cache_size /= 1'024.0;
 		cache_scale = 'M';
 	}
-	return "{:<3g} {:c}B"_format(printable_cache_size, cache_scale);
+	return "{:<5g} {:c}B"_format(printable_cache_size, cache_scale);
 }
 
 enum cache_type_t : std::uint8_t
@@ -440,7 +440,7 @@ void enumerate_deterministic_cache(cpu_t& cpu) {
 	subleaf_t sub = subleaf_t::main;
 	while(true) {
 		cpuid(regs, leaf_t::deterministic_cache, sub);
-		if((regs[eax] & 0x1fui32) == 0) {
+		if((regs[eax] & 0x0000'001fui32) == 0) {
 			break;
 		}
 		cpu.leaves[leaf_t::deterministic_cache][subleaf_t{ sub }] = regs;
@@ -936,18 +936,16 @@ void print_l2_cache_tlb(fmt::Writer& w, const cpu_t & cpu) {
 		w.write("\n");
 
 		w.write("Level 3 cache\n");
-		w.write("\t{:s} {:s} L3 cache with {:d} bytes per line and {:d} lines per tag", print_l3_size(d.split.size),
+		w.write("\t{:s} {:s} L3 cache with {:d} bytes per line and {:d} lines per tag\n", print_l3_size(d.split.size),
 		                                                                                print_associativity(d.split.associativity),
 		                                                                                d.split.line_size,
 		                                                                                d.split.lines_per_tag);
-		w.write("\n");
 		break;
 	case intel:
 		w.write("Level 2 cache\n");
 		w.write("\t{:s} {:s} L2 cache with {:d} bytes per line\n", print_l2_size(c.split.size),
 		                                                           print_associativity(c.split.associativity),
 		                                                           c.split.line_size);
-		w.write("\n");
 		break;
 	default:
 		print_generic(w, cpu, leaf_t::l2_cache_identifiers, subleaf_t::main);
