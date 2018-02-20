@@ -882,7 +882,7 @@ Input options:
 Output options:
 	--raw                      Write unparsed output to screen
 	--write-dump=<filename>    Write unparsed output to <filename>
-	--write-format=<format>    Dump format to write: native, etallen. [default: native]
+	--write-format=<format>    Dump format to write: native, etallen, libcpuid. [default: native]
 	--no-topology              Don't print the processor and cache topology
 	--only-topology            Only print the processor and cache topology
 	--list-ids                 List all core IDs
