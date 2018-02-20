@@ -919,9 +919,10 @@ int main(int argc, char* argv[]) try {
 	std::map<std::uint32_t, cpu_t> logical_cpus;
 	if(std::holds_alternative<std::string>(args.at("--read-dump"))) {
 		file_format format = file_format::native;
-		if("etallen" == std::get<std::string>(args.at("--read-format"))) {
+		const std::string format_name = boost::to_lower_copy(std::get<std::string>(args.at("--read-format")));
+		if("etallen" == format_name) {
 			format = file_format::etallen;
-		} else if("libcpuid" == std::get<std::string>(args.at("--read-format"))) {
+		} else if("libcpuid" == format_name) {
 			format = file_format::libcpuid;
 		}
 		const std::string filename = std::get<std::string>(args.at("--read-dump"));
@@ -952,8 +953,11 @@ int main(int argc, char* argv[]) try {
 
 	if(raw_dump || std::holds_alternative<std::string>(args.at("--write-dump"))) {
 		file_format format = file_format::native;
-		if("etallen" == std::get<std::string>(args.at("--write-format"))) {
+		const std::string format_name = boost::to_lower_copy(std::get<std::string>(args.at("--write-format")));
+		if("etallen" == format_name) {
 			format = file_format::etallen;
+		} else if("libcpuid" == format_name) {
+			format = file_format::libcpuid;
 		}
 		fmt::MemoryWriter w;
 		print_dump(w, logical_cpus, format);
@@ -1016,14 +1020,13 @@ int main(int argc, char* argv[]) try {
 } catch(const docopt::exit_version&) {
 	std::cout << version << std::endl;
 	return EXIT_SUCCESS;
-} catch(const docopt::language_error& error) {
+} catch(const docopt::language_error& e) {
 	std::cerr << "Docopt usage string could not be parsed" << std::endl;
-	std::cerr << error.what() << std::endl;
+	std::cerr << e.what() << std::endl;
 	return EXIT_FAILURE;
-} catch(const docopt::argument_error& error) {
-	std::cerr << error.what();
-	std::cout << std::endl;
-	std::cout << usage_message << std::endl;
+} catch(const docopt::argument_error& e) {
+	std::cerr << e.what() << std::endl;
+	std::cerr << usage_message << std::endl;
 	return EXIT_FAILURE;
 } catch(std::exception& e) {
 	std::cerr << e.what() << std::endl;
