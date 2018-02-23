@@ -102,7 +102,7 @@ namespace docopt {
 	struct Pattern : std::enable_shared_from_this<Pattern>
 	{
 		// flatten out children, stopping descent when the given filter returns 'true'
-		virtual std::vector<std::shared_ptr<Pattern>> flat(bool (*filter)(std::shared_ptr<const Pattern>)) = 0;
+		virtual std::vector<std::shared_ptr<Pattern>> flat(gsl::not_null<bool(*)(std::shared_ptr<const Pattern>)> filter) = 0;
 
 		// flatten out all children into a list of LeafPattern objects
 		virtual void collect_leaves(std::vector<std::shared_ptr<LeafPattern>>&) = 0;
@@ -139,9 +139,9 @@ namespace docopt {
 		                                              fValue(std::move(v)) {
 		}
 
-		virtual std::vector<std::shared_ptr<Pattern>> flat(bool(*filter)(std::shared_ptr<const Pattern>)) override {
+		virtual std::vector<std::shared_ptr<Pattern>> flat(gsl::not_null<bool(*)(std::shared_ptr<const Pattern>)> filter) override {
 			auto shared_this = this->shared_from_this();
-			if(filter(shared_this)) {
+			if((*filter)(shared_this)) {
 				return { shared_this };
 			}
 			return {};
@@ -208,9 +208,9 @@ namespace docopt {
 			throw std::logic_error("Logic error: name() shouldnt be called on a BranchPattern");
 		}
 
-		virtual std::vector<std::shared_ptr<Pattern>> flat(bool(*filter)(std::shared_ptr<const Pattern>)) override {
+		virtual std::vector<std::shared_ptr<Pattern>> flat(gsl::not_null<bool(*)(std::shared_ptr<const Pattern>)> filter) override {
 			auto shared_this = this->shared_from_this();
-			if(filter(shared_this)) {
+			if((*filter)(shared_this)) {
 				return { shared_this };
 			}
 

@@ -439,7 +439,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					if(section == "basic_cpuid") {
 						subleaf = subleaf_t::main;
 					} else if(section == "ext_cpuid") {
-						leaf = leaf_t{ 0x8000'0000ui32 + idx };
+						leaf = static_cast<leaf_t>(0x8000'0000ui32 + idx);
 						subleaf = subleaf_t::main;
 					} else if(section == "intel_fn4") {
 						leaf = leaf_t::deterministic_cache;
@@ -703,7 +703,7 @@ void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag
 		flag_name = m[17].str();
 	}
 	boost::algorithm::to_lower(flag_name);
-	boost::algorithm::replace_all(flag_name, "_", ".");
+	const std::string flag_name_alternative = boost::algorithm::replace_all_copy(flag_name, "_", ".");
 
 	const leaf_t    leaf    = static_cast<leaf_t   >(selector_eax);
 	const subleaf_t subleaf = static_cast<subleaf_t>(selector_ecx);
@@ -726,7 +726,9 @@ void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag
 					continue;
 				}
 				for(const feature_t& feature : sub.at(flag_register)) {
-					if(boost::algorithm::to_lower_copy(feature.mnemonic) == flag_name) {
+					const std::string lower_mnemonic = boost::algorithm::to_lower_copy(feature.mnemonic);
+					if(lower_mnemonic == flag_name
+					|| lower_mnemonic == flag_name_alternative) {
 						DWORD shift_amount = 0;
 						_BitScanForward(&shift_amount, feature.mask);
 						const std::uint32_t result = (value & feature.mask) >> shift_amount;

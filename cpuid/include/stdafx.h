@@ -110,6 +110,7 @@
 #pragma warning(push)
 #pragma warning(disable: 4365) // warning C4365: '%s': conversion from '%s' to '%s', signed/unsigned mismatch
 #pragma warning(disable: 4371) // warning C4371: '%s': layout of class may have changed from a previous version of the compiler due to better packing of member '%s'
+#pragma warning(disable: 4550) // warning C4550: expression evaluates to a function which is missing an argument list
 #pragma warning(disable: 4571) // warning C4571: Informational: catch(...) semantics changed since Visual C++ 7.1; structured exceptions (SEH) are no longer caught
 #pragma warning(disable: 4619) // warning C4619: #pragma warning: there is no warning number '%d'
 #pragma warning(disable: 5031) // warning C5031: #pragma warning(pop): likely mismatch, popping warning state pushed in different file

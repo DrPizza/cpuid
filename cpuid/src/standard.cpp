@@ -935,8 +935,7 @@ void enumerate_pconfig(cpu_t& cpu) {
 	cpuid(regs, leaf_t::pconfig, subleaf_t::main);
 	cpu.leaves[leaf_t::pconfig][subleaf_t::main] = regs;
 
-	const subleaf_t sub = subleaf_t{ 0x1ui32 };
-	for(;;) {
+	for(subleaf_t sub = subleaf_t{ 0x1ui32 };; ++sub) {
 		cpuid(regs, leaf_t::pconfig, sub);
 		if(0 == (regs[eax] & 0x0000'0001ui32)) {
 			break;
@@ -950,6 +949,7 @@ void print_pconfig(fmt::Writer& w, const cpu_t& cpu) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
 		case subleaf_t::main:
+		default:
 			{
 				const union
 				{
@@ -975,8 +975,6 @@ void print_pconfig(fmt::Writer& w, const cpu_t& cpu) {
 				}
 				w.write("\n");
 			}
-			break;
-		default:
 			break;
 		}
 	}
