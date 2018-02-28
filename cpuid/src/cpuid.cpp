@@ -343,6 +343,7 @@ enum struct file_format
 	native,
 	etallen,
 	libcpuid,
+	instlat
 };
 
 std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format format) {
@@ -486,6 +487,61 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 				subleaves.erase(subleaves.lower_bound(limit), subleaves.end());
 			}
 			logical_cpus[current_cpu].leaves.swap(corrected_leaves);
+		}
+		break;
+	case file_format::instlat:
+		{
+			const std::string single_element = "([[:xdigit:]]{8})";
+			const std::string simple = fmt::format("CPUID {}: {}-{}-{}-{}", single_element, single_element, single_element, single_element, single_element);
+			const std::regex simple_line(simple);
+			const std::regex subleaf_line(fmt::format("{} \\[SL ([[:digit:]]{{2}})\\]", simple));
+			const std::regex description_line(fmt::format("{} \\[.*\\]", simple));
+			const std::regex allcpu_line("allcpu:.*");
+			const std::regex affinity_mask_line("CPU#.*");
+			const std::regex registers_line("CPUID Registers.*");
+
+			std::string line;
+			std::uint32_t current_cpu = 0xffff'ffffui32;
+			while(std::getline(fin, line)) {
+				std::smatch m;
+				if(std::regex_search(line, m, allcpu_line)
+				|| std::regex_search(line, m, affinity_mask_line)
+				|| std::regex_search(line, m, registers_line)) {
+					++current_cpu;
+				} else if(std::regex_search(line, m, subleaf_line)) {
+					const leaf_t         leaf    = static_cast<leaf_t   >(std::stoul(m[1].str(), nullptr, 16));
+					const subleaf_t      subleaf = static_cast<subleaf_t>(std::stoul(m[6].str(), nullptr, 10));
+					const register_set_t regs    = {
+						std::stoul(m[2].str(), nullptr, 16),
+						std::stoul(m[3].str(), nullptr, 16),
+						std::stoul(m[4].str(), nullptr, 16),
+						std::stoul(m[5].str(), nullptr, 16)
+					};
+					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
+				} else if(std::regex_search(line, m, description_line)
+				       || std::regex_search(line, m, simple_line)) {
+					const leaf_t         leaf    = static_cast<leaf_t   >(std::stoul(m[1].str(), nullptr, 16));
+					const register_set_t regs    = {
+						std::stoul(m[2].str(), nullptr, 16),
+						std::stoul(m[3].str(), nullptr, 16),
+						std::stoul(m[4].str(), nullptr, 16),
+						std::stoul(m[5].str(), nullptr, 16)
+					};
+					const auto get_subleaf = [&logical_cpus](const std::uint32_t current_cpu, const leaf_t leaf) -> subleaf_t {
+						if(logical_cpus.find(current_cpu) != logical_cpus.end()
+						&& logical_cpus[current_cpu].leaves.find(leaf) != logical_cpus[current_cpu].leaves.end()
+						&& logical_cpus[current_cpu].leaves[leaf].find(subleaf_t::main) != logical_cpus[current_cpu].leaves[leaf].end()) {
+							return static_cast<subleaf_t>(gsl::narrow_cast<std::uint32_t>(logical_cpus[current_cpu].leaves[leaf].size()) + 1ui32);
+						} else {
+							return subleaf_t::main;
+						}
+					};
+					const subleaf_t subleaf = get_subleaf(current_cpu, leaf);
+					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
+				} else {
+					std::cerr << "ignoring line:" << line << std::endl;
+				}
+			}
 		}
 		break;
 	}
@@ -858,6 +914,8 @@ void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, fil
 			print_detailed_leaves(leaf_t::processor_trace, 4, "intel_fn14h");
 		}
 		break;
+	case file_format::instlat:
+		break;
 	}
 }
 
@@ -866,13 +924,13 @@ R"(cpuid.
 
 Usage:
 	cpuid [--read-dump <filename>] [--read-format <format>] [--all-cpus | --cpu <id>] [--ignore-vendor] [--ignore-feature-bits] [--brute-force] [--raw] [--write-dump <filename>] [--write-format <format>] [--single-value <spec>] [--no-topology | --only-topology]
-	cpuid --list-ids
+	cpuid --list-ids [--read-dump <filename>] [--read-format <format>]
 	cpuid --help
 	cpuid --version
 
 Input options:
 	--read-dump=<filename>     Read from <filename> rather than the current processors
-	--read-format=<format>     Dump format to read: native, etallen, libcpuid. [default: native]
+	--read-format=<format>     Dump format to read: native, etallen, libcpuid, instlat. [default: native]
 	--all-cpus                 Show output from every CPU
 	--cpu <id>                 Show output from CPU with APIC ID <id>
 	--single-value <spec>      Print specific flag value, using Intel syntax (e.g. CPUID.01H.EDX.SSE[bit 25]).
@@ -884,7 +942,7 @@ Input options:
 Output options:
 	--raw                      Write unparsed output to screen
 	--write-dump=<filename>    Write unparsed output to <filename>
-	--write-format=<format>    Dump format to write: native, etallen, libcpuid. [default: native]
+	--write-format=<format>    Dump format to write: native, etallen, libcpuid, instlat. [default: native]
 	--no-topology              Don't print the processor and cache topology
 	--only-topology            Only print the processor and cache topology
 	--list-ids                 List all core IDs
@@ -926,6 +984,8 @@ int main(int argc, char* argv[]) try {
 			format = file_format::etallen;
 		} else if("libcpuid" == format_name) {
 			format = file_format::libcpuid;
+		} else if("instlat" == format_name) {
+			format = file_format::instlat;
 		}
 		const std::string filename = std::get<std::string>(args.at("--read-dump"));
 		std::ifstream fin;
@@ -960,6 +1020,8 @@ int main(int argc, char* argv[]) try {
 			format = file_format::etallen;
 		} else if("libcpuid" == format_name) {
 			format = file_format::libcpuid;
+		} else if("instlat" == format_name) {
+			format = file_format::instlat;
 		}
 		fmt::MemoryWriter w;
 		print_dump(w, logical_cpus, format);

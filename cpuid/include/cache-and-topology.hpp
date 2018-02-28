@@ -23,6 +23,7 @@ struct cache_t
 	std::uint32_t total_size;
 	bool fully_associative;
 	bool direct_mapped;
+	bool complex_addressed;
 	bool self_initializing;
 	bool invalidates_lower_levels;
 	bool inclusive;

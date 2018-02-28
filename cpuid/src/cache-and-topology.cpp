@@ -373,10 +373,10 @@ void print_cache_tlb_info(fmt::Writer& w, const cpu_t& cpu) {
 				}
 				break;
 			case 0xf0ui8:
-				non_conformant_descriptors.push_back("64-Byte prefetching");
+				non_conformant_descriptors.push_back("64-byte prefetching");
 				break;
 			case 0xf1ui8:
-				non_conformant_descriptors.push_back("128-Byte prefetching");
+				non_conformant_descriptors.push_back("128-byte prefetching");
 				break;
 			case 0xfeui8:
 			case 0xffui8:
@@ -530,7 +530,7 @@ void print_deterministic_cache(fmt::Writer& w, const cpu_t& cpu) {
 			w.write("\t\tWBINVD/INVD invalidates lower level caches for all threads.\n");
 		}
 		w.write("\t\tCache is {:s}inclusive of lower cache levels.\n", d.split.cache_inclusive != 0 ? "" : "not ");
-		w.write("\t\tCache is {:s}direct mapped.\n", d.split.complex_indexing != 0 ? "not " : "");
+		w.write("\t\tCache is {:s}complex mapped.\n", d.split.complex_indexing != 0 ? "" : "not ");
 		w.write("\t\tCache is shared by up to {:d} threads, with up to {:d} cores in the package.\n", a.split.maximum_addressable_thread_ids + 1, a.split.maximum_addressable_core_ids + 1);
 		w.write("\n");
 	}
@@ -1169,8 +1169,6 @@ std::string to_short_string(const cache_t& cache) {
 	}
 	if(cache.fully_associative) {
 		w.write(" fully associative     ");
-	} else if(cache.direct_mapped) {
-		w.write(" direct-mapped         ");
 	} else {
 		w.write(" {:>2d}-way set associative", cache.ways);
 	}
@@ -1330,11 +1328,12 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 							b.split.coherency_line_size + 1ui32,
 							b.split.physical_line_partitions + 1ui32,
 							cache_size,
-							a.split.fully_associative != 0,
-							d.split.complex_indexing == 0,
-							a.split.self_initializing != 0,
-							d.split.writeback_invalidates != 0,
-							d.split.cache_inclusive != 0,
+							a.split.fully_associative != 0ui32,
+							b.split.associativity_ways == 0ui32,
+							d.split.complex_indexing == 1ui32,
+							a.split.self_initializing != 0ui32,
+							d.split.writeback_invalidates != 0ui32,
+							d.split.cache_inclusive != 0ui32,
 							a.split.maximum_addressable_thread_ids
 						};
 						machine.all_caches.push_back(cache);
@@ -1413,6 +1412,7 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 						b.split.physical_line_partitions + 1ui32,
 						cache_size,
 						a.split.fully_associative != 0,
+						b.split.associativity_ways == 0ui32,
 						false,
 						a.split.self_initializing != 0,
 						d.split.writeback_invalidates != 0,

@@ -589,7 +589,7 @@ void print_rdt_allocation(fmt::Writer& w, const cpu_t& cpu) {
 
 				w.write("\tL3 Cache Allocation Technology\n");
 				w.write("\tLength of capacity bitmask: {:d}\n", (a.split.bit_mask_length + 1ui32));
-				w.write("\tBitmap of isolation/contention: {:#010x\n}", regs[ebx]);
+				w.write("\tBitmap of isolation/contention: {:#010x}\n", regs[ebx]);
 				if(regs[ecx] & 0x0000'0004ui32) {
 					w.write("\tCode and Data Prioritization supported\n");
 				}
