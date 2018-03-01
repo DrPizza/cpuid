@@ -147,8 +147,6 @@ enum cache_associativity_t : std::uint8_t
 };
 
 std::string to_string(cache_associativity_t assoc) {
-	using namespace fmt::literals;
-
 	switch(assoc) {
 	case 0:
 		return "unknown associativity";
@@ -157,7 +155,7 @@ std::string to_string(cache_associativity_t assoc) {
 	case 0xffui8:
 		return "fully associative";
 	default:
-		return "{0:d}-way set associative"_format(assoc);
+		return fmt::format("{0:d}-way set associative", assoc);
 	}
 }
 
@@ -335,20 +333,17 @@ std::string to_string(cache_descriptor_t desc) {
 	return w.str();
 }
 
-void print_cache_tlb_info(fmt::Writer& w, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::cache_and_tlb).at(subleaf_t::main);
-
-	if((regs[eax] & 0xff) != 0x01) {
-		return;
-	}
-
-	const auto bytes = gsl::as_bytes(gsl::make_span(regs));
-
+struct decomposed_cache_t
+{
 	std::vector<gsl::not_null<const cache_descriptor_t*>> tlb_descriptors;
 	std::vector<gsl::not_null<const cache_descriptor_t*>> cache_descriptors;
 	std::vector<gsl::not_null<const cache_descriptor_t*>> other_descriptors;
 	std::vector<std::string>                              non_conformant_descriptors;
+};
 
+decomposed_cache_t decompose_cache_descriptors(const cpu_t& cpu, const register_set_t& regs) {
+	decomposed_cache_t decomposed;
+	const auto bytes = gsl::as_bytes(gsl::make_span(regs));
 	std::ptrdiff_t idx = 0;
 	for(register_t r = eax; r <= edx; ++r, idx += sizeof(std::uint32_t)) {
 		if(regs[r] & 0x8000'0000ui32) {
@@ -360,23 +355,23 @@ void print_cache_tlb_info(fmt::Writer& w, const cpu_t& cpu) {
 			case 0x00ui8:
 				break;
 			case 0x40ui8:
-				non_conformant_descriptors.push_back("No 2nd-level cache or, if processor contains a valid 2nd-level cache, no 3rd-level cache");
+				decomposed.non_conformant_descriptors.push_back("No 2nd-level cache or, if processor contains a valid 2nd-level cache, no 3rd-level cache");
 				break;
 			case 0x49ui8:
 				{
 					const auto it = dual_cache_descriptors.find(value);
 					if(cpu.model.family == 0x0f && cpu.model.model == 0x06) {
-						cache_descriptors.push_back(&(it->second.first));
+						decomposed.cache_descriptors.push_back(&(it->second.first));
 					} else {
-						cache_descriptors.push_back(&(it->second.second));
+						decomposed.cache_descriptors.push_back(&(it->second.second));
 					}
 				}
 				break;
 			case 0xf0ui8:
-				non_conformant_descriptors.push_back("64-byte prefetching");
+				decomposed.non_conformant_descriptors.push_back("64-byte prefetching");
 				break;
 			case 0xf1ui8:
-				non_conformant_descriptors.push_back("128-byte prefetching");
+				decomposed.non_conformant_descriptors.push_back("128-byte prefetching");
 				break;
 			case 0xfeui8:
 			case 0xffui8:
@@ -385,23 +380,22 @@ void print_cache_tlb_info(fmt::Writer& w, const cpu_t& cpu) {
 				{
 					const auto dual = dual_cache_descriptors.find(value);
 					if(dual != dual_cache_descriptors.end()) {
-						tlb_descriptors.push_back(&(dual->second.first));
-						tlb_descriptors.push_back(&(dual->second.second));
+						decomposed.tlb_descriptors.push_back(&(dual->second.first));
+						decomposed.tlb_descriptors.push_back(&(dual->second.second));
 						break;
 					}
 					const auto it = standard_cache_descriptors.find(value);
 					if(it != standard_cache_descriptors.end()) {
 						if(it->second.type & all_tlb) {
-							tlb_descriptors.push_back(&(it->second));
+							decomposed.tlb_descriptors.push_back(&(it->second));
 						} else if(it->second.type & all_cache) {
-							cache_descriptors.push_back(&(it->second));
+							decomposed.cache_descriptors.push_back(&(it->second));
 						} else {
-							other_descriptors.push_back(&(it->second));
+							decomposed.other_descriptors.push_back(&(it->second));
 						}
 						break;
 					}
-					using namespace fmt::literals;
-					non_conformant_descriptors.push_back("Unknown cache type: {:#2x}"_format(value));
+					decomposed.non_conformant_descriptors.push_back(fmt::format("Unknown cache type: {:#2x}", value));
 				}
 				break;
 			}
@@ -415,21 +409,33 @@ void print_cache_tlb_info(fmt::Writer& w, const cpu_t& cpu) {
 		     :                            lhs->entries > rhs->entries; // sic
 	};
 
-	std::sort(std::begin(tlb_descriptors  ), std::end(tlb_descriptors  ), cmp);
-	std::sort(std::begin(cache_descriptors), std::end(cache_descriptors), cmp);
-	std::sort(std::begin(other_descriptors), std::end(other_descriptors), cmp);
+	std::sort(std::begin(decomposed.tlb_descriptors  ), std::end(decomposed.tlb_descriptors  ), cmp);
+	std::sort(std::begin(decomposed.cache_descriptors), std::end(decomposed.cache_descriptors), cmp);
+	std::sort(std::begin(decomposed.other_descriptors), std::end(decomposed.other_descriptors), cmp);
+
+	return decomposed;
+}
+
+void print_cache_tlb_info(fmt::Writer& w, const cpu_t& cpu) {
+	const register_set_t& regs = cpu.leaves.at(leaf_t::cache_and_tlb).at(subleaf_t::main);
+
+	if((regs[eax] & 0x0000'00ffui32) != 0x0000'0001ui32) {
+		return;
+	}
+
+	decomposed_cache_t decomposed = decompose_cache_descriptors(cpu, regs);
 
 	w.write("Cache and TLB\n");
-	for(const auto d : tlb_descriptors) {
+	for(const auto d : decomposed.tlb_descriptors) {
 		w.write("\t{:s}\n", to_string(*d));
 	}
-	for(const auto d : cache_descriptors) {
+	for(const auto d : decomposed.cache_descriptors) {
 		w.write("\t{:s}\n", to_string(*d));
 	}
-	for(const auto d : other_descriptors) {
+	for(const auto d : decomposed.other_descriptors) {
 		w.write("\t{:s}\n", to_string(*d));
 	}
-	for(const std::string& s : non_conformant_descriptors) {
+	for(const std::string& s : decomposed.non_conformant_descriptors) {
 		w.write("\t{:s}\n", s);
 	}
 	w.write("\n");
@@ -1199,15 +1205,17 @@ std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noe
 }
 
 system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
+	vendor_t vendor = vendor_t::unknown;
 	system_t machine = {};
 	bool enumerated_caches = false;
-	std::for_each(std::begin(logical_cpus), std::end(logical_cpus), [&machine, &enumerated_caches](const std::pair<std::uint32_t, cpu_t>& p) {
+	std::for_each(std::begin(logical_cpus), std::end(logical_cpus), [&machine, &enumerated_caches, &vendor](const std::pair<std::uint32_t, cpu_t>& p) {
 		const cpu_t cpu = p.second;
 		machine.x2_apic_ids.push_back(cpu.apic_id);
 		if(enumerated_caches) {
 			return;
 		}
 		enumerated_caches = true;
+		vendor = cpu.vendor;
 		switch(cpu.vendor & any_silicon) {
 		case intel:
 			if(cpu.leaves.find(leaf_t::extended_topology) != cpu.leaves.end()) {
@@ -1324,7 +1332,7 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 							a.split.level,
 							a.split.type,
 							b.split.associativity_ways + 1ui32,
-							regs[ecx] + 1ui32,
+							sets + 1ui32,
 							b.split.coherency_line_size + 1ui32,
 							b.split.physical_line_partitions + 1ui32,
 							cache_size,
@@ -1339,6 +1347,44 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 						machine.all_caches.push_back(cache);
 						break;
 					}
+				}
+			} else if(cpu.leaves.find(leaf_t::cache_and_tlb) != cpu.leaves.end()) {
+				machine.logical_mask_width = 0ui32;
+				machine.physical_mask_width = 0ui32;
+				
+				decomposed_cache_t decomposed = decompose_cache_descriptors(cpu, cpu.leaves.at(leaf_t::cache_and_tlb).at(subleaf_t::main));
+				for(const auto desc : decomposed.cache_descriptors) {
+					const std::uint32_t level = desc->level == level_3 ? 3ui32
+					                          : desc->level == level_2 ? 2ui32
+					                          :                          1ui32;
+					
+					const std::uint32_t type = desc->type == data         ? 1ui32
+					                         : desc->type == instructions ? 2ui32
+					                         :                              3ui32;
+					
+					const std::uint32_t ways = desc->associativity == direct_mapped     ? 1ui32
+					                         : desc->associativity == fully_associative ? 0xffui32
+					                         :                                            static_cast<std::uint32_t>(desc->associativity);
+
+					const std::uint32_t sets = desc->size / (ways * desc->line_size);
+
+					const cache_t cache = {
+						level,
+						type,
+						ways,
+						sets,
+						desc->line_size,
+						1ui32,
+						desc->size,
+						desc->associativity == fully_associative,
+						desc->associativity == direct_mapped,
+						false,
+						true,
+						true,
+						true,
+						0ui32
+					};
+					machine.all_caches.push_back(cache);
 				}
 			}
 			break;
@@ -1407,7 +1453,7 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 						a.split.level,
 						a.split.type,
 						b.split.associativity_ways + 1ui32,
-						regs[ecx] + 1ui32,
+						sets + 1ui32,
 						b.split.coherency_line_size + 1ui32,
 						b.split.physical_line_partitions + 1ui32,
 						cache_size,
@@ -1443,26 +1489,49 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 		}
 	});
 
-	for(const std::uint32_t id : machine.x2_apic_ids) {
-		const full_apic_id_t split = split_apic_id(id, machine.logical_mask_width, machine.physical_mask_width);
+	switch(vendor & any_silicon) {
+	case intel:
+		// per the utterly miserable source code at https://software.intel.com/en-us/articles/intel-64-architecture-processor-topology-enumeration
+		for(const std::uint32_t id : machine.x2_apic_ids) {
+			const full_apic_id_t split = split_apic_id(id, machine.logical_mask_width, machine.physical_mask_width);
 		
-		logical_core_t core = { id, split.package_id, split.physical_id, split.logical_id };
+			logical_core_t core = { id, split.package_id, split.physical_id, split.logical_id };
 
-		for(const cache_t& cache : machine.all_caches) {
-			core.shared_cache_ids.push_back(id & cache.sharing_mask);
-			core.non_shared_cache_ids.push_back(id & ~cache.sharing_mask);
+			for(const cache_t& cache : machine.all_caches) {
+				core.shared_cache_ids.push_back(id & cache.sharing_mask);
+				core.non_shared_cache_ids.push_back(id & ~cache.sharing_mask);
+			}
+			machine.all_cores.push_back(core);
+
+			machine.packages[split.package_id].physical_cores[split.physical_id].logical_cores[split.logical_id] = core;
 		}
-		machine.all_cores.push_back(core);
-
-		machine.packages[split.package_id].physical_cores[split.physical_id].logical_cores[split.logical_id] = core;
+		for(std::size_t i = 0; i < machine.all_caches.size(); ++i) {
+			cache_t& cache = machine.all_caches[i];
+			for(const logical_core_t& core : machine.all_cores) {
+				cache.instances[core.non_shared_cache_ids[i]].sharing_ids.push_back(core.full_apic_id);
+			}
+		}
+		break;
+	case amd:
+		// pure guesswork, since AMD does not appear to document its algorithm anywhere
+		for(const std::uint32_t id : machine.x2_apic_ids) {
+			const full_apic_id_t split = split_apic_id(id, machine.logical_mask_width, machine.physical_mask_width);
+		
+			logical_core_t core = { id, split.package_id, split.physical_id, split.logical_id };
+			machine.all_cores.push_back(core);
+			machine.packages[split.package_id].physical_cores[split.physical_id].logical_cores[split.logical_id] = core;
+		}
+		for(std::size_t i = 0; i < machine.all_caches.size(); ++i) {
+			cache_t& cache = machine.all_caches[i];
+			for(std::size_t j = 0; j < machine.all_cores.size(); ++j) {
+				cache.instances[gsl::narrow<std::uint32_t>(j) / (cache.sharing_mask + 1ui32)].sharing_ids.push_back(machine.all_cores[j].full_apic_id);
+			}
+		}
+		break;
+	default:
+		break;
 	}
 
-	for(std::size_t i = 0; i < machine.all_caches.size(); ++i) {
-		cache_t& cache = machine.all_caches[i];
-		for(const logical_core_t& core : machine.all_cores) {
-			cache.instances[core.non_shared_cache_ids[i]].sharing_ids.push_back(core.full_apic_id);
-		}
-	}
 
 	return machine;
 }

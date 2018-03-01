@@ -135,13 +135,13 @@ void print_serial_number(fmt::Writer& w, const cpu_t& cpu) {
 			const std::uint32_t top = cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main)[eax];
 			const std::uint32_t middle = regs[edx];
 			const std::uint32_t bottom = regs[ecx];
-			w.write("Serial number: {:04x}-{:04x}-{:04x}-{:04x}-{:04x}-{:04x}", top    >> 16ui32, top    & 0xffffui32,
-			                                                                    middle >> 16ui32, middle & 0xffffui32,
-			                                                                    bottom >> 16ui32, bottom & 0xffffui32);
+			w.write("Serial number: {:04x}-{:04x}-{:04x}-{:04x}-{:04x}-{:04x}\n", top    >> 16ui32, top    & 0xffffui32,
+			                                                                      middle >> 16ui32, middle & 0xffffui32,
+			                                                                      bottom >> 16ui32, bottom & 0xffffui32);
 		}
 		break;
 	case transmeta:
-		w.write("{:08x}-{:08x}-{:08x}-{:08x}", regs[eax], regs[ebx], regs[ecx], regs[edx]);
+		w.write("{:08x}-{:08x}-{:08x}-{:08x}\n", regs[eax], regs[ebx], regs[ecx], regs[edx]);
 		break;
 	default:
 		print_generic(w, cpu, leaf_t::serial_number, subleaf_t::main);
@@ -693,7 +693,7 @@ void print_sgx_info(fmt::Writer& w, const cpu_t& cpu) {
 			break;
 		case subleaf_t::sgx_attributes:
 			{
-				w.write("\tSECS.ATTRIBUTES valid bits: {:08x}:{:08x}:{:08x}:{:08x}", regs[edx], regs[ecx], regs[ebx], regs[eax]);
+				w.write("\tSECS.ATTRIBUTES valid bits: {:08x}:{:08x}:{:08x}:{:08x}\n", regs[edx], regs[ecx], regs[ebx], regs[eax]);
 				w.write("\n");
 			}
 			break;

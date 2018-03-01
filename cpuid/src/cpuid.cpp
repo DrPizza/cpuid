@@ -582,7 +582,12 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 	}
 	if(format != file_format::native) {
 		std::map<std::uint32_t, cpu_t> corrected_ids;
-		for(const auto& p : logical_cpus) {
+		for(auto& p : logical_cpus) {
+			if(corrected_ids.find(p.second.apic_id) != corrected_ids.end()) {
+				// duplicate APIC IDs: this happens on old multisocket systems
+				// so let's just synthesize some garbage APIC IDs
+				p.second.apic_id = gsl::narrow<std::uint32_t>(corrected_ids.size());
+			}
 			corrected_ids[p.second.apic_id] = p.second;
 		}
 		logical_cpus.swap(corrected_ids);
