@@ -1353,13 +1353,19 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 				machine.physical_mask_width = 0ui32;
 				
 				decomposed_cache_t decomposed = decompose_cache_descriptors(cpu, cpu.leaves.at(leaf_t::cache_and_tlb).at(subleaf_t::main));
-				for(const auto desc : decomposed.cache_descriptors) {
+				std::vector<gsl::not_null<const cache_descriptor_t*>> combined;
+				combined.reserve(decomposed.cache_descriptors.size() + decomposed.other_descriptors.size());
+				combined.insert(combined.end(), decomposed.other_descriptors.begin(), decomposed.other_descriptors.end());
+				combined.insert(combined.end(), decomposed.cache_descriptors.begin(), decomposed.cache_descriptors.end());
+
+				for(const auto desc : combined) {
 					const std::uint32_t level = desc->level == level_3 ? 3ui32
 					                          : desc->level == level_2 ? 2ui32
 					                          :                          1ui32;
 					
 					const std::uint32_t type = desc->type == data         ? 1ui32
 					                         : desc->type == instructions ? 2ui32
+					                         : desc->type == trace        ? 2ui32
 					                         :                              3ui32;
 					
 					const std::uint32_t ways = desc->associativity == direct_mapped     ? 1ui32

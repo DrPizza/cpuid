@@ -520,13 +520,6 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
 				} else if(std::regex_search(line, m, description_line)
 				       || std::regex_search(line, m, simple_line)) {
-					const leaf_t         leaf    = static_cast<leaf_t   >(std::stoul(m[1].str(), nullptr, 16));
-					const register_set_t regs    = {
-						std::stoul(m[2].str(), nullptr, 16),
-						std::stoul(m[3].str(), nullptr, 16),
-						std::stoul(m[4].str(), nullptr, 16),
-						std::stoul(m[5].str(), nullptr, 16)
-					};
 					const auto get_subleaf = [&logical_cpus](const std::uint32_t current_cpu, const leaf_t leaf) -> subleaf_t {
 						if(logical_cpus.find(current_cpu) != logical_cpus.end()
 						&& logical_cpus[current_cpu].leaves.find(leaf) != logical_cpus[current_cpu].leaves.end()
@@ -536,7 +529,19 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 							return subleaf_t::main;
 						}
 					};
-					const subleaf_t subleaf = get_subleaf(current_cpu, leaf);
+					const leaf_t         leaf    = static_cast<leaf_t   >(std::stoul(m[1].str(), nullptr, 16));
+					if(leaf == leaf_t::basic_info
+					&& logical_cpus.find(current_cpu) != logical_cpus.end()
+					&& logical_cpus[current_cpu].leaves.find(leaf) != logical_cpus[current_cpu].leaves.end()) {
+						++current_cpu;
+					}
+					const subleaf_t      subleaf = get_subleaf(current_cpu, leaf);
+					const register_set_t regs    = {
+						std::stoul(m[2].str(), nullptr, 16),
+						std::stoul(m[3].str(), nullptr, 16),
+						std::stoul(m[4].str(), nullptr, 16),
+						std::stoul(m[5].str(), nullptr, 16)
+					};
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
 				} else {
 					std::cerr << "ignoring line:" << line << std::endl;
