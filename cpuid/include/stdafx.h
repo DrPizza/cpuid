@@ -1,7 +1,7 @@
 #ifndef STDAFX__H
 #define STDAFX__H
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 #include <SDKDDKVer.h>
 
@@ -33,16 +33,24 @@
 #pragma warning(disable: 4711) // warning C4711: function '%s' selected for automatic inline expansion
 #pragma warning(disable: 4820) // warning C4820: '%s': '%d' bytes padding added after data member '%s'
 
-#pragma warning(push)
-#pragma warning(disable: 5039) // warning C5039: '%s': pointer or reference to potentially throwing function passed to extern C function under -EHc. Undefined behavior may occur if this function throws an exception.
 #include <Windows.h>
-#pragma warning(pop)
 
 #pragma warning(push)
 #pragma warning(disable: 4005) // warning C4005: '%s': macro redefinition
 #include <Winternl.h>
 #include <ntstatus.h>
 #pragma warning(pop)
+
+#else // defined(_WIN32)
+
+// linux system headers go here
+
+#endif
+
+#if defined(_MSC_VER)
+
+// currently broken (triggers on iterators and other objects that are usually unnamed)
+#pragma warning(disable: 26444) // warning C26444: Avoid unnamed objects with custom construction and destruction (es.84: http://go.microsoft.com/fwlink/?linkid=862923).
 
 // disable for everything
 #pragma warning(disable: 4061) // warning C4061: enumerator '%s' in switch of enum '%s' is not explicitly handled by a case label
@@ -66,8 +74,6 @@
 
 // disable for standard headers
 #pragma warning(push)
-#pragma warning(disable: 5039) // warning C5039: '%s': pointer or reference to potentially throwing function passed to extern C function under -EHc. Undefined behavior may occur if this function throws an exception.
-
 #pragma warning(disable: 26400) // warning C26400: Do not assign the result of an allocation or a function call with an owner<T> return value to a raw pointer, use owner<T> instead. (i.11 http://go.microsoft.com/fwlink/?linkid=845474)
 #pragma warning(disable: 26401) // warning C26401: Do not delete a raw pointer that is not an owner<T>. (i.11: http://go.microsoft.com/fwlink/?linkid=845474)
 #pragma warning(disable: 26408) // warning C26408: Avoid malloc() and free(), prefer the nothrow version of new with delete. (r.10 http://go.microsoft.com/fwlink/?linkid=845483)
@@ -78,6 +84,7 @@
 #pragma warning(disable: 26423) // warning C26423: The allocation was not directly assigned to an owner.
 #pragma warning(disable: 26424) // warning C26424: Failing to delete or assign ownership of allocation at line %d.
 #pragma warning(disable: 26425) // warning C26425: Assigning '%s' to a static variable.
+#pragma warning(disable: 26444) // warning C26444: Avoid unnamed objects with custom construction and destruction (es.84: http://go.microsoft.com/fwlink/?linkid=862923).
 #pragma warning(disable: 26461) // warning C26461: The reference argument '%s' for function %s can be marked as const. (con.3: https://go.microsoft.com/fwlink/p/?LinkID=786684)
 #pragma warning(disable: 26471) // warning C26471: Don't use reinterpret_cast. A cast from void* can use static_cast. (type.1: http://go.microsoft.com/fwlink/p/?LinkID=620417).
 #pragma warning(disable: 26481) // warning C26481: Don't use pointer arithmetic. Use span instead. (bounds.1: http://go.microsoft.com/fwlink/p/?LinkID=620413)
@@ -88,6 +95,8 @@
 #pragma warning(disable: 26495) // warning C26495: Variable '%s' is uninitialized. Always initialize a member variable. (type.6: http://go.microsoft.com/fwlink/p/?LinkID=620422)
 #pragma warning(disable: 26496) // warning C26496: Variable '%s' is assigned only once, mark it as const. (con.4: https://go.microsoft.com/fwlink/p/?LinkID=784969)
 #pragma warning(disable: 26497) // warning C26497: This function %s could be marked constexpr if compile-time evaluation is desired. (f.4: https://go.microsoft.com/fwlink/p/?LinkID=784970)
+
+#endif
 
 #include <cstddef>
 #include <map>
@@ -106,21 +115,25 @@
 #include <thread>
 #include <cstdlib>
 
+#if defined(_MSC_VER)
+
 // disable additionally for third-party libraries
 #pragma warning(push)
-#pragma warning(disable: 4365) // warning C4365: '%s': conversion from '%s' to '%s', signed/unsigned mismatch
-#pragma warning(disable: 4371) // warning C4371: '%s': layout of class may have changed from a previous version of the compiler due to better packing of member '%s'
-#pragma warning(disable: 4550) // warning C4550: expression evaluates to a function which is missing an argument list
-#pragma warning(disable: 4571) // warning C4571: Informational: catch(...) semantics changed since Visual C++ 7.1; structured exceptions (SEH) are no longer caught
-#pragma warning(disable: 4619) // warning C4619: #pragma warning: there is no warning number '%d'
-#pragma warning(disable: 5031) // warning C5031: #pragma warning(pop): likely mismatch, popping warning state pushed in different file
 #pragma warning(disable: 26429) // warning C26429: Symbol '%s' is never tested for nullness, it can be marked as not_null (f.23: http://go.microsoft.com/fwlink/?linkid=853921).
 #pragma warning(disable: 26432) // warning C26432: If you define or delete any default operation in the type '%s', define or delete them all (c.21: http://go.microsoft.com/fwlink/?linkid=853922).
+#pragma warning(disable: 26433) // warning C26433: Function '%s' should be marked with 'override' (c.128: http://go.microsoft.com/fwlink/?linkid=853923).
 #pragma warning(disable: 26434) // warning C26434: Function '%s' hides a non-virtual function '%s' (c.128: http://go.microsoft.com/fwlink/?linkid=853923).
+#pragma warning(disable: 26436) // warning C26436: The type '%s' with a virtual function needs either public, virtual or protected non-virtual destructor (c.35: http://go.microsoft.com/fwlink/?linkid=853924).
 #pragma warning(disable: 26439) // warning C26439: This kind of function may not throw. Declare it 'noexcept' (f.6: http://go.microsoft.com/fwlink/?linkid=853927).
 #pragma warning(disable: 26440) // warning C26440: Function '%s' can be declared 'noexcept' (f.6: http://go.microsoft.com/fwlink/?linkid=853927).
+#pragma warning(disable: 26443) // warning C26443: Overriding destructor should not use explicit 'override' or 'virtual' specifiers (c.128: http://go.microsoft.com/fwlink/?linkid=853923).
+#pragma warning(disable: 26462) // warning C26462: The value pointed to by '%s' is assigned only once, mark it as a pointer to const (con.4: https://go.microsoft.com/fwlink/p/?LinkID=784969).
 #pragma warning(disable: 26472) // warning C26472: Don't use a static_cast for arithmetic conversions. Use brace initialization, gsl::narrow_cast or gsl::narow (type.1: http://go.microsoft.com/fwlink/p/?LinkID=620417).
+#pragma warning(disable: 26474) // warning C26474: Don't cast between pointer types when the conversion could be implicit (type.1: http://go.microsoft.com/fwlink/p/?LinkID=620417).
 #pragma warning(disable: 26491) // warning C26491: Don't use static_cast downcasts (type.2: http://go.microsoft.com/fwlink/p/?LinkID=620418).
+#pragma warning(disable: 26498) // warning C26498: The function '%s' is constexpr, mark variable '%s' constexpr if compile-time evaluation is desired (con.5: https://go.microsoft.com/fwlink/p/?LinkID=784974).
+
+#endif
 
 #ifndef BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE
 #define BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE
@@ -133,13 +146,10 @@
 
 #include <fmt/format.h>
 
-#pragma warning(pop)
+#if defined(_MSC_VER)
 
 #pragma warning(pop)
-
-#else
-
-// linux includes go here
+#pragma warning(pop)
 
 #endif
 

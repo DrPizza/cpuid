@@ -499,10 +499,10 @@ void print_deterministic_cache(fmt::Writer& w, const cpu_t& cpu) {
 		} d = { regs[edx] };
 		
 		const std::size_t sets = regs[ecx];
-		const std::size_t cache_size = (b.split.associativity_ways       + 1ui32)
-		                             * (b.split.physical_line_partitions + 1ui32)
-		                             * (b.split.coherency_line_size      + 1ui32)
-		                             * (sets                             + 1ui32);
+		const std::size_t cache_size = (b.split.associativity_ways       + 1ui64)
+		                             * (b.split.physical_line_partitions + 1ui64)
+		                             * (b.split.coherency_line_size      + 1ui64)
+		                             * (sets                             + 1ui64);
 
 		w.write("\t{:s} L{:d} ", print_size(cache_size), a.split.level);
 		switch(a.split.type) {
@@ -917,11 +917,11 @@ void print_l2_cache_tlb(fmt::Writer& w, const cpu_t & cpu) {
 	} d = { regs[edx] };
 
 	const auto print_l2_size = [](std::uint32_t cache_size) {
-		return print_size(cache_size * 1024);
+		return print_size(cache_size * 1024ui64);
 	};
 
 	const auto print_l3_size = [](std::uint32_t cache_size) {
-		return print_size(cache_size * 1024 * 512);
+		return print_size(cache_size * 1024ui64 * 512ui64);
 	};
 	
 	switch(cpu.vendor & any_silicon) {
@@ -1042,10 +1042,10 @@ void print_cache_properties(fmt::Writer& w, const cpu_t& cpu) {
 		} d = { regs[edx] };
 
 		const std::size_t sets = regs[ecx];
-		const std::size_t cache_size = (b.split.associativity_ways       + 1ui32)
-		                             * (b.split.coherency_line_size      + 1ui32)
-		                             * (b.split.physical_line_partitions + 1ui32)
-		                             * (sets                             + 1ui32);
+		const std::size_t cache_size = (b.split.associativity_ways       + 1ui64)
+		                             * (b.split.coherency_line_size      + 1ui64)
+		                             * (b.split.physical_line_partitions + 1ui64)
+		                             * (sets                             + 1ui64);
 
 		w.write("\t{:s} L{:d} ", print_size(cache_size), a.split.level);
 		switch(a.split.type) {

@@ -821,7 +821,7 @@ void print_time_stamp_counter(fmt::Writer& w, const cpu_t& cpu) {
 	w.write("Time Stamp Counter and Nominal Core Crystal Clock\n");
 	w.write("\tTSC:core crystal clock ratio: {:d}:{:d}\n", regs[ebx], regs[eax]);
 	w.write("\tNominal core crystal clock/Hz: {:d}\n", regs[ecx]);
-	w.write("\tTSC frequency/Hz: {:d}\n", gsl::narrow_cast<std::uint64_t>(regs[ecx] * regs[ebx]) / regs[eax]);
+	w.write("\tTSC frequency/Hz: {:d}\n", gsl::narrow_cast<std::uint64_t>(regs[ecx]) * regs[ebx] / regs[eax]);
 	w.write("\n");
 }
 

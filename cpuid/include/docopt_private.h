@@ -139,7 +139,7 @@ namespace docopt {
 		                                              fValue(std::move(v)) {
 		}
 
-		virtual std::vector<std::shared_ptr<Pattern>> flat(gsl::not_null<bool(*)(std::shared_ptr<const Pattern>)> filter) override {
+		std::vector<std::shared_ptr<Pattern>> flat(gsl::not_null<bool(*)(std::shared_ptr<const Pattern>)> filter) override {
 			auto shared_this = this->shared_from_this();
 			if((*filter)(shared_this)) {
 				return { shared_this };
@@ -147,13 +147,13 @@ namespace docopt {
 			return {};
 		}
 
-		virtual void collect_leaves(std::vector<std::shared_ptr<LeafPattern>>& lst) override final {
+		void collect_leaves(std::vector<std::shared_ptr<LeafPattern>>& lst) final {
 			lst.push_back(std::dynamic_pointer_cast<LeafPattern>(this->shared_from_this()));
 		}
 
-		virtual bool match(PatternList& left, std::vector<std::shared_ptr<LeafPattern>>& collected) const override;
+		bool match(PatternList& left, std::vector<std::shared_ptr<LeafPattern>>& collected) const override;
 
-		virtual bool hasValue() const noexcept override {
+		bool hasValue() const noexcept override {
 			return !std::holds_alternative<std::monostate>(fValue);
 		}
 
@@ -165,11 +165,11 @@ namespace docopt {
 			fValue = std::move(v);
 		}
 
-		virtual std::string const& name() const noexcept override {
+		std::string const& name() const noexcept override {
 			return fName;
 		}
 
-		virtual size_t hash() const override {
+		size_t hash() const override {
 			size_t seed = typeid(*this).hash_code();
 			hash_combine(seed, fName);
 			hash_combine(seed, fValue);
@@ -200,7 +200,7 @@ namespace docopt {
 			return *this;
 		}
 
-		virtual std::string const& name() const override {
+		std::string const& name() const override {
 			throw std::logic_error("Logic error: name() shouldnt be called on a BranchPattern");
 		}
 
@@ -208,7 +208,7 @@ namespace docopt {
 			throw std::logic_error("Logic error: name() shouldnt be called on a BranchPattern");
 		}
 
-		virtual std::vector<std::shared_ptr<Pattern>> flat(gsl::not_null<bool(*)(std::shared_ptr<const Pattern>)> filter) override {
+		std::vector<std::shared_ptr<Pattern>> flat(gsl::not_null<bool(*)(std::shared_ptr<const Pattern>)> filter) override {
 			auto shared_this = this->shared_from_this();
 			if((*filter)(shared_this)) {
 				return { shared_this };
@@ -222,7 +222,7 @@ namespace docopt {
 			return ret;
 		}
 
-		virtual void collect_leaves(std::vector<std::shared_ptr<LeafPattern>>& lst) override final {
+		void collect_leaves(std::vector<std::shared_ptr<LeafPattern>>& lst) final {
 			for(auto& child : fChildren) {
 				child->collect_leaves(lst);
 			}
@@ -252,7 +252,7 @@ namespace docopt {
 			}
 		}
 
-		virtual size_t hash() const override {
+		size_t hash() const override {
 			size_t seed = typeid(*this).hash_code();
 			hash_combine(seed, fChildren.size());
 			for(auto const& child : fChildren) {
@@ -272,7 +272,7 @@ namespace docopt {
 		using LeafPattern::LeafPattern;
 
 	protected:
-		virtual std::pair<size_t, std::shared_ptr<LeafPattern>> single_match(PatternList const& left) const override;
+		std::pair<size_t, std::shared_ptr<LeafPattern>> single_match(PatternList const& left) const override;
 	};
 
 	struct Command : Argument
@@ -281,7 +281,7 @@ namespace docopt {
 		}
 
 	protected:
-		virtual std::pair<size_t, std::shared_ptr<LeafPattern>> single_match(PatternList const& left) const override;
+		std::pair<size_t, std::shared_ptr<LeafPattern>> single_match(PatternList const& left) const override;
 	};
 
 	struct Option final : LeafPattern
@@ -323,7 +323,7 @@ namespace docopt {
 			return fArgcount;
 		}
 
-		virtual size_t hash() const override {
+		size_t hash() const override {
 			size_t seed = LeafPattern::hash();
 			hash_combine(seed, fShortOption);
 			hash_combine(seed, fLongOption);
@@ -332,7 +332,7 @@ namespace docopt {
 		}
 
 	protected:
-		virtual std::pair<size_t, std::shared_ptr<LeafPattern>> single_match(PatternList const& left) const override;
+		std::pair<size_t, std::shared_ptr<LeafPattern>> single_match(PatternList const& left) const override;
 
 	private:
 		std::string fShortOption;
@@ -442,7 +442,7 @@ namespace docopt {
 		std::vector<PatternList> either = transform(children());
 		for(auto const& group : either) {
 			// use multiset to help identify duplicate entries
-			std::unordered_multiset<std::shared_ptr<Pattern>, PatternHasher> group_set{ group.begin(), group.end() };
+			std::unordered_multiset<std::shared_ptr<Pattern>, PatternHasher> group_set(group.begin(), group.end());
 			for(auto const& e : group_set) {
 				if(group_set.count(e) == 1) {
 					continue;
@@ -575,7 +575,7 @@ namespace docopt {
 		}
 
 		static const docopt::regex pattern{ "(-{1,2})?(.*?)([,= ]|$)" };
-		for(docopt::sregex_iterator i{ option_description.begin(), options_end, pattern, docopt::regex_constants::match_not_null }, e{};
+		for(docopt::sregex_iterator i(option_description.begin(), options_end, pattern, docopt::regex_constants::match_not_null), e{};
 		    i != e;
 		    ++i) {
 			docopt::smatch const& match = *i;
@@ -611,14 +611,14 @@ namespace docopt {
 	}
 
 	inline std::pair<size_t, std::shared_ptr<LeafPattern>> Option::single_match(PatternList const& left) const {
-		auto thematch = find_if(left.begin(), left.end(), [this](std::shared_ptr<Pattern> const& a) noexcept {
+		auto thematch = std::find_if(left.begin(), left.end(), [this](std::shared_ptr<Pattern> const& a) noexcept {
 			auto leaf = std::dynamic_pointer_cast<LeafPattern>(a);
 			return leaf && this->name() == leaf->name();
 		});
 		if(thematch == left.end()) {
 			return {};
 		}
-		return { std::distance(left.begin(), thematch), std::dynamic_pointer_cast<LeafPattern>(*thematch) };
+		return std::make_pair(std::distance(left.begin(), thematch), std::dynamic_pointer_cast<LeafPattern>(*thematch));
 	}
 
 	inline bool Required::match(PatternList& left, std::vector<std::shared_ptr<LeafPattern>>& collected) const {

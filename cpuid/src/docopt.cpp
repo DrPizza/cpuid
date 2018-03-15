@@ -10,6 +10,13 @@
 //  Copyright (c) 2013 Jared Grubb. All rights reserved.
 //
 
+#if defined(_MSC_VER)
+#pragma warning(disable: 26414) // warning C26414: Move, copy, reassign or reset a local smart pointer '%s' (r.5: http://go.microsoft.com/fwlink/?linkid=845473).
+#pragma warning(disable: 26415) // warning C26415: Smart pointer parameter '%s' is used only to access contained pointer. Use T* or T& instead (r.30: http://go.microsoft.com/fwlink/?linkid=845475).
+#pragma warning(disable: 26418) // warning C26418: Shared pointer parameter '%s' is not copied or moved. Use T* or T& instead (r.36: http://go.microsoft.com/fwlink/?linkid=845489).
+#pragma warning(disable: 26472) // warning C26472: Don't use a static_cast for arithmetic conversions. Use brace initialization, gsl::narrow_cast or gsl::narow (type.1: http://go.microsoft.com/fwlink/p/?LinkID=620417).
+#endif
+
 #include "docopt.h"
 #include "docopt_util.h"
 #include "docopt_private.h"
@@ -559,7 +566,7 @@ namespace {
 		std::vector<std::shared_ptr<docopt::Option>> pattern_options = flat_filter<docopt::Option>(pattern);
 
 		using UniqueOptions = std::unordered_set<std::shared_ptr<docopt::Option>, docopt::PatternHasher, docopt::PatternPointerEquality>;
-		UniqueOptions const uniq_pattern_options{ pattern_options.begin(), pattern_options.end() };
+		const UniqueOptions uniq_pattern_options(pattern_options.begin(), pattern_options.end());
 
 		// Fix up any "[options]" shortcuts with the actual option tree
 		for(auto& options_shortcut : flat_filter<docopt::OptionsShortcut>(pattern)) {
