@@ -15,6 +15,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cpuid", "cpuid\cpuid.vcxproj", "{CBE22B40-F50D-4CF0-BF3F-74096F04A3FC}"
+	ProjectSection(ProjectDependencies) = postProject
+		{21E817B6-C211-40ED-8197-D6760A7B3C2E} = {21E817B6-C211-40ED-8197-D6760A7B3C2E}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcpuid", "libcpuid\libcpuid.vcxproj", "{21E817B6-C211-40ED-8197-D6760A7B3C2E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcxproj", "{EC740520-D7D3-4523-98CB-9D08AC41E6E5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,6 +33,14 @@ Global
 		{CBE22B40-F50D-4CF0-BF3F-74096F04A3FC}.Debug|x64.Build.0 = Debug|x64
 		{CBE22B40-F50D-4CF0-BF3F-74096F04A3FC}.Release|x64.ActiveCfg = Release|x64
 		{CBE22B40-F50D-4CF0-BF3F-74096F04A3FC}.Release|x64.Build.0 = Release|x64
+		{21E817B6-C211-40ED-8197-D6760A7B3C2E}.Debug|x64.ActiveCfg = Debug|x64
+		{21E817B6-C211-40ED-8197-D6760A7B3C2E}.Debug|x64.Build.0 = Debug|x64
+		{21E817B6-C211-40ED-8197-D6760A7B3C2E}.Release|x64.ActiveCfg = Release|x64
+		{21E817B6-C211-40ED-8197-D6760A7B3C2E}.Release|x64.Build.0 = Release|x64
+		{EC740520-D7D3-4523-98CB-9D08AC41E6E5}.Debug|x64.ActiveCfg = Debug|x64
+		{EC740520-D7D3-4523-98CB-9D08AC41E6E5}.Debug|x64.Build.0 = Debug|x64
+		{EC740520-D7D3-4523-98CB-9D08AC41E6E5}.Release|x64.ActiveCfg = Release|x64
+		{EC740520-D7D3-4523-98CB-9D08AC41E6E5}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

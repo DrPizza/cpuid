@@ -9,7 +9,9 @@ CXXFLAGS=-std=c++17 -stdlib=libc++ -O3
 BUILD_DIR=./build
 SRC_DIR  =./src
 INC_DIR  =./include
-INC_FLAGS=$(addprefix -I,$(INC_DIR))
+SYS_INC_DIR =~/vcpkg/installed/x64-linux/include
+INC_FLAGS+=$(addprefix -I ,$(INC_DIR))
+INC_FLAGS+=$(addprefix -isystem ,$(SYS_INC_DIR))
 
 SRCS := $(wildcard $(SRC_DIR)/*.cpp)
 OBJS := $(SRCS:%.cpp=$(BUILD_DIR)/%.o)

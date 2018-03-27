@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 
 #include "cpuid.hpp"
 #include "cache-and-topology.hpp"
@@ -20,8 +20,6 @@
 #include <gsl/gsl>
 
 #include <fmt/format.h>
-
-#include "docopt.h"
 
 template<std::size_t N, std::size_t... Is>
 constexpr std::array<char, N - 1> to_array(const char(&str)[N], std::index_sequence<Is...>) {
@@ -338,14 +336,6 @@ void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool brute_force, bool skip_vendor_
 	}
 }
 
-enum struct file_format
-{
-	native,
-	etallen,
-	libcpuid,
-	instlat
-};
-
 std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format format) {
 	std::map<std::uint32_t, cpu_t> logical_cpus;
 
@@ -659,34 +649,7 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_
 	return logical_cpus;
 }
 
-void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag_spec) {
-	const std::vector<std::string> samples = {
-		"CPUID.01:ECX[SSE4.2]",
-		"CPUID.01:ECX.MOVBE[bit 22]",
-		"CPUID.01H.EDX.SSE[bit 25]",
-		"CPUID.(EAX=07H, ECX=0H):EBX.BMI1[bit 3]",
-		"CPUID.EAX=80000001H:ECX.LZCNT[bit 5]",
-		"CPUID.(EAX=07H, ECX=0H):EBX[bit 9]",
-		"CPUID.(EAX=0DH,ECX=0):EAX[4:3]",
-		"CPUID.(EAX=0DH,ECX=0):EAX[9]",
-		"CPUID.1:ECX.OSXSAVE[bit 27]",
-		"CPUID.1:ECX.OSXSAVE",
-		"CPUID.(EAX=0DH,ECX=0):EBX",
-		"CPUID.0x7.0:EBX.AVX512PF[bit 26]",
-		"CPUID.(EAX=0DH, ECX=04H).EBX[31:0]",
-		"CPUID.(EAX=07H,ECX=0H):ECX.MAWAU[bits 21:17]",
-		"CPUID.(EAX=07H, ECX=0H).EBX.MPX ",
-		"CPUID.1.ECX",
-		"CPUID.(EAX=07H, ECX=0H):EBX[SGX]",
-		"CPUID.80000008H:EAX[7:0]",
-		"CPUID.1.EBX[23:16]",
-		"CPUID.(EAX=07H, ECX=0H):EBX.INVPCID (bit 10)",
-		"CPUID.80000001H:ECX.LAHF-SAHF[bit 0]",
-		"CPUID.01H:ECX.POPCNT [Bit 23]",
-		"CPUID.(EAX=0DH,ECX=1):EAX.XSS[bit 3]",
-		"CPUID.80000008H:EAX[bits 7-0]",
-	};
-
+flag_spec_t parse_flag_spec(const std::string& flag_description) {
 	const std::string hex_number       = "(?:0x)?([[:xdigit:]]+)H?";
 
 	const std::string simple_selector  = "(?:(?:EAX=)?{hex_number:s})";
@@ -713,111 +676,113 @@ void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag
 
 	std::regex re_pattern(full_pattern, std::regex::optimize | std::regex::icase);
 	std::smatch m;
-	if(!std::regex_search(flag_spec, m, re_pattern)) {
-		throw std::runtime_error(fmt::format("Bad pattern: {:s}", flag_spec));
+	if(!std::regex_search(flag_description, m, re_pattern)) {
+		throw std::runtime_error(fmt::format("Bad pattern: {:s}", flag_description));
 	}
 
-	std::uint32_t selector_eax  = 0ui32;
-	std::uint32_t selector_ecx  = 0ui32;
-	register_t    flag_register = eax;
-	std::string   flag_name     = "";
-	std::uint32_t flag_start    = 0xffff'ffffui32;
-	std::uint32_t flag_end      = 0xffff'ffffui32;
+	flag_spec_t spec = {};
 
 	if(m[1].matched) {
-		selector_eax = std::stoul(m[1].str(), nullptr, 16);
+		spec.selector_eax = std::stoul(m[1].str(), nullptr, 16);
 	} else if(m[2].matched) {
-		selector_eax = std::stoul(m[2].str(), nullptr, 16);
-		selector_ecx = m[3].matched ? std::stoul(m[3].str(), nullptr, 16) : 0ui32;
+		spec.selector_eax = std::stoul(m[2].str(), nullptr, 16);
+		spec.selector_ecx = m[3].matched ? std::stoul(m[3].str(), nullptr, 16) : 0ui32;
 	} else if(m[4].matched) {
-		selector_eax = std::stoul(m[4].str(), nullptr, 16);
-		selector_ecx = m[5].matched ? std::stoul(m[5].str(), nullptr, 16) : 0ui32;
+		spec.selector_eax = std::stoul(m[4].str(), nullptr, 16);
+		spec.selector_ecx = m[5].matched ? std::stoul(m[5].str(), nullptr, 16) : 0ui32;
 	}
 
 	const std::string reg_name = boost::algorithm::to_lower_copy(m[6].str());
 	if(reg_name == "eax") {
-		flag_register = eax;
+		spec.flag_register = eax;
 	} else if(reg_name == "ebx") {
-		flag_register = ebx;
+		spec.flag_register = ebx;
 	} else if(reg_name == "ecx") {
-		flag_register = ecx;
+		spec.flag_register = ecx;
 	} else if(reg_name == "edx") {
-		flag_register = edx;
+		spec.flag_register = edx;
 	}
 
 	if(m[7].matched) {
-		flag_name = m[8].str();
+		spec.flag_name = m[8].str();
 		if(m[9].matched) {
-			flag_start = std::stoul(m[9].str());
-			flag_end   = flag_start;
+			spec.flag_start = std::stoul(m[9].str());
+			spec.flag_end   = spec.flag_start;
 		} else if(m[10].matched) {
-			flag_start = std::stoul(m[11].str());
-			flag_end   = std::stoul(m[10].str());
+			spec.flag_start = std::stoul(m[11].str());
+			spec.flag_end   = std::stoul(m[10].str());
 		}
 	} else if(m[12].matched) {
-		flag_name = m[12].str();
+		spec.flag_name = m[12].str();
 	} else if(m[13].matched) {
 		if(m[14].matched) {
-			flag_start = std::stoul(m[14].str());
-			flag_end   = flag_start;
+			spec.flag_start = std::stoul(m[14].str());
+			spec.flag_end   = spec.flag_start;
 		} else if(m[15].matched) {
-			flag_start = std::stoul(m[16].str());
-			flag_end   = std::stoul(m[15].str());
+			spec.flag_start = std::stoul(m[16].str());
+			spec.flag_end   = std::stoul(m[15].str());
 		}
 	}
 	else if(m[17].matched) {
-		flag_name = m[17].str();
+		spec.flag_name = m[17].str();
 	}
-	boost::algorithm::to_lower(flag_name);
-	const std::string flag_name_alternative = boost::algorithm::replace_all_copy(flag_name, "_", ".");
+	boost::algorithm::to_lower(spec.flag_name);
 
-	const leaf_t    leaf    = static_cast<leaf_t   >(selector_eax);
-	const subleaf_t subleaf = static_cast<subleaf_t>(selector_ecx);
+	return spec;
+}
+
+void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag_description) {
+	const flag_spec_t spec = parse_flag_spec(flag_description);
+
+	const std::string flag_name_alternative = boost::algorithm::replace_all_copy(spec.flag_name, "_", ".");
+
+	const leaf_t    leaf    = static_cast<leaf_t   >(spec.selector_eax);
+	const subleaf_t subleaf = static_cast<subleaf_t>(spec.selector_ecx);
 	bool handled = false;
 	if(cpu.leaves.find(leaf) != cpu.leaves.end()
 	&& cpu.leaves.at(leaf).find(subleaf) != cpu.leaves.at(leaf).end()) {
-		const std::uint32_t value = cpu.leaves.at(leaf).at(subleaf).at(flag_register);
-		if(flag_name == "" && flag_start == 0xffff'ffffui32 && flag_end == 0xffff'ffffui32) {
-			w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_spec, value);
+		const std::uint32_t value = cpu.leaves.at(leaf).at(subleaf).at(spec.flag_register);
+		if(spec.flag_name == "" && spec.flag_start == 0xffff'ffffui32 && spec.flag_end == 0xffff'ffffui32) {
+			w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, value);
 			handled = true;
 		}
-		if(flag_name != "") {
+		if(spec.flag_name != "") {
 			const auto range = all_features.equal_range(leaf);
 			for(auto it = range.first; it != range.second; ++it) {
 				if(it->second.find(subleaf) == it->second.end()) {
 					continue;
 				}
 				auto sub = it->second.at(subleaf);
-				if(sub.find(flag_register) == sub.end()) {
+				if(sub.find(spec.flag_register) == sub.end()) {
 					continue;
 				}
-				for(const feature_t& feature : sub.at(flag_register)) {
+				for(const feature_t& feature : sub.at(spec.flag_register)) {
 					const std::string lower_mnemonic = boost::algorithm::to_lower_copy(feature.mnemonic);
-					if(lower_mnemonic == flag_name
+					if(lower_mnemonic == spec.flag_name
 					|| lower_mnemonic == flag_name_alternative) {
 						DWORD shift_amount = 0;
 						_BitScanForward(&shift_amount, feature.mask);
 						const std::uint32_t result = (value & feature.mask) >> shift_amount;
 
-						w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_spec, result);
+						w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, result);
 						handled = true;
 						break;
 					}
 				}
 			}
 		}
-		if(!handled && flag_start != 0xffff'ffffui32 && flag_end != 0xffff'ffffui32) {
-			const std::uint32_t mask = range_mask(flag_start, flag_end);
+		if(!handled && spec.flag_start != 0xffff'ffffui32 && spec.flag_end != 0xffff'ffffui32) {
+			const std::uint32_t mask = range_mask(spec.flag_start, spec.flag_end);
 			DWORD shift_amount = 0;
 			_BitScanForward(&shift_amount, mask);
 			const std::uint32_t result = (value & mask) >> shift_amount;
-			w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_spec, result);
+			w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, result);
 			handled = true;
 		}
 	}
 
 	if(!handled) {
-		w.write("No data found for {:s}\n", flag_spec);
+		w.write("No data found for {:s}\n", flag_description);
 	}
 }
 
@@ -927,182 +892,4 @@ void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, fil
 	case file_format::instlat:
 		break;
 	}
-}
-
-static const char usage_message[] =
-R"(cpuid.
-
-Usage:
-	cpuid [--read-dump <filename>] [--read-format <format>] [--all-cpus | --cpu <id>] [--ignore-vendor] [--ignore-feature-bits] [--brute-force] [--raw] [--write-dump <filename>] [--write-format <format>] [--single-value <spec>] [--no-topology | --only-topology]
-	cpuid --list-ids [--read-dump <filename>] [--read-format <format>]
-	cpuid --help
-	cpuid --version
-
-Input options:
-	--read-dump=<filename>     Read from <filename> rather than the current processors
-	--read-format=<format>     Dump format to read: native, etallen, libcpuid, instlat. [default: native]
-	--all-cpus                 Show output from every CPU
-	--cpu <id>                 Show output from CPU with APIC ID <id>
-	--single-value <spec>      Print specific flag value, using Intel syntax (e.g. CPUID.01H.EDX.SSE[bit 25]).
-	                           Handles most of the wild inconsistencies found in Intel's documentation.
-	--ignore-vendor            Ignore vendor constraints
-	--ignore-feature-bits      Ignore feature bit constraints
-	--brute-force              Ignore constraints, and enumerate even reserved leaves
-
-Output options:
-	--raw                      Write unparsed output to screen
-	--write-dump=<filename>    Write unparsed output to <filename>
-	--write-format=<format>    Dump format to write: native, etallen, libcpuid, instlat. [default: native]
-	--no-topology              Don't print the processor and cache topology
-	--only-topology            Only print the processor and cache topology
-	--list-ids                 List all core IDs
-
-Other options:
-	--help                     Show this text
-	--version                  Show the version
-
-)";
-
-static const char version[] = "cpuid 0.1";
-
-int main(int argc, char* argv[]) try {
-	HANDLE output = ::GetStdHandle(STD_OUTPUT_HANDLE);
-	DWORD mode = 0;
-	::GetConsoleMode(output, &mode);
-	mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-	::SetConsoleMode(output, mode);
-	::SetConsoleCP(CP_UTF8);
-	::SetConsoleOutputCP(CP_UTF8);
-
-	std::cout.rdbuf()->pubsetbuf(nullptr, 1024);
-
-	const std::map<std::string, docopt::value> args = docopt::docopt_parse(usage_message, { argv + 1, argv + argc }, true, true);
-	const bool skip_vendor_check  = std::get<bool>(args.at("--ignore-vendor"));
-	const bool skip_feature_check = std::get<bool>(args.at("--ignore-feature-bits"));
-	const bool raw_dump           = std::get<bool>(args.at("--raw"));
-	const bool all_cpus           = std::get<bool>(args.at("--all-cpus"));
-	const bool list_ids           = std::get<bool>(args.at("--list-ids"));
-	const bool brute_force        = std::get<bool>(args.at("--brute-force"));
-	const bool no_topology        = std::get<bool>(args.at("--no-topology"));
-	const bool only_topology      = std::get<bool>(args.at("--only-topology"));
-
-	std::map<std::uint32_t, cpu_t> logical_cpus;
-	if(std::holds_alternative<std::string>(args.at("--read-dump"))) {
-		file_format format = file_format::native;
-		const std::string format_name = boost::to_lower_copy(std::get<std::string>(args.at("--read-format")));
-		if("etallen" == format_name) {
-			format = file_format::etallen;
-		} else if("libcpuid" == format_name) {
-			format = file_format::libcpuid;
-		} else if("instlat" == format_name) {
-			format = file_format::instlat;
-		}
-		const std::string filename = std::get<std::string>(args.at("--read-dump"));
-		std::ifstream fin;
-		if(filename != "-") {
-			fin.open(filename);
-			if(!fin) {
-				throw std::runtime_error(fmt::format("Could not open {:s} for input", filename));
-			}
-		}
-		logical_cpus = enumerate_file(filename != "-" ? fin : std::cin, format);
-	} else {
-		logical_cpus = enumerate_processors(brute_force, skip_vendor_check, skip_feature_check);
-	}
-
-	if(logical_cpus.size() == 0) {
-		throw std::runtime_error("No processors found, which is implausible.");
-	}
-
-	if(list_ids) {
-		fmt::MemoryWriter w;
-		for(const auto& p : logical_cpus) {
-			w.write("{:#04x}\n", p.first);
-		}
-		std::cout << w.str() << std::flush;
-		return 0;
-	}
-
-	if(raw_dump || std::holds_alternative<std::string>(args.at("--write-dump"))) {
-		file_format format = file_format::native;
-		const std::string format_name = boost::to_lower_copy(std::get<std::string>(args.at("--write-format")));
-		if("etallen" == format_name) {
-			format = file_format::etallen;
-		} else if("libcpuid" == format_name) {
-			format = file_format::libcpuid;
-		} else if("instlat" == format_name) {
-			format = file_format::instlat;
-		}
-		fmt::MemoryWriter w;
-		print_dump(w, logical_cpus, format);
-		std::string filename = "-";
-		if(std::holds_alternative<std::string>(args.at("--write-dump"))) {
-			filename = std::get<std::string>(args.at("--write-dump"));
-		}
-		std::ofstream fout;
-		if(filename != "-") {
-			fout.open(filename);
-			if(!fout) {
-				throw std::runtime_error(fmt::format("Could not open {:s} for output", filename));
-			}
-		}
-		(filename != "-" ? fout : std::cout) << w.str() << std::flush;
-		return 0;
-	}
-
-	std::vector<std::uint32_t> cpu_ids;
-
-	if(all_cpus) {
-		for(const auto& p : logical_cpus) {
-			cpu_ids.push_back(p.second.apic_id);
-		}
-	} else {
-		const std::uint32_t chosen_id = std::holds_alternative<std::string>(args.at("--cpu")) ? std::stoul(std::get<std::string>(args.at("--cpu")), nullptr, 16)
-		                                                                                      : logical_cpus.begin()->first;
-		if(logical_cpus.find(chosen_id) == logical_cpus.end()) {
-			throw std::runtime_error(fmt::format("No such CPU ID: {:#04x}\n", chosen_id));
-		}
-		cpu_ids.push_back(chosen_id);
-	}
-
-	if(!only_topology) {
-		for(const std::uint32_t chosen_id : cpu_ids) {
-			const cpu_t& cpu = logical_cpus.at(chosen_id);
-			fmt::MemoryWriter w;
-			if(std::holds_alternative<std::string>(args.at("--single-value"))) {
-				const std::string flag_spec = std::get<std::string>(args.at("--single-value"));
-				print_single_flag(w, cpu, flag_spec);
-			} else {
-				print_leaves(w, cpu, skip_vendor_check, skip_feature_check);
-			}
-			std::cout << w.str() << std::flush;
-		}
-	}
-
-	if(!std::holds_alternative<std::string>(args.at("--single-value"))
-	&& !no_topology) {
-		fmt::MemoryWriter w;
-		system_t machine = build_topology(logical_cpus);
-		print_topology(w, machine);
-		std::cout << w.str() << std::flush;
-	}
-
-	return EXIT_SUCCESS;
-} catch(const docopt::exit_help&) {
-	std::cout << usage_message << std::endl;
-	return EXIT_SUCCESS;
-} catch(const docopt::exit_version&) {
-	std::cout << version << std::endl;
-	return EXIT_SUCCESS;
-} catch(const docopt::language_error& e) {
-	std::cerr << "Docopt usage string could not be parsed" << std::endl;
-	std::cerr << e.what() << std::endl;
-	return EXIT_FAILURE;
-} catch(const docopt::argument_error& e) {
-	std::cerr << e.what() << std::endl;
-	std::cerr << usage_message << std::endl;
-	return EXIT_FAILURE;
-} catch(std::exception& e) {
-	std::cerr << e.what() << std::endl;
-	return EXIT_FAILURE;
 }

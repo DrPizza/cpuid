@@ -343,4 +343,37 @@ inline void cpuid(register_set_t& regs, leaf_t leaf, subleaf_t subleaf) noexcept
 
 void print_generic(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf);
 
+enum struct file_format
+{
+	native,
+	etallen,
+	libcpuid,
+	instlat
+};
+
+std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format format);
+std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_vendor_check, bool skip_feature_check);
+
+void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, file_format format);
+void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag_description);
+void print_leaves(fmt::Writer& w, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check);
+
+struct flag_spec_t
+{
+	std::uint32_t selector_eax  = 0ui32;
+	std::uint32_t selector_ecx  = 0ui32;
+	register_t    flag_register = eax;
+	std::string   flag_name     = "";
+	std::uint32_t flag_start    = 0xffff'ffffui32;
+	std::uint32_t flag_end      = 0xffff'ffffui32;
+};
+
+
+inline bool operator==(const flag_spec_t& lhs, const flag_spec_t& rhs) noexcept {
+	return std::tie(lhs.selector_eax, lhs.selector_ecx, lhs.flag_register, lhs.flag_name, lhs.flag_start, lhs.flag_end)
+	    == std::tie(rhs.selector_eax, rhs.selector_ecx, rhs.flag_register, rhs.flag_name, rhs.flag_start, rhs.flag_end);
+}
+
+flag_spec_t parse_flag_spec(const std::string& flag_description);
+
 #endif
