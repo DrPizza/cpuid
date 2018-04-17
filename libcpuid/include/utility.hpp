@@ -33,7 +33,7 @@ void run_on_every_core(Fn&& f) {
 			}
 		}
 #else
-        long int total_cores = sysconf(_SC_NPROCESSORS_CONF);
+		long int total_cores = sysconf(_SC_NPROCESSORS_CONF);
 		cpu_set_t* cpus = CPU_ALLOC(total_cores);
 		std::size_t cpu_size = CPU_SIZE(total_cores);
 

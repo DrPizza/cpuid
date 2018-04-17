@@ -99,6 +99,11 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'0800ui32, "HWP_PLR"           , "HWP_Package_Level_Request          : HWP_REQUEST_PKG"                           },
 				{ intel                  , 0x0000'2000ui32, "HDC"               , "HDC_CTL, HDC_CTL1, THREAD_STALL"                                                },
 				{ intel                  , 0x0000'4000ui32, "TBT3"              , "Intel Turbo Boost Max Technology 3.0"                                           },
+				{ intel                  , 0x0000'8000ui32, "HWP_Cap"           , "HWP Capabilities. Highest Performance change is supported."                     },
+				{ intel                  , 0x0001'0000ui32, "HWP_PECI"          , "HWP PECI Override."                                                             },
+				{ intel                  , 0x0002'0000ui32, "Flexible_HWP"      , "Flexible HWP"                                                                   },
+				{ intel                  , 0x0004'0000ui32, "Fast_Access"       , "Fast access mode for HWP_REQUEST MSR"                                           },
+				{ intel                  , 0x0010'0000ui32, "Ignore_Idle"       , "Ignore Idle Logical Processor HWP request"                                      },
 			}},
 			{ ecx, {
 				{ intel | amd            , 0x0000'0001ui32, "HCF"               , "Hardware Coordination Feedback Capability: MPERF, APERF"     },
@@ -181,8 +186,9 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'0020ui32, "AVX512_mask"       , "AVX-512 OpMask"                },
 				{ intel                  , 0x0000'0040ui32, "AVX512_hi256"      , "AVX-512 ZMM0-15 upper bits"    },
 				{ intel                  , 0x0000'0080ui32, "AVX512_hi16"       , "AVX-512 ZMM16-31"              },
-				{ intel                  , 0x0000'0100ui32, "XSS"               , "Processor Trace"               },
+				{ intel                  , 0x0000'0100ui32, "PT"                , "Processor Trace"               },
 				{ intel                  , 0x0000'0200ui32, "PKRU"              , "Protection Keys User Register" },
+				{ intel                  , 0x0000'1000ui32, "HDC"               , "Hardware Duty Cycling"         },
 			}},
 		}},
 		{ subleaf_t::extended_state_sub, {
