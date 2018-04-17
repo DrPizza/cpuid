@@ -21,7 +21,7 @@
 #include <variant>
 
 // Workaround GCC 4.8 not having std::regex
-#if DOCTOPT_USE_BOOST_REGEX
+#if DOCOPT_USE_BOOST_REGEX
 #include <boost/regex.hpp>
 namespace docopt {
 	using boost::regex;

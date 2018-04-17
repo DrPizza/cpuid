@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
-#include "cpuid.hpp"
-#include "cache-and-topology.hpp"
+#include "cpuid/cpuid.hpp"
 
 #include "docopt.h"
 

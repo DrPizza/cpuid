@@ -49,11 +49,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>$(SolutionDir)libcpuid\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)libcpuid;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>$(SolutionDir)libcpuid\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)libcpuid;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -90,9 +90,6 @@
     <ClInclude Include="include\docopt_private.h" />
     <ClInclude Include="include\docopt_util.h" />
     <ClInclude Include="include\stdafx.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Makefile" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\libcpuid\libcpuid.vcxproj">

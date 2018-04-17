@@ -2,7 +2,7 @@
 
 #include <CppUnitTest.h>
 
-#include "cpuid.hpp"
+#include "cpuid/cpuid.hpp"
 #include "utility.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;

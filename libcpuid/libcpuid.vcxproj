@@ -51,10 +51,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
+    <IncludePath>$(ProjectDir)cpuid;$(ProjectDir)include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
+    <IncludePath>$(ProjectDir)cpuid;$(ProjectDir)include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -84,7 +86,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\cache-and-topology.hpp" />
-    <ClInclude Include="include\cpuid.hpp" />
+    <ClInclude Include="cpuid\cpuid.hpp" />
     <ClInclude Include="include\features.hpp" />
     <ClInclude Include="include\hypervisors.hpp" />
     <ClInclude Include="include\standard.hpp" />

@@ -13,7 +13,7 @@
 
 #include <string>
 
-#if DOCTOPT_USE_BOOST_REGEX
+#if DOCOPT_USE_BOOST_REGEX
 #include <boost/regex.hpp>
 namespace docopt {
 	using boost::regex;

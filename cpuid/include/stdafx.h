@@ -157,6 +157,6 @@
 
 #endif
 
-#define DOCTOPT_USE_BOOST_REGEX 1
+#define DOCOPT_USE_BOOST_REGEX 1
 
 #endif
