@@ -215,7 +215,7 @@ const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::hyper_v_shared_virtual_memory  , { hyper_v                , nullptr                        , print_hyper_v_shared_virtual_memory  , {} } },
 	{ leaf_t::hyper_v_nested_hypervisor      , { hyper_v                , nullptr                        , print_hyper_v_nested_hypervisor      , {} } },
 	{ leaf_t::hyper_v_nested_features        , { hyper_v                , nullptr                        , print_hyper_v_nested_features        , {} } },
-	{ leaf_t::xen_limit                      , { xen_hvm                , nullptr                        , print_null                           , {} } },
+	{ leaf_t::xen_limit                      , { xen_hvm                , nullptr                        , print_xen_limit                      , {} } },
 	{ leaf_t::xen_version                    , { xen_hvm                , nullptr                        , print_xen_version                    , {} } },
 	{ leaf_t::xen_features                   , { xen_hvm                , nullptr                        , print_xen_features                   , {} } },
 	{ leaf_t::xen_time                       , { xen_hvm                , enumerate_xen_time             , print_xen_time                       , {} } },
