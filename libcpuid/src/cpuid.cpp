@@ -140,7 +140,7 @@ uint32_t get_apic_id(const cpu_t& cpu) {
 	return get_local_apic_id(cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main));
 }
 
-using leaf_print = void(*)(fmt::Writer& w, const cpu_t& cpu);
+using leaf_print = void(*)(fmt::memory_buffer& out, const cpu_t& cpu);
 using leaf_enumerate = void(*)(cpu_t& cpu);
 
 struct filter_t
@@ -171,7 +171,7 @@ struct leaf_descriptor_t
 void enumerate_null(cpu_t&) noexcept {
 }
 
-void print_null(fmt::Writer&, const cpu_t&) noexcept {
+void print_null(fmt::memory_buffer&, const cpu_t&) noexcept {
 }
 
 const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
@@ -264,9 +264,9 @@ const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
 	{ leaf_t::encrypted_memory               , {         amd            , nullptr                        , print_encrypted_memory               , {} } }
 };
 
-void print_generic(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
+void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf);
-	w.write("{:#010x} {:#010x} {:#010x}: {:#010x} {:#010x} {:#010x} {:#010x}\n", cpu.apic_id,
+	format_to(out, "{:#010x} {:#010x} {:#010x}: {:#010x} {:#010x} {:#010x} {:#010x}\n", cpu.apic_id,
 	                                                                             static_cast<std::uint32_t>(leaf),
 	                                                                             static_cast<std::uint32_t>(subleaf),
 	                                                                             regs[eax],
@@ -276,15 +276,15 @@ void print_generic(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t subl
 
 }
 
-void print_generic(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf) {
+void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf) {
 	for(const auto& sub : cpu.leaves.at(leaf)) {
-		print_generic(w, cpu, leaf, sub.first);
+		print_generic(out, cpu, leaf, sub.first);
 	}
 }
 
-void print_generic(fmt::Writer& w, const cpu_t& cpu) {
+void print_generic(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& leaf : cpu.leaves) {
-		print_generic(w, cpu, leaf.first);
+		print_generic(out, cpu, leaf.first);
 	}
 }
 
@@ -731,7 +731,7 @@ flag_spec_t parse_flag_spec(const std::string& flag_description) {
 	return spec;
 }
 
-void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag_description) {
+void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const std::string& flag_description) {
 	const flag_spec_t spec = parse_flag_spec(flag_description);
 
 	const std::string flag_name_alternative = boost::algorithm::replace_all_copy(spec.flag_name, "_", ".");
@@ -743,7 +743,7 @@ void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag
 	&& cpu.leaves.at(leaf).find(subleaf) != cpu.leaves.at(leaf).end()) {
 		const std::uint32_t value = cpu.leaves.at(leaf).at(subleaf).at(spec.flag_register);
 		if(spec.flag_name == "" && spec.flag_start == 0xffff'ffffui32 && spec.flag_end == 0xffff'ffffui32) {
-			w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, value);
+			format_to(out, "cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, value);
 			handled = true;
 		}
 		if(spec.flag_name != "") {
@@ -764,7 +764,7 @@ void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag
 						_BitScanForward(&shift_amount, feature.mask);
 						const std::uint32_t result = (value & feature.mask) >> shift_amount;
 
-						w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, result);
+						format_to(out, "cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, result);
 						handled = true;
 						break;
 					}
@@ -776,17 +776,17 @@ void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag
 			DWORD shift_amount = 0;
 			_BitScanForward(&shift_amount, mask);
 			const std::uint32_t result = (value & mask) >> shift_amount;
-			w.write("cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, result);
+			format_to(out, "cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, result);
 			handled = true;
 		}
 	}
 
 	if(!handled) {
-		w.write("No data found for {:s}\n", flag_description);
+		format_to(out, "No data found for {:s}\n", flag_description);
 	}
 }
 
-void print_leaves(fmt::Writer& w, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check) {
+void print_leaves(fmt::memory_buffer& out, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check) {
 	for(const auto& leaf : cpu.leaves) {
 		const auto range = descriptors.equal_range(leaf.first);
 		if(range.first != range.second) {
@@ -797,46 +797,46 @@ void print_leaves(fmt::Writer& w, const cpu_t& cpu, bool skip_vendor_check, bool
 						|| filter == no_filter
 						|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
 						if(it->second.printer) {
-							it->second.printer(w, cpu);
+							it->second.printer(out, cpu);
 						} else {
-							print_generic(w, cpu, leaf.first);
+							print_generic(out, cpu, leaf.first);
 						}
 					}
 				}
 			}
 		} else {
-			print_generic(w, cpu, leaf.first);
-			w.write("\n");
+			print_generic(out, cpu, leaf.first);
+			format_to(out, "\n");
 		}
 	}
 }
 
-void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, file_format format) {
+void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_cpus, file_format format) {
 	switch(format) {
 	case file_format::native:
-		w.write("#apic eax ecx: eax ebx ecx edx\n");
+		format_to(out, "#apic eax ecx: eax ebx ecx edx\n");
 		for(const auto& p : logical_cpus) {
-			print_generic(w, p.second);
-			w.write("\n");
+			print_generic(out, p.second);
+			format_to(out, "\n");
 		}
 		break;
 	case file_format::etallen:
 		{
 			std::uint32_t count = 0ui32;
 			for(const auto& c : logical_cpus) {
-				w.write("CPU {:d}:\n", count);
+				format_to(out, "CPU {:d}:\n", count);
 				for(const auto& l : c.second.leaves) {
 					for(const auto& s : l.second) {
 						const cpu_t& cpu = c.second;
 						const leaf_t leaf = l.first;
 						const subleaf_t subleaf = s.first;
 						const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf);
-						w.write("   {:#010x} {:#04x}: eax={:#010x} ebx={:#010x} ecx={:#010x} edx={:#010x}\n", static_cast<std::uint32_t>(leaf),
-						                                                                                      static_cast<std::uint32_t>(subleaf),
-						                                                                                      regs[eax],
-						                                                                                      regs[ebx],
-						                                                                                      regs[ecx],
-						                                                                                      regs[edx]);
+						format_to(out, "   {:#010x} {:#04x}: eax={:#010x} ebx={:#010x} ecx={:#010x} edx={:#010x}\n", static_cast<std::uint32_t>(leaf),
+						                                                                                             static_cast<std::uint32_t>(subleaf),
+						                                                                                             regs[eax],
+						                                                                                             regs[ebx],
+						                                                                                             regs[ecx],
+						                                                                                             regs[edx]);
 					}
 				}
 				++count;
@@ -846,39 +846,39 @@ void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, fil
 	case file_format::libcpuid:
 		{
 			// this is a crappy file format
-			w.write("version=0.4.0\n");
+			format_to(out, "version=0.4.0\n");
 			const cpu_t& cpu = logical_cpus.begin()->second;
 
 			for(std::uint32_t i = 0ui32; i < 32ui32; ++i) {
 				const leaf_t leaf{ i };
 				if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
 					const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
-					w.write("basic_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, regs[eax], regs[ebx], regs[ecx], regs[edx]);
+					format_to(out, "basic_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, regs[eax], regs[ebx], regs[ecx], regs[edx]);
 				} else {
-					w.write("basic_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, 0ui32, 0ui32, 0ui32, 0ui32);
+					format_to(out, "basic_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, 0ui32, 0ui32, 0ui32, 0ui32);
 				}
 			}
 			for(std::uint32_t i = 0ui32; i < 32ui32; ++i) {
 				const leaf_t leaf{ i + 0x8000'0000ui32 };
 				if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
 					const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
-					w.write("ext_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, regs[eax], regs[ebx], regs[ecx], regs[edx]);
+					format_to(out, "ext_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, regs[eax], regs[ebx], regs[ecx], regs[edx]);
 				} else {
-					w.write("ext_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, 0ui32, 0ui32, 0ui32, 0ui32);
+					format_to(out, "ext_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, 0ui32, 0ui32, 0ui32, 0ui32);
 				}
 			}
 
-			const auto print_detailed_leaves = [&w, &cpu](const leaf_t leaf, const std::uint32_t limit, const std::string& label) {
+			const auto print_detailed_leaves = [&out, &cpu](const leaf_t leaf, const std::uint32_t limit, const std::string& label) {
 				if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
 					const subleaves_t& subleaves = cpu.leaves.at(leaf);
 					std::uint32_t i = 0ui32;
 					for(const auto& s : subleaves) {
 						const register_set_t& regs = s.second;
-						w.write("{:s}[{:d}]={:08x} {:08x} {:08x} {:08x}\n", label, i, regs[eax], regs[ebx], regs[ecx], regs[edx]);
+						format_to(out, "{:s}[{:d}]={:08x} {:08x} {:08x} {:08x}\n", label, i, regs[eax], regs[ebx], regs[ecx], regs[edx]);
 						++i;
 					}
 					for(; i < limit; ++i) {
-						w.write("{:s}[{:d}]={:08x} {:08x} {:08x} {:08x}\n", label, i, 0ui32, 0ui32, 0ui32, 0ui32);
+						format_to(out, "{:s}[{:d}]={:08x} {:08x} {:08x} {:08x}\n", label, i, 0ui32, 0ui32, 0ui32, 0ui32);
 					}
 				}
 			};

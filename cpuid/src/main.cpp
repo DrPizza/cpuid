@@ -90,11 +90,11 @@ int main(int argc, char* argv[]) try {
 	}
 
 	if(list_ids) {
-		fmt::MemoryWriter w;
+		fmt::memory_buffer out;
 		for(const auto& p : logical_cpus) {
-			w.write("{:#04x}\n", p.first);
+			format_to(out, "{:#04x}\n", p.first);
 		}
-		std::cout << w.str() << std::flush;
+		std::cout << out.data() << std::flush;
 		return 0;
 	}
 
@@ -108,8 +108,8 @@ int main(int argc, char* argv[]) try {
 		} else if("instlat" == format_name) {
 			format = file_format::instlat;
 		}
-		fmt::MemoryWriter w;
-		print_dump(w, logical_cpus, format);
+		fmt::memory_buffer out;
+		print_dump(out, logical_cpus, format);
 		std::string filename = "-";
 		if(std::holds_alternative<std::string>(args.at("--write-dump"))) {
 			filename = std::get<std::string>(args.at("--write-dump"));
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) try {
 				throw std::runtime_error(fmt::format("Could not open {:s} for output", filename));
 			}
 		}
-		(filename != "-" ? fout : std::cout) << w.str() << std::flush;
+		(filename != "-" ? fout : std::cout) << out.data() << std::flush;
 		return 0;
 	}
 
@@ -143,23 +143,23 @@ int main(int argc, char* argv[]) try {
 	if(!only_topology) {
 		for(const std::uint32_t chosen_id : cpu_ids) {
 			const cpu_t& cpu = logical_cpus.at(chosen_id);
-			fmt::MemoryWriter w;
+			fmt::memory_buffer out;
 			if(std::holds_alternative<std::string>(args.at("--single-value"))) {
 				const std::string flag_spec = std::get<std::string>(args.at("--single-value"));
-				print_single_flag(w, cpu, flag_spec);
+				print_single_flag(out, cpu, flag_spec);
 			} else {
-				print_leaves(w, cpu, skip_vendor_check, skip_feature_check);
+				print_leaves(out, cpu, skip_vendor_check, skip_feature_check);
 			}
-			std::cout << w.str() << std::flush;
+			std::cout << out.data() << std::flush;
 		}
 	}
 
 	if(!std::holds_alternative<std::string>(args.at("--single-value"))
 	&& !no_topology) {
-		fmt::MemoryWriter w;
+		fmt::memory_buffer out;
 		system_t machine = build_topology(logical_cpus);
-		print_topology(w, machine);
-		std::cout << w.str() << std::flush;
+		print_topology(out, machine);
+		std::cout << out.data() << std::flush;
 	}
 
 	return EXIT_SUCCESS;

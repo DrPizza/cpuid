@@ -10,10 +10,10 @@
 
 #include "utility.hpp"
 
-void print_basic_info(fmt::Writer& w, const cpu_t& cpu) {
+void print_basic_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::basic_info).at(subleaf_t::main);
-	w.write("Basic Information\n");
-	w.write("\tMaximum basic cpuid leaf: {:#010x}\n", regs[eax]);
+	format_to(out, "Basic Information\n");
+	format_to(out, "\tMaximum basic cpuid leaf: {:#010x}\n", regs[eax]);
 
 	const union
 	{
@@ -21,14 +21,14 @@ void print_basic_info(fmt::Writer& w, const cpu_t& cpu) {
 		std::array<char, 12> vndr;
 	} data = { regs[ebx], regs[edx], regs[ecx] };
 
-	w.write("\tVendor identifier: {}\n", data.vndr);
-	w.write("\tVendor name: {:s}\n", to_string(get_vendor_from_name(regs)));
-	w.write("\n");
+	format_to(out, "\tVendor identifier: {}\n", data.vndr);
+	format_to(out, "\tVendor name: {:s}\n", to_string(get_vendor_from_name(regs)));
+	format_to(out, "\n");
 }
 
-void print_version_info(fmt::Writer& w, const cpu_t& cpu) {
+void print_version_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main);
-	w.write("Version Information\n");
+	format_to(out, "Version Information\n");
 
 	const union
 	{
@@ -42,92 +42,92 @@ void print_version_info(fmt::Writer& w, const cpu_t& cpu) {
 		id_info_t split;
 	} b = { regs[ebx] };
 	
-	w.write("\tsignature: {:#010x}\n", regs[eax]);
-	w.write("\t   family: {:#02x}\n" , cpu.model.family);
-	w.write("\t    model: {:#02x}\n" , cpu.model.model);
-	w.write("\t stepping: {:#02x}\n" , cpu.model.stepping);
-	w.write("\n");
+	format_to(out, "\tsignature: {:#010x}\n", regs[eax]);
+	format_to(out, "\t   family: {:#02x}\n" , cpu.model.family);
+	format_to(out, "\t    model: {:#02x}\n" , cpu.model.model);
+	format_to(out, "\t stepping: {:#02x}\n" , cpu.model.stepping);
+	format_to(out, "\n");
 
 	if(cpu.vendor & intel) {
-		w.write("\t");
+		format_to(out, "\t");
 		switch(a.split.type) {
 		case 0:
-			w.write("Original OEM Processor\n");
+			format_to(out, "Original OEM Processor\n");
 			break;
 		case 1:
-			w.write("Intel OverDrive Processor\n");
+			format_to(out, "Intel OverDrive Processor\n");
 			break;
 		case 2:
-			w.write("Dual processor\n");
+			format_to(out, "Dual processor\n");
 			break;
 		case 3:
-			w.write("Intel reserved\n");
+			format_to(out, "Intel reserved\n");
 			break;
 		}
-		w.write("\n");
+		format_to(out, "\n");
 
 		if(b.split.brand_id != 0ui32) {
-			w.write("\tbrand ID: ");
+			format_to(out, "\tbrand ID: ");
 			switch(b.split.brand_id) {
 			case 0x00: break;
-			case 0x01: w.write("Intel(R) Celeron(R) processor"); break;
-			case 0x02: w.write("Intel(R) Pentium(R) III processor"); break;
+			case 0x01: format_to(out, "Intel(R) Celeron(R) processor"); break;
+			case 0x02: format_to(out, "Intel(R) Pentium(R) III processor"); break;
 			case 0x03:
 				if(regs[eax] == 0x000006b1ui32) {
-					w.write("Intel(R) Celeron(R) processor");
+					format_to(out, "Intel(R) Celeron(R) processor");
 				} else {
-					w.write("Intel(R) Pentium(R) III Xeon(R) processor");
+					format_to(out, "Intel(R) Pentium(R) III Xeon(R) processor");
 				}
-			case 0x04: w.write("Intel(R) Pentium(R) III processor"); break;
-			case 0x06: w.write("Mobile Intel(R) Pentium(R) III processor-M"); break;
-			case 0x07: w.write("Mobile Intel(R) Celeron(R) processor"); break;
-			case 0x08: w.write("Intel(R) Pentium(R) 4 processor"); break;
-			case 0x09: w.write("Intel(R) Pentium(R) 4 processor"); break;
-			case 0x0a: w.write("Intel(R) Celeron(R) processor"); break;
+			case 0x04: format_to(out, "Intel(R) Pentium(R) III processor"); break;
+			case 0x06: format_to(out, "Mobile Intel(R) Pentium(R) III processor-M"); break;
+			case 0x07: format_to(out, "Mobile Intel(R) Celeron(R) processor"); break;
+			case 0x08: format_to(out, "Intel(R) Pentium(R) 4 processor"); break;
+			case 0x09: format_to(out, "Intel(R) Pentium(R) 4 processor"); break;
+			case 0x0a: format_to(out, "Intel(R) Celeron(R) processor"); break;
 			case 0x0b:
 				if(regs[eax] == 0x00000f13ui32) {
-					w.write("Intel(R) Xeon(R) processor MP");
+					format_to(out, "Intel(R) Xeon(R) processor MP");
 				} else {
-					w.write("Intel(R) Xeon(R) processor");
+					format_to(out, "Intel(R) Xeon(R) processor");
 				}
-			case 0x0c: w.write("Intel(R) Xeon(R) processor MP"); break;
+			case 0x0c: format_to(out, "Intel(R) Xeon(R) processor MP"); break;
 			case 0x0e:
 				if(regs[eax] == 0x00000f13ui32) {
-					w.write("Intel(R) Xeon(R) processor");
+					format_to(out, "Intel(R) Xeon(R) processor");
 				} else {
-					w.write("Mobile Intel(R) Pentium(R) 4 processor - M");
+					format_to(out, "Mobile Intel(R) Pentium(R) 4 processor - M");
 				}
-			case 0x0f: w.write("Mobile Intel(R) Celeron(R) processor"); break;
-			case 0x11: w.write("Mobile Genuine Intel(R) processor"); break;
-			case 0x12: w.write("Intel(R) Celeron(R) M processor"); break;
-			case 0x13: w.write("Mobile Intel(R) Celeron(R) processor"); break;
-			case 0x14: w.write("Intel(R) Celeron(R) processor"); break;
-			case 0x15: w.write("Mobile Genuine Intel(R) processor"); break;
-			case 0x16: w.write("Intel(R) Pentium(R) M processor"); break;
-			case 0x17: w.write("Mobile Intel(R) Celeron(R) processor"); break;
+			case 0x0f: format_to(out, "Mobile Intel(R) Celeron(R) processor"); break;
+			case 0x11: format_to(out, "Mobile Genuine Intel(R) processor"); break;
+			case 0x12: format_to(out, "Intel(R) Celeron(R) M processor"); break;
+			case 0x13: format_to(out, "Mobile Intel(R) Celeron(R) processor"); break;
+			case 0x14: format_to(out, "Intel(R) Celeron(R) processor"); break;
+			case 0x15: format_to(out, "Mobile Genuine Intel(R) processor"); break;
+			case 0x16: format_to(out, "Intel(R) Pentium(R) M processor"); break;
+			case 0x17: format_to(out, "Mobile Intel(R) Celeron(R) processor"); break;
 			default:
 				break;
 			}
-			w.write("\n");
+			format_to(out, "\n");
 		}
 	}
-	w.write("\tcache line size/bytes: {:d}\n", b.split.cache_line_size * 8);
+	format_to(out, "\tcache line size/bytes: {:d}\n", b.split.cache_line_size * 8);
 	if(0 != (cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main).at(edx) & 0x1000'0000ui32)) {
-		w.write("\tlogical processors per package: {:d}\n", gsl::narrow_cast<std::uint32_t>(b.split.maximum_addressable_ids));
+		format_to(out, "\tlogical processors per package: {:d}\n", gsl::narrow_cast<std::uint32_t>(b.split.maximum_addressable_ids));
 	}
-	w.write("\tlocal APIC ID: {:#04x}\n", gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id));
-	w.write("\n");
+	format_to(out, "\tlocal APIC ID: {:#04x}\n", gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id));
+	format_to(out, "\n");
 
-	w.write("\tFeature identifiers\n");
-	print_features(w, cpu, leaf_t::version_info, subleaf_t::main, edx);
-	w.write("\n");
-	print_features(w, cpu, leaf_t::version_info, subleaf_t::main, ecx);
-	w.write("\n");
+	format_to(out, "\tFeature identifiers\n");
+	print_features(out, cpu, leaf_t::version_info, subleaf_t::main, edx);
+	format_to(out, "\n");
+	print_features(out, cpu, leaf_t::version_info, subleaf_t::main, ecx);
+	format_to(out, "\n");
 }
 
-void print_serial_number(fmt::Writer& w, const cpu_t& cpu) {
-	w.write("Processor serial number\n");
-	w.write("\t");
+void print_serial_number(fmt::memory_buffer& out, const cpu_t& cpu) {
+	format_to(out, "Processor serial number\n");
+	format_to(out, "\t");
 	const register_set_t& regs = cpu.leaves.at(leaf_t::serial_number).at(subleaf_t::main);
 	switch(cpu.vendor & any_silicon) {
 	case intel:
@@ -135,22 +135,22 @@ void print_serial_number(fmt::Writer& w, const cpu_t& cpu) {
 			const std::uint32_t top = cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main)[eax];
 			const std::uint32_t middle = regs[edx];
 			const std::uint32_t bottom = regs[ecx];
-			w.write("Serial number: {:04x}-{:04x}-{:04x}-{:04x}-{:04x}-{:04x}\n", top    >> 16ui32, top    & 0xffffui32,
+			format_to(out, "Serial number: {:04x}-{:04x}-{:04x}-{:04x}-{:04x}-{:04x}\n", top    >> 16ui32, top    & 0xffffui32,
 			                                                                      middle >> 16ui32, middle & 0xffffui32,
 			                                                                      bottom >> 16ui32, bottom & 0xffffui32);
 		}
 		break;
 	case transmeta:
-		w.write("{:08x}-{:08x}-{:08x}-{:08x}\n", regs[eax], regs[ebx], regs[ecx], regs[edx]);
+		format_to(out, "{:08x}-{:08x}-{:08x}-{:08x}\n", regs[eax], regs[ebx], regs[ecx], regs[edx]);
 		break;
 	default:
-		print_generic(w, cpu, leaf_t::serial_number, subleaf_t::main);
+		print_generic(out, cpu, leaf_t::serial_number, subleaf_t::main);
 		break;
 	}
-	w.write("\n");
+	format_to(out, "\n");
 }
 
-void print_mwait_parameters(fmt::Writer& w, const cpu_t& cpu) {
+void print_mwait_parameters(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::monitor_mwait).at(subleaf_t::main);
 
 	//if(regs[eax] == 0ui32 && regs[ebx] == 0ui32) {
@@ -188,27 +188,27 @@ void print_mwait_parameters(fmt::Writer& w, const cpu_t& cpu) {
 		} split;
 	} c = { regs[ecx] };
 
-	w.write("MONITOR/MWAIT leaf\n");
-	w.write("\tSmallest monitor-line size: {:d} bytes\n", (a.split.smallest_monitor_line + 0ui32));
-	w.write("\tLargest monitor-line size: {:d} bytes\n", (b.split.largest_monitor_line  + 0ui32));
+	format_to(out, "MONITOR/MWAIT leaf\n");
+	format_to(out, "\tSmallest monitor-line size: {:d} bytes\n", (a.split.smallest_monitor_line + 0ui32));
+	format_to(out, "\tLargest monitor-line size: {:d} bytes\n", (b.split.largest_monitor_line  + 0ui32));
 	if(c.split.enumerable) {
-		print_features(w, cpu, leaf_t::monitor_mwait, subleaf_t::main, ecx);
+		print_features(out, cpu, leaf_t::monitor_mwait, subleaf_t::main, ecx);
 		if(cpu.vendor & intel) {
 			const std::uint32_t mask = 0b1111;
 			for(std::size_t i = 0; i < 8; ++i) {
 				const std::uint32_t states = (regs[edx] & (mask << (i * 4))) >> (i * 4);
-				w.write("\t{:d} C{:d} sub C-states supported using MWAIT\n", states, i);
+				format_to(out, "\t{:d} C{:d} sub C-states supported using MWAIT\n", states, i);
 			}
 		}
 	}
-	w.write("\n");
+	format_to(out, "\n");
 }
 
-void print_thermal_and_power(fmt::Writer& w, const cpu_t& cpu) {
+void print_thermal_and_power(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::thermal_and_power).at(subleaf_t::main);
-	w.write("Thermal and Power Management\n");
-	print_features(w, cpu, leaf_t::thermal_and_power, subleaf_t::main, eax);
-	w.write("\n");
+	format_to(out, "Thermal and Power Management\n");
+	print_features(out, cpu, leaf_t::thermal_and_power, subleaf_t::main, eax);
+	format_to(out, "\n");
 
 	if(cpu.vendor & intel) {
 		const union
@@ -222,10 +222,10 @@ void print_thermal_and_power(fmt::Writer& w, const cpu_t& cpu) {
 		} b = { regs[ebx] };
 
 		if(b.split.interrupt_thresholds) {
-			w.write("\t{:d} interrupt thresholds in Digital Thermal Sensor\n", b.split.interrupt_thresholds);
+			format_to(out, "\t{:d} interrupt thresholds in Digital Thermal Sensor\n", b.split.interrupt_thresholds);
 		}
-		print_features(w, cpu, leaf_t::thermal_and_power, subleaf_t::main, ecx);
-		w.write("\n");
+		print_features(out, cpu, leaf_t::thermal_and_power, subleaf_t::main, ecx);
+		format_to(out, "\n");
 	}
 }
 
@@ -241,15 +241,15 @@ void enumerate_extended_features(cpu_t& cpu) {
 	}
 }
 
-void print_extended_features(fmt::Writer& w, const cpu_t& cpu) {
+void print_extended_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::extended_features)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
 		case subleaf_t::extended_state_main:
 			{
-				w.write("Extended features\n");
-				print_features(w, cpu, leaf_t::extended_features, subleaf_t::extended_features_main, ebx);
-				w.write("\n");
+				format_to(out, "Extended features\n");
+				print_features(out, cpu, leaf_t::extended_features, subleaf_t::extended_features_main, ebx);
+				format_to(out, "\n");
 				if(cpu.vendor & intel) {
 					const union
 					{
@@ -281,31 +281,31 @@ void print_extended_features(fmt::Writer& w, const cpu_t& cpu) {
 
 						} split;
 					} c = { regs[ecx] };
-					w.write("\tMPX Address-width adjust: {:d}\n", c.split.mawau_value);
-					w.write("\n");
-					print_features(w, cpu, leaf_t::extended_features, subleaf_t::extended_features_main, ecx);
-					w.write("\n");
+					format_to(out, "\tMPX Address-width adjust: {:d}\n", c.split.mawau_value);
+					format_to(out, "\n");
+					print_features(out, cpu, leaf_t::extended_features, subleaf_t::extended_features_main, ecx);
+					format_to(out, "\n");
 				}
-				print_features(w, cpu, leaf_t::extended_features, subleaf_t::extended_features_main, edx);
-				w.write("\n");
+				print_features(out, cpu, leaf_t::extended_features, subleaf_t::extended_features_main, edx);
+				format_to(out, "\n");
 			}
 			break;
 		default:
-			print_generic(w, cpu, leaf_t::extended_features, sub.first);
-			w.write("\n");
+			print_generic(out, cpu, leaf_t::extended_features, sub.first);
+			format_to(out, "\n");
 			break;
 		}
 	}
 }
 
-void print_direct_cache_access(fmt::Writer& w, const cpu_t& cpu) {
+void print_direct_cache_access(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::direct_cache_access).at(subleaf_t::main);
-	w.write("Direct Cache Access\n");
-	w.write("\tDCA CAP MSR: {:#010x}\n", regs[eax]);
-	w.write("\n");
+	format_to(out, "Direct Cache Access\n");
+	format_to(out, "\tDCA CAP MSR: {:#010x}\n", regs[eax]);
+	format_to(out, "\n");
 }
 
-void print_performance_monitoring(fmt::Writer& w, const cpu_t& cpu) {
+void print_performance_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::performance_monitoring).at(subleaf_t::main);
 	const union
 	{
@@ -352,37 +352,37 @@ void print_performance_monitoring(fmt::Writer& w, const cpu_t& cpu) {
 		return;
 	}
 
-	w.write("Architectural Performance Monitoring\n");
-	w.write("\tVersion: {:d}\n", a.split.version);
-	w.write("\tCounters per logical processor: {:d}\n", a.split.counters_per_logical);
-	w.write("\tCounter bit width: {:d}\n", a.split.counter_bit_width);
-	w.write("\tFixed function counters: {:d}\n", d.split.fixed_function_counters);
-	w.write("\tFixed function counter bit width: {:d}\n", d.split.fixed_function_counter_width);
-	w.write("\tAnyThread: {:d}\n", d.split.any_thread);
+	format_to(out, "Architectural Performance Monitoring\n");
+	format_to(out, "\tVersion: {:d}\n", a.split.version);
+	format_to(out, "\tCounters per logical processor: {:d}\n", a.split.counters_per_logical);
+	format_to(out, "\tCounter bit width: {:d}\n", a.split.counter_bit_width);
+	format_to(out, "\tFixed function counters: {:d}\n", d.split.fixed_function_counters);
+	format_to(out, "\tFixed function counter bit width: {:d}\n", d.split.fixed_function_counter_width);
+	format_to(out, "\tAnyThread: {:d}\n", d.split.any_thread);
 
-	w.write("\tSupported counters\n");
+	format_to(out, "\tSupported counters\n");
 	if(0 == b.split.core_cycle) {
-		w.write("\t\tCore cycles\n");
+		format_to(out, "\t\tCore cycles\n");
 	}
 	if(0 == b.split.instructions_retired) {
-		w.write("\t\tInstructions retired\n");
+		format_to(out, "\t\tInstructions retired\n");
 	}
 	if(0 == b.split.reference_cycles) {
-		w.write("\t\tReference cycles\n");
+		format_to(out, "\t\tReference cycles\n");
 	}
 	if(0 == b.split.llc_reference) {
-		w.write("\t\tLast-level cache reference\n");
+		format_to(out, "\t\tLast-level cache reference\n");
 	}
 	if(0 == b.split.llc_misses) {
-		w.write("\t\tLast-level cache misses\n");
+		format_to(out, "\t\tLast-level cache misses\n");
 	}
 	if(0 == b.split.branch_retired) {
-		w.write("\t\tBranch instructions retired\n");
+		format_to(out, "\t\tBranch instructions retired\n");
 	}
 	if(0 == b.split.branch_mispredict) {
-		w.write("\t\tBranch instructions mispredicted\n");
+		format_to(out, "\t\tBranch instructions mispredicted\n");
 	}
-	w.write("\n");
+	format_to(out, "\n");
 }
 
 void enumerate_extended_state(cpu_t& cpu) {
@@ -414,30 +414,30 @@ void enumerate_extended_state(cpu_t& cpu) {
 	}
 }
 
-void print_extended_state(fmt::Writer& w, const cpu_t& cpu) {
+void print_extended_state(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::extended_state)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
 		case subleaf_t::extended_state_main:
 			{
-				w.write("Extended states\n");
-				w.write("\tFeatures supported by XSAVE: \n");
-				print_features(w, cpu, leaf_t::extended_state, subleaf_t::extended_state_main, eax);
-				w.write("\n");
+				format_to(out, "Extended states\n");
+				format_to(out, "\tFeatures supported by XSAVE: \n");
+				print_features(out, cpu, leaf_t::extended_state, subleaf_t::extended_state_main, eax);
+				format_to(out, "\n");
 
-				w.write("\tMaximum size for all enabled features/bytes  : {:d}\n", regs[ebx]);
-				w.write("\tMaximum size for all supported features/bytes: {:d}\n", regs[ecx]);
-				w.write("\n");
+				format_to(out, "\tMaximum size for all enabled features/bytes  : {:d}\n", regs[ebx]);
+				format_to(out, "\tMaximum size for all supported features/bytes: {:d}\n", regs[ecx]);
+				format_to(out, "\n");
 			}
 			break;
 		case subleaf_t::extended_state_sub:
 			{
-				w.write("\tXSAVE extended features:\n");
-				print_features(w, cpu, leaf_t::extended_state, subleaf_t::extended_state_sub, eax);
-				w.write("\n");
+				format_to(out, "\tXSAVE extended features:\n");
+				print_features(out, cpu, leaf_t::extended_state, subleaf_t::extended_state_sub, eax);
+				format_to(out, "\n");
 
-				w.write("\tSize for enabled features/bytes: {:d}\n", regs[ebx]);
-				w.write("\n");
+				format_to(out, "\tSize for enabled features/bytes: {:d}\n", regs[ebx]);
+				format_to(out, "\n");
 			}
 			break;
 		default:
@@ -459,18 +459,18 @@ void print_extended_state(fmt::Writer& w, const cpu_t& cpu) {
 				                               : idx == 0xe3ui32        ? "Lightweight Profiling"
 				                               :                          "(unknown)";
 
-				w.write("\tExtended state for {:s} ({:#04x}) uses {:d} bytes at offset {:#010x}\n", description, static_cast<std::uint32_t>(sub.first), regs[eax], regs[ebx]);
+				format_to(out, "\tExtended state for {:s} ({:#04x}) uses {:d} bytes at offset {:#010x}\n", description, static_cast<std::uint32_t>(sub.first), regs[eax], regs[ebx]);
 				if(c.split.set_in_xss) {
-					w.write("\t\tBit set in XSS MSR\n");
+					format_to(out, "\t\tBit set in XSS MSR\n");
 				} else {
-					w.write("\t\tBit set in XCR0\n");
+					format_to(out, "\t\tBit set in XCR0\n");
 				}
 				if(c.split.aligned_to_64_bytes) {
-					w.write("\t\tAligned to next 64-byte boundary\n");
+					format_to(out, "\t\tAligned to next 64-byte boundary\n");
 				} else {
-					w.write("\t\tImmediately follows previous component.\n");
+					format_to(out, "\t\tImmediately follows previous component.\n");
 				}
-				w.write("\n");
+				format_to(out, "\n");
 			}
 			break;
 		}
@@ -492,7 +492,7 @@ void enumerate_rdt_monitoring(cpu_t& cpu) {
 	}
 }
 
-void print_rdt_monitoring(fmt::Writer& w, const cpu_t& cpu) {
+void print_rdt_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
 	static const std::vector<feature_t> monitorables = {
 		{ intel , 0x0000'0001ui32, "O", "Occupancy"       },
 		{ intel , 0x0000'0002ui32, "T", "Total Bandwidth" },
@@ -502,29 +502,29 @@ void print_rdt_monitoring(fmt::Writer& w, const cpu_t& cpu) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
 		case subleaf_t::rdt_monitoring_main:
-			w.write("Intel Resource Director Technology monitoring\n");
-			w.write("\tMaximum Resource Monitoring ID of all types: {:#010x}\n", regs[ebx]);
-			w.write("\n");
+			format_to(out, "Intel Resource Director Technology monitoring\n");
+			format_to(out, "\tMaximum Resource Monitoring ID of all types: {:#010x}\n", regs[ebx]);
+			format_to(out, "\n");
 			break;
 		case subleaf_t::rdt_monitoring_l3:
-			w.write("\tL3 cache monitoring\n");
-			w.write("\t\tConversion factor: {:d}\n", regs[ebx]);
+			format_to(out, "\tL3 cache monitoring\n");
+			format_to(out, "\t\tConversion factor: {:d}\n", regs[ebx]);
 			for(const feature_t& mon : monitorables) {
 				if(regs[edx] & mon.mask) {
-					w.write("\t\tL3 {:s}\n", mon.description);
+					format_to(out, "\t\tL3 {:s}\n", mon.description);
 				}
 			}
-			w.write("\n");
+			format_to(out, "\n");
 			break;
 		default:
-			w.write("\tUnknown resource type {:#04x} monitoring\n", static_cast<std::uint32_t>(sub.first));
-			w.write("\t\tConversion factor: {:d}\n", regs[ebx]);
+			format_to(out, "\tUnknown resource type {:#04x} monitoring\n", static_cast<std::uint32_t>(sub.first));
+			format_to(out, "\t\tConversion factor: {:d}\n", regs[ebx]);
 			for(const feature_t& mon : monitorables) {
 				if(regs[edx] & mon.mask) {
-					w.write("\t\tUnknown resource {:s}\n", mon.description);
+					format_to(out, "\t\tUnknown resource {:s}\n", mon.description);
 				}
 			}
-			w.write("\n");
+			format_to(out, "\n");
 			break;
 		}
 	}
@@ -545,7 +545,7 @@ void enumerate_rdt_allocation(cpu_t& cpu) {
 	}
 }
 
-void print_rdt_allocation(fmt::Writer& w, const cpu_t& cpu) {
+void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 	static const std::vector<feature_t> allocatables = {
 		{ intel , 0x0000'0002ui32, "L3" , "L3 Cache Allocation"},
 		{ intel , 0x0000'0004ui32, "L2" , "L2 Cache Allocation"},
@@ -567,13 +567,13 @@ void print_rdt_allocation(fmt::Writer& w, const cpu_t& cpu) {
 
 		switch(sub.first) {
 		case subleaf_t::rdt_allocation_main:
-			w.write("Intel Resource Director Technology allocation\n");
+			format_to(out, "Intel Resource Director Technology allocation\n");
 			for(const feature_t& all : allocatables) {
 				if(regs[edx] & all.mask) {
-					w.write("\t\tSupports {:s}\n", all.description);
+					format_to(out, "\t\tSupports {:s}\n", all.description);
 				}
 			}
-			w.write("\n");
+			format_to(out, "\n");
 			break;
 		case subleaf_t::rdt_cat_l3:
 			{
@@ -587,14 +587,14 @@ void print_rdt_allocation(fmt::Writer& w, const cpu_t& cpu) {
 					} split;
 				} a = { regs[eax] };
 
-				w.write("\tL3 Cache Allocation Technology\n");
-				w.write("\tLength of capacity bitmask: {:d}\n", (a.split.bit_mask_length + 1ui32));
-				w.write("\tBitmap of isolation/contention: {:#010x}\n", regs[ebx]);
+				format_to(out, "\tL3 Cache Allocation Technology\n");
+				format_to(out, "\tLength of capacity bitmask: {:d}\n", (a.split.bit_mask_length + 1ui32));
+				format_to(out, "\tBitmap of isolation/contention: {:#010x}\n", regs[ebx]);
 				if(regs[ecx] & 0x0000'0004ui32) {
-					w.write("\tCode and Data Prioritization supported\n");
+					format_to(out, "\tCode and Data Prioritization supported\n");
 				}
-				w.write("\tHighest COS number for this resource: {:d}\n", d.split.highest_cos_number);
-				w.write("\n");
+				format_to(out, "\tHighest COS number for this resource: {:d}\n", d.split.highest_cos_number);
+				format_to(out, "\n");
 			}
 			break;
 		case subleaf_t::rdt_cat_l2:
@@ -609,11 +609,11 @@ void print_rdt_allocation(fmt::Writer& w, const cpu_t& cpu) {
 					} split;
 				} a = { regs[eax] };
 
-				w.write("\tL2 Cache Allocation Technology\n");
-				w.write("\tLength of capacity bitmask: {:d}\n", (a.split.bit_mask_length + 1ui32));
-				w.write("\tBitmap of isolation/contention: {:#010x}\n", regs[ebx]);
-				w.write("\tHighest COS number for this resource: {:d}\n", d.split.highest_cos_number);
-				w.write("\n");
+				format_to(out, "\tL2 Cache Allocation Technology\n");
+				format_to(out, "\tLength of capacity bitmask: {:d}\n", (a.split.bit_mask_length + 1ui32));
+				format_to(out, "\tBitmap of isolation/contention: {:#010x}\n", regs[ebx]);
+				format_to(out, "\tHighest COS number for this resource: {:d}\n", d.split.highest_cos_number);
+				format_to(out, "\n");
 			}
 			break;
 		case subleaf_t::rdt_mba:
@@ -628,19 +628,19 @@ void print_rdt_allocation(fmt::Writer& w, const cpu_t& cpu) {
 					} split;
 				} a = { regs[eax] };
 
-				w.write("\tMemory Bandwidth Allocation\n");
-				w.write("\tMaximum MBA throttling value: {:d}\n", (a.split.max_throttle + 1ui32));
+				format_to(out, "\tMemory Bandwidth Allocation\n");
+				format_to(out, "\tMaximum MBA throttling value: {:d}\n", (a.split.max_throttle + 1ui32));
 				if(regs[ecx] & 0x0000'0004ui32) {
-					w.write("\tResponse of delay values is linear\n");
+					format_to(out, "\tResponse of delay values is linear\n");
 				}
-				w.write("\tHighest COS number for this resource: {:d}\n", d.split.highest_cos_number);
-				w.write("\n");
+				format_to(out, "\tHighest COS number for this resource: {:d}\n", d.split.highest_cos_number);
+				format_to(out, "\n");
 			}
 			break;
 		default:
-			w.write("\tUnknown resource type {:#04x} allocation\n", static_cast<std::uint32_t>(sub.first));
-			w.write("\tHighest COS number for this resource: {:d}\n", d.split.highest_cos_number);
-			w.write("\n");
+			format_to(out, "\tUnknown resource type {:#04x} allocation\n", static_cast<std::uint32_t>(sub.first));
+			format_to(out, "\tHighest COS number for this resource: {:d}\n", d.split.highest_cos_number);
+			format_to(out, "\n");
 			break;
 		}
 	}
@@ -663,7 +663,7 @@ void enumerate_sgx_info(cpu_t& cpu) {
 	}
 }
 
-void print_sgx_info(fmt::Writer& w, const cpu_t& cpu) {
+void print_sgx_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::sgx_info)) {
 		const register_set_t& regs = sub.second;
 
@@ -681,20 +681,20 @@ void print_sgx_info(fmt::Writer& w, const cpu_t& cpu) {
 					} split;
 				} d = { regs[edx] };
 
-				w.write("Intel SGX\n");
-				w.write("\tFeatures:\n");
-				print_features(w, cpu, leaf_t::sgx_info, subleaf_t::sgx_capabilities, eax);
-				w.write("\n");
-				w.write("\tMISCSELECT extended features: {:#010x}\n", regs[ebx]);
-				w.write("\tMaximum enclave size in 32-bit mode/bytes: {:d}\n", (1ui64 << d.split.max_enclave_32_bit));
-				w.write("\tMaximum enclave size in 64-bit mode/bytes: {:d}\n", (1ui64 << d.split.max_enclave_64_bit));
-				w.write("\n");
+				format_to(out, "Intel SGX\n");
+				format_to(out, "\tFeatures:\n");
+				print_features(out, cpu, leaf_t::sgx_info, subleaf_t::sgx_capabilities, eax);
+				format_to(out, "\n");
+				format_to(out, "\tMISCSELECT extended features: {:#010x}\n", regs[ebx]);
+				format_to(out, "\tMaximum enclave size in 32-bit mode/bytes: {:d}\n", (1ui64 << d.split.max_enclave_32_bit));
+				format_to(out, "\tMaximum enclave size in 64-bit mode/bytes: {:d}\n", (1ui64 << d.split.max_enclave_64_bit));
+				format_to(out, "\n");
 			}
 			break;
 		case subleaf_t::sgx_attributes:
 			{
-				w.write("\tSECS.ATTRIBUTES valid bits: {:08x}:{:08x}:{:08x}:{:08x}\n", regs[edx], regs[ecx], regs[ebx], regs[eax]);
-				w.write("\n");
+				format_to(out, "\tSECS.ATTRIBUTES valid bits: {:08x}:{:08x}:{:08x}:{:08x}\n", regs[edx], regs[ecx], regs[ebx], regs[eax]);
+				format_to(out, "\n");
 			}
 			break;
 		default:
@@ -748,11 +748,11 @@ void print_sgx_info(fmt::Writer& w, const cpu_t& cpu) {
 					                                     | (gsl::narrow_cast<std::uint64_t>(a.split.epc_physical_address_low_bits) << 12ui64);
 					const std::uint64_t epc_size = (gsl::narrow_cast<std::uint64_t>(d.split.epc_section_size_hi_bits ) << 32ui64)
 					                             | (gsl::narrow_cast<std::uint64_t>(c.split.epc_section_size_low_bits) << 12ui64);
-					w.write("\tEnclave Page Cache section\n");
-					w.write("\t\tSection {:s} confidentiality and integrity protection\n", c.split.epc_section_properties == 0b0001ui32 ? "has" : "does not have");
-					w.write("\t\tEPC physical address: {:0#18x}\n", physical_address);
-					w.write("\t\tEPC size: {:#018x}\n"            , epc_size);
-					w.write("\n");
+					format_to(out, "\tEnclave Page Cache section\n");
+					format_to(out, "\t\tSection {:s} confidentiality and integrity protection\n", c.split.epc_section_properties == 0b0001ui32 ? "has" : "does not have");
+					format_to(out, "\t\tEPC physical address: {:0#18x}\n", physical_address);
+					format_to(out, "\t\tEPC size: {:#018x}\n"            , epc_size);
+					format_to(out, "\n");
 				}
 			}
 			break;
@@ -772,16 +772,16 @@ void enumerate_processor_trace(cpu_t& cpu) {
 	}
 }
 
-void print_processor_trace(fmt::Writer& w, const cpu_t& cpu) {
+void print_processor_trace(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::processor_trace)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
 		case subleaf_t::main:
-			w.write("Processor Trace\n");
-			print_features(w, cpu, leaf_t::processor_trace, subleaf_t::main, ebx);
-			w.write("\n");
-			print_features(w, cpu, leaf_t::processor_trace, subleaf_t::main, ecx);
-			w.write("\n");
+			format_to(out, "Processor Trace\n");
+			print_features(out, cpu, leaf_t::processor_trace, subleaf_t::main, ebx);
+			format_to(out, "\n");
+			print_features(out, cpu, leaf_t::processor_trace, subleaf_t::main, ecx);
+			format_to(out, "\n");
 			break;
 		default:
 			{
@@ -805,27 +805,27 @@ void print_processor_trace(fmt::Writer& w, const cpu_t& cpu) {
 						std::uint32_t supported_psb_bitmap : 16;
 					} split;
 				} b = { regs[ebx] };
-				w.write("\tNumber of configurable address ranges for filtering: {:d}\n", a.split.number_of_ranges);
-				w.write("\tBitmap of supported MTC period encodings: {:#010x}\n", a.split.mtc_period_bitmap);
-				w.write("\tBitmap of supported Cycle Treshold value encodings: {:#010x}\n", b.split.cycle_threshold_bitmap);
-				w.write("\tBitmap of supported Configurable PSB frequency encodings: {:#010x}\n", b.split.supported_psb_bitmap);
-				w.write("\n");
+				format_to(out, "\tNumber of configurable address ranges for filtering: {:d}\n", a.split.number_of_ranges);
+				format_to(out, "\tBitmap of supported MTC period encodings: {:#010x}\n", a.split.mtc_period_bitmap);
+				format_to(out, "\tBitmap of supported Cycle Treshold value encodings: {:#010x}\n", b.split.cycle_threshold_bitmap);
+				format_to(out, "\tBitmap of supported Configurable PSB frequency encodings: {:#010x}\n", b.split.supported_psb_bitmap);
+				format_to(out, "\n");
 			}
 			break;
 		}
 	}
 }
 
-void print_time_stamp_counter(fmt::Writer& w, const cpu_t& cpu) {
+void print_time_stamp_counter(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::time_stamp_counter).at(subleaf_t::main);
-	w.write("Time Stamp Counter and Nominal Core Crystal Clock\n");
-	w.write("\tTSC:core crystal clock ratio: {:d}:{:d}\n", regs[ebx], regs[eax]);
-	w.write("\tNominal core crystal clock/Hz: {:d}\n", regs[ecx]);
-	w.write("\tTSC frequency/Hz: {:d}\n", gsl::narrow_cast<std::uint64_t>(regs[ecx]) * regs[ebx] / regs[eax]);
-	w.write("\n");
+	format_to(out, "Time Stamp Counter and Nominal Core Crystal Clock\n");
+	format_to(out, "\tTSC:core crystal clock ratio: {:d}:{:d}\n", regs[ebx], regs[eax]);
+	format_to(out, "\tNominal core crystal clock/Hz: {:d}\n", regs[ecx]);
+	format_to(out, "\tTSC frequency/Hz: {:d}\n", gsl::narrow_cast<std::uint64_t>(regs[ecx]) * regs[ebx] / regs[eax]);
+	format_to(out, "\n");
 }
 
-void print_processor_frequency(fmt::Writer& w, const cpu_t& cpu) {
+void print_processor_frequency(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::processor_frequency).at(subleaf_t::main);
 
 	struct frequency_t
@@ -852,11 +852,11 @@ void print_processor_frequency(fmt::Writer& w, const cpu_t& cpu) {
 		frequency_t split;
 	} c = { regs[ecx] };
 
-	w.write("Processor frequency\n");
-	w.write("\tBase frequency/MHz: {:d}\n", a.split.frequency);
-	w.write("\tMaximum frequency/MHz: {:d}\n", b.split.frequency);
-	w.write("\tBus (reference) frequency/MHz: {:d}\n", c.split.frequency);
-	w.write("\n");
+	format_to(out, "Processor frequency\n");
+	format_to(out, "\tBase frequency/MHz: {:d}\n", a.split.frequency);
+	format_to(out, "\tMaximum frequency/MHz: {:d}\n", b.split.frequency);
+	format_to(out, "\tBus (reference) frequency/MHz: {:d}\n", c.split.frequency);
+	format_to(out, "\n");
 }
 
 void enumerate_system_on_chip_vendor(cpu_t& cpu) {
@@ -871,7 +871,7 @@ void enumerate_system_on_chip_vendor(cpu_t& cpu) {
 	}
 }
 
-void print_system_on_chip_vendor(fmt::Writer& w, const cpu_t& cpu) {
+void print_system_on_chip_vendor(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::system_on_chip_vendor)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -888,16 +888,16 @@ void print_system_on_chip_vendor(fmt::Writer& w, const cpu_t& cpu) {
 					} split;
 				} b = { regs[ebx] };
 
-				w.write("System-on-chip\n");
-				w.write("\tVendor ID: {:#06x}\n", b.split.vendor_id);
+				format_to(out, "System-on-chip\n");
+				format_to(out, "\tVendor ID: {:#06x}\n", b.split.vendor_id);
 				if(b.split.is_industry_standard_vendor) {
-					w.write("\tVendor ID is assigned by an industry standard scheme\n");
+					format_to(out, "\tVendor ID is assigned by an industry standard scheme\n");
 				} else {
-					w.write("\tVendor ID is assigned by Intel\n");
+					format_to(out, "\tVendor ID is assigned by Intel\n");
 				}
-				w.write("\tProject ID: {:#010x}\n", regs[ecx]);
-				w.write("\tStepping: {:#010x}\n", regs[edx]);
-				w.write("\n");
+				format_to(out, "\tProject ID: {:#010x}\n", regs[ecx]);
+				format_to(out, "\tStepping: {:#010x}\n", regs[edx]);
+				format_to(out, "\n");
 			}
 			break;
 		case subleaf_t{ 1 }:
@@ -911,20 +911,20 @@ void print_system_on_chip_vendor(fmt::Writer& w, const cpu_t& cpu) {
 					cpu.leaves.at(leaf_t::system_on_chip_vendor).at(subleaf_t{ 2 }),
 					cpu.leaves.at(leaf_t::system_on_chip_vendor).at(subleaf_t{ 3 })
 				};
-				w.write("\tSoC brand: {}\n", brand.full);
-				w.write("\n");
+				format_to(out, "\tSoC brand: {}\n", brand.full);
+				format_to(out, "\n");
 			}
 			break;
 		case subleaf_t{ 2 }:
 		case subleaf_t{ 3 }:
 			break;
 		default:
-			w.write("\tVendor data:\n");
-			w.write("\t\t{:#010x}\n", regs[eax]);
-			w.write("\t\t{:#010x}\n", regs[ebx]);
-			w.write("\t\t{:#010x}\n", regs[ecx]);
-			w.write("\t\t{:#010x}\n", regs[edx]);
-			w.write("\n");
+			format_to(out, "\tVendor data:\n");
+			format_to(out, "\t\t{:#010x}\n", regs[eax]);
+			format_to(out, "\t\t{:#010x}\n", regs[ebx]);
+			format_to(out, "\t\t{:#010x}\n", regs[ecx]);
+			format_to(out, "\t\t{:#010x}\n", regs[edx]);
+			format_to(out, "\n");
 			break;
 		}
 	}
@@ -944,7 +944,7 @@ void enumerate_pconfig(cpu_t& cpu) {
 	}
 }
 
-void print_pconfig(fmt::Writer& w, const cpu_t& cpu) {
+void print_pconfig(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::pconfig)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -961,35 +961,35 @@ void print_pconfig(fmt::Writer& w, const cpu_t& cpu) {
 					} split;
 				} a = { regs[eax] };
 
-				w.write("PCONFIG information\n");
+				format_to(out, "PCONFIG information\n");
 				switch(a.split.type) {
 				case 0:
-					w.write("\tInvalid\n");
+					format_to(out, "\tInvalid\n");
 					break;
 				case 1:
-					w.write("\tMKTIME\n");
+					format_to(out, "\tMKTIME\n");
 					break;
 				default:
-					w.write("Unknown target: {:#010x}\n", a.split.type);
+					format_to(out, "Unknown target: {:#010x}\n", a.split.type);
 					break;
 				}
-				w.write("\n");
+				format_to(out, "\n");
 			}
 			break;
 		}
 	}
 }
 
-void print_extended_limit(fmt::Writer& w, const cpu_t& cpu) {
+void print_extended_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_limit).at(subleaf_t::main);
-	w.write("Extended limit\n");
-	w.write("\tMaximum extended cpuid leaf: {:#010x}\n", regs[eax]);
-	w.write("\n");
+	format_to(out, "Extended limit\n");
+	format_to(out, "\tMaximum extended cpuid leaf: {:#010x}\n", regs[eax]);
+	format_to(out, "\n");
 }
 
-void print_extended_signature_and_features(fmt::Writer& w, const cpu_t& cpu) {
+void print_extended_signature_and_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_signature_and_features).at(subleaf_t::main);
-	w.write("Extended signature and features\n");
+	format_to(out, "Extended signature and features\n");
 	
 	if(cpu.vendor & amd) {
 		const union
@@ -1002,42 +1002,42 @@ void print_extended_signature_and_features(fmt::Writer& w, const cpu_t& cpu) {
 				std::uint32_t package_type : 4;
 			} split;
 		} b = { regs[ebx] };
-		w.write("\tBrand ID: {:#06x}\n", b.split.brand_id);
-		w.write("\tPackage: ");
+		format_to(out, "\tBrand ID: {:#06x}\n", b.split.brand_id);
+		format_to(out, "\tPackage: ");
 		switch(b.split.package_type) {
 		case 0x0:
-			w.write("FP4 (BGA)/FT3 (BGA)/FT3b (BGA)\n");
+			format_to(out, "FP4 (BGA)/FT3 (BGA)/FT3b (BGA)\n");
 			break;
 		case 0x1:
-			w.write("AM3r2/FS1b\n");
+			format_to(out, "AM3r2/FS1b\n");
 			break;
 		case 0x2:
-			w.write("AM4 (\u00b5PGA)\n");
+			format_to(out, "AM4 (\u00b5PGA)\n");
 			break;
 		case 0x3:
-			w.write("G34r1/FP4\n");
+			format_to(out, "G34r1/FP4\n");
 			break;
 		case 0x4:
-			w.write("FT4 (BGA)\n");
+			format_to(out, "FT4 (BGA)\n");
 			break;
 		case 0x5:
-			w.write("C32r1\n");
+			format_to(out, "C32r1\n");
 			break;
 		default:
-			w.write("Unknown\n");
+			format_to(out, "Unknown\n");
 			break;
 		}
-		w.write("\n");
+		format_to(out, "\n");
 	}
-	w.write("\tFeature identifiers\n");
-	print_features(w, cpu, leaf_t::extended_signature_and_features, subleaf_t::main, ecx);
-	w.write("\n");
-	print_features(w, cpu, leaf_t::extended_signature_and_features, subleaf_t::main, edx);
-	w.write("\n");
+	format_to(out, "\tFeature identifiers\n");
+	print_features(out, cpu, leaf_t::extended_signature_and_features, subleaf_t::main, ecx);
+	format_to(out, "\n");
+	print_features(out, cpu, leaf_t::extended_signature_and_features, subleaf_t::main, edx);
+	format_to(out, "\n");
 }
 
-void print_brand_string(fmt::Writer& w, const cpu_t& cpu) {
-	w.write("Processor brand string\n");
+void print_brand_string(fmt::memory_buffer& out, const cpu_t& cpu) {
+	format_to(out, "Processor brand string\n");
 	const union
 	{
 		std::array<register_set_t, 3> split;
@@ -1048,11 +1048,11 @@ void print_brand_string(fmt::Writer& w, const cpu_t& cpu) {
 		cpu.leaves.at(leaf_t::brand_string_2).at(subleaf_t::main)
 	};
 
-	w.write("\tBrand: {}\n", brand.full);
-	w.write("\n");
+	format_to(out, "\tBrand: {}\n", brand.full);
+	format_to(out, "\n");
 }
 
-void print_ras_advanced_power_management(fmt::Writer& w, const cpu_t& cpu) {
+void print_ras_advanced_power_management(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::ras_advanced_power_management).at(subleaf_t::main);
 
 	const union
@@ -1068,31 +1068,31 @@ void print_ras_advanced_power_management(fmt::Writer& w, const cpu_t& cpu) {
 
 	switch(cpu.vendor & any_silicon) {
 	case amd:
-		w.write("Processor feedback capabilities\n");
-		w.write("\tNumber of monitors: {:d}\n", a.split.number_of_monitors);
-		w.write("\tVersion: {:d}\n", a.split.version);
-		w.write("\tMaximum seconds between readings to avoid wraps: {:d}\n", a.split.max_wrap_time);
-		w.write("\n");
-		w.write("RAS capabilities\n");
-		print_features(w, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, ebx);
-		w.write("\n");
-		w.write("Advanced Power Management information\n");
-		w.write("\tCompute unit power sample time period: {:d}\n", regs[ecx]);
-		print_features(w, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, edx);
+		format_to(out, "Processor feedback capabilities\n");
+		format_to(out, "\tNumber of monitors: {:d}\n", a.split.number_of_monitors);
+		format_to(out, "\tVersion: {:d}\n", a.split.version);
+		format_to(out, "\tMaximum seconds between readings to avoid wraps: {:d}\n", a.split.max_wrap_time);
+		format_to(out, "\n");
+		format_to(out, "RAS capabilities\n");
+		print_features(out, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, ebx);
+		format_to(out, "\n");
+		format_to(out, "Advanced Power Management information\n");
+		format_to(out, "\tCompute unit power sample time period: {:d}\n", regs[ecx]);
+		print_features(out, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, edx);
 		break;
 	case intel:
-		w.write("Advanced Power Management information\n");
-		print_features(w, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, edx);
+		format_to(out, "Advanced Power Management information\n");
+		print_features(out, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, edx);
 		break;
 	default:
-		w.write("Advanced Power Management information\n");
-		print_generic(w, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main);
+		format_to(out, "Advanced Power Management information\n");
+		print_generic(out, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main);
 		break;
 	}
-	w.write("\n");
+	format_to(out, "\n");
 }
 
-void print_address_limits(fmt::Writer& w, const cpu_t& cpu) {
+void print_address_limits(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::address_limits).at(subleaf_t::main);
 
 	const union
@@ -1122,58 +1122,58 @@ void print_address_limits(fmt::Writer& w, const cpu_t& cpu) {
 
 	switch(cpu.vendor & any_silicon) {
 	case amd:
-		w.write("Address size limits\n");
-		w.write("\tPhysical address size/bits: {:d}\n", a.split.physical_address_size);
-		w.write("\tVirtual address size/bits: {:d}\n", a.split.virtual_address_size);
+		format_to(out, "Address size limits\n");
+		format_to(out, "\tPhysical address size/bits: {:d}\n", a.split.physical_address_size);
+		format_to(out, "\tVirtual address size/bits: {:d}\n", a.split.virtual_address_size);
 		if(0 == a.split.guest_physical_size) {
-			w.write("\tGuest physical size matches machine physical size\n");
+			format_to(out, "\tGuest physical size matches machine physical size\n");
 		}
-		w.write("\n");
+		format_to(out, "\n");
 
-		w.write("\tExtended features\n");
-		print_features(w, cpu, leaf_t::address_limits, subleaf_t::main, ebx);
-		w.write("\n");
+		format_to(out, "\tExtended features\n");
+		print_features(out, cpu, leaf_t::address_limits, subleaf_t::main, ebx);
+		format_to(out, "\n");
 
-		w.write("\tSize identifiers\n");
-		w.write("\t\tThreads in package: {:d}\n", c.split.package_threads + 1ui32);
-		w.write("\t\t{:d} bits of APIC ID denote threads within a package\n", c.split.apic_id_size);
+		format_to(out, "\tSize identifiers\n");
+		format_to(out, "\t\tThreads in package: {:d}\n", c.split.package_threads + 1ui32);
+		format_to(out, "\t\t{:d} bits of APIC ID denote threads within a package\n", c.split.apic_id_size);
 
 		if(0 != (cpu.leaves.at(leaf_t::extended_signature_and_features).at(subleaf_t::main).at(ecx) & 0x0400'0000ui32)) {
-			w.write("\t\tPerformance time-stamp counter size/bits: ");
+			format_to(out, "\t\tPerformance time-stamp counter size/bits: ");
 			switch(c.split.perf_tsc_size) {
 			case 0b00ui32:
-				w.write("40");
+				format_to(out, "40");
 				break;
 			case 0b01ui32:
-				w.write("48");
+				format_to(out, "48");
 				break;
 			case 0b10ui32:
-				w.write("56");
+				format_to(out, "56");
 				break;
 			case 0b11ui32:
-				w.write("64");
+				format_to(out, "64");
 				break;
 			}
-			w.write("\n");
+			format_to(out, "\n");
 		}
 		break;
 	case intel:
-		w.write("Address size limits\n");
-		w.write("\tPhysical address size/bits: {:d}\n", a.split.physical_address_size);
-		w.write("\tVirtual address size/bits: {:d}\n", a.split.virtual_address_size);
-		w.write("\n");
-		w.write("\tExtended features\n");
-		print_features(w, cpu, leaf_t::address_limits, subleaf_t::main, ebx);
+		format_to(out, "Address size limits\n");
+		format_to(out, "\tPhysical address size/bits: {:d}\n", a.split.physical_address_size);
+		format_to(out, "\tVirtual address size/bits: {:d}\n", a.split.virtual_address_size);
+		format_to(out, "\n");
+		format_to(out, "\tExtended features\n");
+		print_features(out, cpu, leaf_t::address_limits, subleaf_t::main, ebx);
 		break;
 	default:
-		w.write("Address size limits\n");
-		print_generic(w, cpu, leaf_t::address_limits, subleaf_t::main);
+		format_to(out, "Address size limits\n");
+		print_generic(out, cpu, leaf_t::address_limits, subleaf_t::main);
 		break;
 	}
-	w.write("\n");
+	format_to(out, "\n");
 }
 
-void print_secure_virtual_machine(fmt::Writer& w, const cpu_t& cpu) {
+void print_secure_virtual_machine(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::secure_virtual_machine).at(subleaf_t::main);
 
 	const union
@@ -1186,27 +1186,27 @@ void print_secure_virtual_machine(fmt::Writer& w, const cpu_t& cpu) {
 		} split;
 	} a = { regs[eax] };
 
-	w.write("Secure Virtual Machine\n");
-	w.write("\tSVM revision: {:d}\n", a.split.svm_revision);
-	w.write("\tNumber of address space identifiers: {:d}\n", regs[ebx]);
-	w.write("\n");
-	print_features(w, cpu, leaf_t::secure_virtual_machine, subleaf_t::main, edx);
-	w.write("\n");
+	format_to(out, "Secure Virtual Machine\n");
+	format_to(out, "\tSVM revision: {:d}\n", a.split.svm_revision);
+	format_to(out, "\tNumber of address space identifiers: {:d}\n", regs[ebx]);
+	format_to(out, "\n");
+	print_features(out, cpu, leaf_t::secure_virtual_machine, subleaf_t::main, edx);
+	format_to(out, "\n");
 }
 
-void print_performance_optimization(fmt::Writer& w, const cpu_t& cpu) {
-	w.write("Performance Optimization\n");
-	print_features(w, cpu, leaf_t::performance_optimization, subleaf_t::main, eax);
-	w.write("\n");
+void print_performance_optimization(fmt::memory_buffer& out, const cpu_t& cpu) {
+	format_to(out, "Performance Optimization\n");
+	print_features(out, cpu, leaf_t::performance_optimization, subleaf_t::main, eax);
+	format_to(out, "\n");
 }
 
-void print_instruction_based_sampling(fmt::Writer& w, const cpu_t& cpu) {
-	w.write("Instruction Based Sampling\n");
-	print_features(w, cpu, leaf_t::instruction_based_sampling, subleaf_t::main, eax);
-	w.write("\n");
+void print_instruction_based_sampling(fmt::memory_buffer& out, const cpu_t& cpu) {
+	format_to(out, "Instruction Based Sampling\n");
+	print_features(out, cpu, leaf_t::instruction_based_sampling, subleaf_t::main, eax);
+	format_to(out, "\n");
 }
 
-void print_lightweight_profiling(fmt::Writer& w, const cpu_t& cpu) {
+void print_lightweight_profiling(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::lightweight_profiling).at(subleaf_t::main);
 
 	const union
@@ -1239,22 +1239,22 @@ void print_lightweight_profiling(fmt::Writer& w, const cpu_t& cpu) {
 		} split;
 	} c = { regs[ecx] };
 
-	w.write("Lightweight profiling\n");
-	w.write("\tLWP version: {:d}\n", c.split.version);
-	print_features(w, cpu, leaf_t::lightweight_profiling, subleaf_t::main, eax);
-	print_features(w, cpu, leaf_t::lightweight_profiling, subleaf_t::main, ecx);
-	w.write("\n");
-	w.write("\tControl block size/bytes: {:d}\n", (b.split.lwpcp_size * 4ui32));
-	w.write("\tEvent record size/bytes: {:d}\n", b.split.event_size);
-	w.write("\tMaximum EventID: {:d}\n", b.split.max_event_id);
-	w.write("\tOffset to first interval/bytes: {:d}\n", b.split.event_offset);
-	w.write("\tLatency counter size/bits: {:d}\n", c.split.latency_max);
-	w.write("\tLatency counter rounding: {:d}\n", c.split.latency_rounding);
-	w.write("\tMinimum ring buffer size/32 events: {:d}\n", c.split.minimum_buffer_size);
-	w.write("\n");
+	format_to(out, "Lightweight profiling\n");
+	format_to(out, "\tLWP version: {:d}\n", c.split.version);
+	print_features(out, cpu, leaf_t::lightweight_profiling, subleaf_t::main, eax);
+	print_features(out, cpu, leaf_t::lightweight_profiling, subleaf_t::main, ecx);
+	format_to(out, "\n");
+	format_to(out, "\tControl block size/bytes: {:d}\n", (b.split.lwpcp_size * 4ui32));
+	format_to(out, "\tEvent record size/bytes: {:d}\n", b.split.event_size);
+	format_to(out, "\tMaximum EventID: {:d}\n", b.split.max_event_id);
+	format_to(out, "\tOffset to first interval/bytes: {:d}\n", b.split.event_offset);
+	format_to(out, "\tLatency counter size/bits: {:d}\n", c.split.latency_max);
+	format_to(out, "\tLatency counter rounding: {:d}\n", c.split.latency_rounding);
+	format_to(out, "\tMinimum ring buffer size/32 events: {:d}\n", c.split.minimum_buffer_size);
+	format_to(out, "\n");
 }
 
-void print_encrypted_memory(fmt::Writer& w, const cpu_t& cpu) {
+void print_encrypted_memory(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::encrypted_memory).at(subleaf_t::main);
 
 	const union
@@ -1267,12 +1267,12 @@ void print_encrypted_memory(fmt::Writer& w, const cpu_t& cpu) {
 		} split;
 	} b = { regs[ebx] };
 
-	w.write("Encrypted memory\n");
-	print_features(w, cpu, leaf_t::encrypted_memory, subleaf_t::main, eax);
-	w.write("\n");
-	w.write("\tC-bit position in PTE: {:d}\n", b.split.cbit_position);
-	w.write("\tPhysical address bit reduction: {:d}\n", b.split.physical_address_reduction);
-	w.write("\tNumber of simultaneous encrypted guests: {:d}\n", regs[ecx]);
-	w.write("\tMinimum ASID for an SEV-enabled, SEV-ES-disabled guest: {:#010x}\n", regs[edx]);
-	w.write("\n");
+	format_to(out, "Encrypted memory\n");
+	print_features(out, cpu, leaf_t::encrypted_memory, subleaf_t::main, eax);
+	format_to(out, "\n");
+	format_to(out, "\tC-bit position in PTE: {:d}\n", b.split.cbit_position);
+	format_to(out, "\tPhysical address bit reduction: {:d}\n", b.split.physical_address_reduction);
+	format_to(out, "\tNumber of simultaneous encrypted guests: {:d}\n", regs[ecx]);
+	format_to(out, "\tMinimum ASID for an SEV-enabled, SEV-ES-disabled guest: {:#010x}\n", regs[edx]);
+	format_to(out, "\n");
 }

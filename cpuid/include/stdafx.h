@@ -36,6 +36,7 @@
 #pragma warning(disable: 4710) // warning C4710: '%s': function not inlined
 #pragma warning(disable: 4711) // warning C4711: function '%s' selected for automatic inline expansion
 #pragma warning(disable: 4820) // warning C4820: '%s': '%d' bytes padding added after data member '%s'
+#pragma warning(disable: 5045) // warning C5045: Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
 
 #include <Windows.h>
 

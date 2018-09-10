@@ -153,6 +153,7 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'0004ui32, "UMIP"              , "User Mode Instruction Prevention"              },
 				{ intel                  , 0x0000'0008ui32, "PKU"               , "Protection Keys for User-mode pages"           },
 				{ intel                  , 0x0000'0010ui32, "OSPKE"             , "OS has set CR4.PKE"                            },
+				{ intel                  , 0x0000'0020ui32, "WAITPKG"           , "Wait and pause enhancements"                   },
 				{ intel                  , 0x0000'0040ui32, "AVX512_VBMI2"      , "AVX512 Vector Bit Manipulation Instructions 2" },
 				{ intel                  , 0x0000'0100ui32, "GFNI"              , "Galois Field NI"                               },
 				{ intel                  , 0x0000'0200ui32, "VAES"              , "VEX-AES-NI"                                    },
@@ -163,15 +164,21 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0001'0000ui32, "LA57"              , "5-level page tables/57-bit virtual addressing" },
 				{ intel                  , 0x003e'0000ui32, "MAWAU"             , "MPX Address Width Adjust for User addresses"   },
 				{ intel                  , 0x0040'0000ui32, "RDPID"             , "Read Processor ID"                             },
+				{ intel                  , 0x0200'0000ui32, "CLDEMOTE"          , "Cache line demote"                             },
+				{ intel                  , 0x0800'0000ui32, "MOVDIRI"           , "32-bit direct stores"                          },
+				{ intel                  , 0x1000'0000ui32, "MOVDIRI64B"        , "64-bit direct stores"                          },
 				{ intel                  , 0x4000'0000ui32, "SGX_LC"            , "SGX Launch Configuration"                      },
 			}},
 			{ edx, {
 				{ intel                  , 0x0000'0004ui32, "AVX512_4NNIW"      , "AVX512 4-register Neural Network Instructions"                                },
 				{ intel                  , 0x0000'0008ui32, "AVX512_4FMAPS"     , "AVX512 4-register Neural Network Instructions"                                },
+				{ intel                  , 0x0000'0010ui32, "REPMOVS"           , "Fast short REP MOV"                                                           },
 				{ intel                  , 0x0004'0000ui32, "PCONFIG"           , "Platform configuration for MKTME"                                             },
-				{ intel | amd            , 0x0400'0000ui32, "IBRS"              , "Indirect Branch Restricted Speculation and Indirect Branch Predictor Barrier" },
-				{ intel | amd            , 0x0800'0000ui32, "STIBP"             , "Single Thread Indirect Branch Predictors"                                     },
+				{ intel                  , 0x0400'0000ui32, "IBRS"              , "Indirect Branch Restricted Speculation and Indirect Branch Predictor Barrier" },
+				{ intel                  , 0x0800'0000ui32, "STIBP"             , "Single Thread Indirect Branch Predictors"                                     },
+				{ intel | amd            , 0x1000'0000ui32, "L1TF"              , "L1 Data Cache flush"                                                          },
 				{ intel                  , 0x2000'0000ui32, "ARCH_CAPS"         , "ARCH_CAPABILITIES MSR"                                                        },
+				{ intel                  , 0x8000'0000ui32, "SSBD"              , "Speculative Store Bypass Disable"                                             },
 			}}
 		}}
 	}},
@@ -245,6 +252,7 @@ const feature_map_t all_features = {
 				{ hyper_v                , 0x0000'0400ui32, "accessGuestIdleReg"              , "Guest idle state MSR"        },
 				{ hyper_v                , 0x0000'0800ui32, "accessFrequencyRegs"             , "TSC and APIC frequency MSRs" },
 				{ hyper_v                , 0x0000'1000ui32, "accessDebugRegs"                 , "Guest debugging MSRs"        },
+				{ hyper_v                , 0x0000'2000ui32, "accessReenlightenmentControls"   , "Reenlightenment controls"    },
 			}},
 			{ ebx, {
 				{ hyper_v                , 0x0000'0001ui32, "createPartitions"          , "HvCreatePartition hypercall"                 },
@@ -258,6 +266,8 @@ const feature_map_t all_features = {
 				{ hyper_v                , 0x0000'0100ui32, "accessStats"               , "HvMapStatsPage/etc. hypercalls"              },
 				{ hyper_v                , 0x0000'0800ui32, "debugging"                 , "HvPostDebugData/etc. hypercalls"             },
 				{ hyper_v                , 0x0000'1000ui32, "cpuManagement"             , "HvGetLogicalProcessoRunTime/etc. hypercalls" },
+				{ hyper_v                , 0x0000'2000ui32, "configureProfiler"         , "Configure Profiler hypercall"                },
+				{ hyper_v                , 0x0000'4000ui32, "enableExpandedStackWalking", "Enable expanded stack walking"               },
 				{ hyper_v                , 0x0001'0000ui32, "accessVSM"                 , "The partition can use Virtual Secure Mode"   },
 				{ hyper_v                , 0x0002'0000ui32, "accessVpRegisters"         , "Access VP Registers"                         },
 				{ hyper_v                , 0x0010'0000ui32, "enabledExtendedHypercalls" , "Extended hypercall interface"                },
@@ -280,7 +290,7 @@ const feature_map_t all_features = {
 				{ hyper_v                , 0x0000'2000ui32, "DisableHypervisor"   , "Disable hypervisor supported"            },
 				{ hyper_v                , 0x0000'4000ui32, "ExtendedGvaRanges"   , "Extended GVA ranges for flush"           },
 				{ hyper_v                , 0x0000'8000ui32, "XMMHypercallOutput"  , "Hypercall results in XMM registers"      },
-				{ hyper_v                , 0x0002'0000ui32, "SintPollingMode"     , "Sint polling mode available"             },
+				{ hyper_v                , 0x0002'0000ui32, "SintPollingMode"     , "Soft interrupt polling mode available"   },
 				{ hyper_v                , 0x0004'0000ui32, "HypercallMsrLock"    , "Hypercall MSR lock available"            },
 				{ hyper_v                , 0x0008'0000ui32, "SyntheticTimers"     , "Use direct synthetic timers"             },
 			}}
@@ -304,6 +314,9 @@ const feature_map_t all_features = {
 				{ hyper_v                , 0x0000'1000ui32, "Nested"              , "Running in a nested partition"                       },
 				{ hyper_v                , 0x0000'2000ui32, "INT_MBEC"            , "Use INT for MBEC system calls"                       },
 				{ hyper_v                , 0x0000'4000ui32, "VMCS"                , "Use VMCS for nested hypervisor"                      },
+				{ hyper_v                , 0x0000'8000ui32, "syncedTimeline"      , "Use QueryPerformanceCounter bias from root partition"},
+				{ hyper_v                , 0x0002'0000ui32, "directLocalFlush"    , "Use CR4.PGE to flush entire TLB"                     },
+				{ hyper_v                , 0x0004'0000ui32, "noNonArchCoreSharing", "Virtual machines never share physical cores"         },
 			}}
 		}}
 	}},
@@ -351,12 +364,12 @@ const feature_map_t all_features = {
 				{ hyper_v                , 0x0000'0010ui32, "AccessIntrCtrlRegs"    , "Interrupt Control MSRs"   },
 				{ hyper_v                , 0x0000'0020ui32, "AccessHypercallMsrs"   , "Hypercall MSRs"           },
 				{ hyper_v                , 0x0000'0040ui32, "AccessVpIndex"         , "VP Index MSRs"            },
-				{ hyper_v                , 0x0000'0100ui32, "AccessReenlightenment" , "Reenlightenment controls" },
+				{ hyper_v                , 0x0000'1000ui32, "AccessReenlightenment" , "Reenlightenment controls" },
 			}},
 			{ edx, {
 				{ hyper_v                , 0x0000'0010ui32, "XMMHypercallInput"    , "Hypercall parameters in XMM registers" },
 				{ hyper_v                , 0x0000'8000ui32, "XMMHypercallOutput"   , "Hypercall results in XMM registers"    },
-				{ hyper_v                , 0x0002'0000ui32, "SintPollingAvailable" , "Sint polling mode available"           },
+				{ hyper_v                , 0x0002'0000ui32, "SintPollingAvailable" , "Soft interrupt polling mode available" },
 			}},
 		}}
 	}},
@@ -513,10 +526,15 @@ const feature_map_t all_features = {
 	{ leaf_t::address_limits, {
 		{ subleaf_t::main, {
 			{ ebx, {
-				{         amd            , 0x0000'0001ui32, "CLZERO"   , "CLZERO instruction"                 },
-				{         amd            , 0x0000'0002ui32, "IRPERF"   , "Instructions retired count support" },
-				{         amd            , 0x0000'0004ui32, "ASRFPEP"  , "XSAVE (etc.) saves error pointer"   },
-				{ intel                  , 0x0000'0200ui32, "WBNOINVD" , "WBNOINVD is available"              },
+				{         amd            , 0x0000'0001ui32, "CLZERO"       , "CLZERO instruction"                      },
+				{         amd            , 0x0000'0002ui32, "IRPERF"       , "Instructions retired count support"      },
+				{         amd            , 0x0000'0004ui32, "ASRFPEP"      , "XSAVE (etc.) saves error pointer"        },
+				{ intel                  , 0x0000'0200ui32, "WBNOINVD"     , "WBNOINVD is available"                   },
+				{         amd            , 0x0000'1000ui32, "IBPB"         , "Indirect Branch Prediction Barrier"      },
+				{         amd            , 0x0000'4000ui32, "IBRS"         , "Indirect Branch Restricted Speculation"  },
+				{         amd            , 0x0000'8000ui32, "STIBP"        , "Single Thread Indirect Branch Predictor" },
+				{         amd            , 0x0100'0000ui32, "SSBD"         , "Speculative Store Bypass Disable"        },
+				{         amd            , 0x0200'0000ui32, "VIRT_SPEC_CTL", "VIRT_SPEC_CTL"                           },
 			}}
 		}}
 	}},
@@ -601,7 +619,7 @@ const feature_map_t all_features = {
 	}}
 };
 
-void print_features(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg) {
+void print_features(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg) {
 	const auto range = all_features.equal_range(leaf);
 	for(auto it = range.first; it != range.second; ++it) {
 		if(it->second.find(sub) == it->second.end()) {
@@ -619,9 +637,9 @@ void print_features(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t sub
 			if(__popcnt(f.mask) == 1ui32) {
 				if(cpu.vendor & f.vendor) {
 					if(0 != (value & f.mask)) {
-						w.write("{: >32s} \x1b[32;1m[+]\x1b[0m {:s}\n", f.mnemonic, f.description);
+						format_to(out, "{: >32s} \x1b[32;1m[+]\x1b[0m {:s}\n", f.mnemonic, f.description);
 					} else {
-						w.write("{: >32s} \x1b[31;1m[-]\x1b[0m {:s}\n", f.mnemonic, f.description);
+						format_to(out, "{: >32s} \x1b[31;1m[-]\x1b[0m {:s}\n", f.mnemonic, f.description);
 					}
 				}
 			}

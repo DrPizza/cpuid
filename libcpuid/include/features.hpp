@@ -17,6 +17,6 @@ using feature_map_t = std::multimap<leaf_t, std::map<subleaf_t, std::map<registe
 
 extern const feature_map_t all_features;
 
-void print_features(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg);
+void print_features(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg);
 
 #endif

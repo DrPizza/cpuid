@@ -65,15 +65,23 @@ inline std::uint32_t range_mask(const std::uint32_t start, const std::uint32_t e
 
 namespace fmt {
 	template<size_t N>
-	void format_arg(fmt::BasicFormatter<char>& f, const char*&, const std::array<char, N>& arr) {
-		for(const char c : arr) {
-			if(c != '\0') {
-				f.writer().write("{:c}", c);
-			} else {
-				return;
-			}
+	struct formatter<std::array<char, N> >
+	{
+		template<typename ParseContext>
+		constexpr auto parse(ParseContext& ctx) {
+			return ctx.begin();
 		}
-	}
+
+		template<typename FormatContext>
+		auto format(const std::array<char, N>& arr, FormatContext& ctx) {
+			for(const char c : arr) {
+				if(c != '\0') {
+					format_to(ctx.begin(), "{:c}", c);
+				}
+			}
+			return ctx.begin();
+		}
+	};
 }
 
 #endif

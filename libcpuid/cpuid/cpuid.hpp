@@ -341,7 +341,7 @@ inline void cpuid(register_set_t& regs, leaf_t leaf, subleaf_t subleaf) noexcept
 	regs[edx] = gsl::narrow_cast<std::uint32_t>(raw_regs[edx]);
 }
 
-void print_generic(fmt::Writer& w, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf);
+void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf);
 
 enum struct file_format
 {
@@ -354,9 +354,9 @@ enum struct file_format
 std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format format);
 std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_vendor_check, bool skip_feature_check);
 
-void print_dump(fmt::Writer& w, std::map<std::uint32_t, cpu_t> logical_cpus, file_format format);
-void print_single_flag(fmt::Writer& w, const cpu_t& cpu, const std::string& flag_description);
-void print_leaves(fmt::Writer& w, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check);
+void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_cpus, file_format format);
+void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const std::string& flag_description);
+void print_leaves(fmt::memory_buffer& out, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check);
 
 struct flag_spec_t
 {
@@ -443,6 +443,6 @@ struct system_t
 
 system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus);
 
-void print_topology(fmt::Writer& w, const system_t& machine);
+void print_topology(fmt::memory_buffer& out, const system_t& machine);
 
 #endif

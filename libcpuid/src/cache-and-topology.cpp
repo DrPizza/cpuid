@@ -96,47 +96,47 @@ constexpr cache_attributes_t operator|(const cache_attributes_t& lhs, const cach
 }
 
 std::string to_string(cache_attributes_t attrs) {
-	fmt::MemoryWriter m;
+	fmt::memory_buffer out;
 	const std::uint8_t page = gsl::narrow_cast<std::uint8_t>(attrs & all_page_sizes);
 	std::uint8_t mask = 1ui8;
 	bool needs_separator = false;
 	do {
 		switch(page & mask) {
 		case 0:
-			m <<  "";
+			format_to(out, "");
 			break;
 		case pages_4k:
 			if(needs_separator) {
-				m << " | ";
+				format_to(out, " | ");
 			}
-			m <<  "4 KByte pages";
+			format_to(out, "4 KByte pages");
 			needs_separator = true;
 			break;
 		case pages_2m:
 			if(needs_separator) {
-				m << " | ";
+				format_to(out, " | ");
 			}
-			m << "2 MByte pages";
+			format_to(out, "2 MByte pages");
 			needs_separator = true;
 			break;
 		case pages_4m:
 			if(needs_separator) {
-				m << " | ";
+				format_to(out, " | ");
 			}
-			m << "4 MByte pages";
+			format_to(out, "4 MByte pages");
 			needs_separator = true;
 			break;
 		case pages_1g:
 			if(needs_separator) {
-				m << " | ";
+				format_to(out, " | ");
 			}
-			m << "1 GByte pages";
+			format_to(out, "1 GByte pages");
 			needs_separator = true;
 			break;
 		}
 		mask <<= 1ui8;
 	} while(mask & all_page_sizes);
-	return m.str();
+	return out.data();
 }
 
 enum cache_associativity_t : std::uint8_t 
@@ -305,32 +305,31 @@ const dual_descriptors_map_t dual_cache_descriptors = {
 
 std::string to_string(cache_descriptor_t desc) {
 	using namespace fmt::literals;
-	fmt::MemoryWriter w;
-	w << to_string(desc.level);
-	if(w.size() > 0) {
-		w << " ";
+	fmt::memory_buffer out;
+	format_to(out, to_string(desc.level));
+	if(out.size() > 0) {
+		format_to(out, " ");
 	}
-	w << to_string(desc.type) << ": ";
+	format_to(out, to_string(desc.type));
+	format_to(out, ": ");
 	if(desc.type & all_cache) {
-		w << print_size(desc.size);
+		format_to(out, print_size(desc.size));
 	} else if(desc.type & all_tlb) {
-		w << to_string(desc.attributes);
+		format_to(out, to_string(desc.attributes));
 	} else if(desc.type & trace) {
-		w << (desc.size / 1'024) << " K-\u00b5op";
+		format_to(out, "{} K-\u00b5op", (desc.size / 1'024));
 	}
-	w << ", ";
-	w << to_string(desc.associativity);
+	format_to(out, ", ");
+	format_to(out, to_string(desc.associativity));
 	if(desc.type & all_cache) {
-		w << ", ";
-		w << desc.line_size << " byte line size";
+		format_to(out, ", {} byte line size", desc.line_size);
 		if(desc.attributes & sectored_two_lines) {
-			w << ", 2 lines per sector";
+			format_to(out, ", 2 lines per sector");
 		}
 	} else if(desc.type & all_tlb) {
-		w << ", ";
-		w << desc.entries << " entries";
+		format_to(out, ", {} entries", desc.entries);
 	}
-	return w.str();
+	return out.data();
 }
 
 struct decomposed_cache_t
@@ -361,9 +360,9 @@ decomposed_cache_t decompose_cache_descriptors(const cpu_t& cpu, const register_
 				{
 					const auto it = dual_cache_descriptors.find(value);
 					if(cpu.model.family == 0x0f && cpu.model.model == 0x06) {
-						decomposed.cache_descriptors.push_back(&(it->second.first));
+						decomposed.cache_descriptors.push_back(gsl::not_null(&(it->second.first)));
 					} else {
-						decomposed.cache_descriptors.push_back(&(it->second.second));
+						decomposed.cache_descriptors.push_back(gsl::not_null(&(it->second.second)));
 					}
 				}
 				break;
@@ -380,18 +379,18 @@ decomposed_cache_t decompose_cache_descriptors(const cpu_t& cpu, const register_
 				{
 					const auto dual = dual_cache_descriptors.find(value);
 					if(dual != dual_cache_descriptors.end()) {
-						decomposed.tlb_descriptors.push_back(&(dual->second.first));
-						decomposed.tlb_descriptors.push_back(&(dual->second.second));
+						decomposed.tlb_descriptors.push_back(gsl::not_null(&(dual->second.first)));
+						decomposed.tlb_descriptors.push_back(gsl::not_null(&(dual->second.second)));
 						break;
 					}
 					const auto it = standard_cache_descriptors.find(value);
 					if(it != standard_cache_descriptors.end()) {
 						if(it->second.type & all_tlb) {
-							decomposed.tlb_descriptors.push_back(&(it->second));
+							decomposed.tlb_descriptors.push_back(gsl::not_null(&(it->second)));
 						} else if(it->second.type & all_cache) {
-							decomposed.cache_descriptors.push_back(&(it->second));
+							decomposed.cache_descriptors.push_back(gsl::not_null(&(it->second)));
 						} else {
-							decomposed.other_descriptors.push_back(&(it->second));
+							decomposed.other_descriptors.push_back(gsl::not_null(&(it->second)));
 						}
 						break;
 					}
@@ -416,7 +415,7 @@ decomposed_cache_t decompose_cache_descriptors(const cpu_t& cpu, const register_
 	return decomposed;
 }
 
-void print_cache_tlb_info(fmt::Writer& w, const cpu_t& cpu) {
+void print_cache_tlb_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::cache_and_tlb).at(subleaf_t::main);
 
 	if((regs[eax] & 0x0000'00ffui32) != 0x0000'0001ui32) {
@@ -425,20 +424,20 @@ void print_cache_tlb_info(fmt::Writer& w, const cpu_t& cpu) {
 
 	decomposed_cache_t decomposed = decompose_cache_descriptors(cpu, regs);
 
-	w.write("Cache and TLB\n");
+	format_to(out, "Cache and TLB\n");
 	for(const auto d : decomposed.tlb_descriptors) {
-		w.write("\t{:s}\n", to_string(*d));
+		format_to(out, "\t{:s}\n", to_string(*d));
 	}
 	for(const auto d : decomposed.cache_descriptors) {
-		w.write("\t{:s}\n", to_string(*d));
+		format_to(out, "\t{:s}\n", to_string(*d));
 	}
 	for(const auto d : decomposed.other_descriptors) {
-		w.write("\t{:s}\n", to_string(*d));
+		format_to(out, "\t{:s}\n", to_string(*d));
 	}
 	for(const std::string& s : decomposed.non_conformant_descriptors) {
-		w.write("\t{:s}\n", s);
+		format_to(out, "\t{:s}\n", s);
 	}
-	w.write("\n");
+	format_to(out, "\n");
 }
 
 void enumerate_deterministic_cache(cpu_t& cpu) {
@@ -454,8 +453,8 @@ void enumerate_deterministic_cache(cpu_t& cpu) {
 	}
 }
 
-void print_deterministic_cache(fmt::Writer& w, const cpu_t& cpu) {
-	w.write("Deterministic cache\n");
+void print_deterministic_cache(fmt::memory_buffer& out, const cpu_t& cpu) {
+	format_to(out, "Deterministic cache\n");
 
 	for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_cache)) {
 		const register_set_t& regs = sub.second;
@@ -504,41 +503,41 @@ void print_deterministic_cache(fmt::Writer& w, const cpu_t& cpu) {
 		                             * (b.split.coherency_line_size      + 1ui64)
 		                             * (sets                             + 1ui64);
 
-		w.write("\t{:s} L{:d} ", print_size(cache_size), a.split.level);
+		format_to(out, "\t{:s} L{:d} ", print_size(cache_size), a.split.level);
 		switch(a.split.type) {
 		case 1:
-			w.write("data");
+			format_to(out, "data");
 			break;
 		case 2:
-			w.write("instruction");
+			format_to(out, "instruction");
 			break;
 		case 3:
-			w.write("unified");
+			format_to(out, "unified");
 			break;
 		}
-		w.write("\n");
-		w.write("\t\t{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:s}.\n", b.split.coherency_line_size      + 1ui32,
+		format_to(out, "\n");
+		format_to(out, "\t\t{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:s}.\n", b.split.coherency_line_size      + 1ui32,
 		                                                                                                      b.split.associativity_ways       + 1ui32,
 		                                                                                                      b.split.physical_line_partitions + 1ui32,
 		                                                                                                      sets                             + 1ui32,
 		                                                                                                      print_size(cache_size));
 		if(a.split.self_initializing) {
-			w.write("\t\tSelf-initializing.\n");
+			format_to(out, "\t\tSelf-initializing.\n");
 		}
 		if(a.split.fully_associative) {
-			w.write("\t\tFully associative.\n");
+			format_to(out, "\t\tFully associative.\n");
 		} else {
-			w.write("\t\t{:d}-way set associative.\n", b.split.associativity_ways + 1ui32);
+			format_to(out, "\t\t{:d}-way set associative.\n", b.split.associativity_ways + 1ui32);
 		}
 		if(d.split.writeback_invalidates) {
-			w.write("\t\tWBINVD/INVD does not invalidate lower level caches for other threads.\n");
+			format_to(out, "\t\tWBINVD/INVD does not invalidate lower level caches for other threads.\n");
 		} else {
-			w.write("\t\tWBINVD/INVD invalidates lower level caches for all threads.\n");
+			format_to(out, "\t\tWBINVD/INVD invalidates lower level caches for all threads.\n");
 		}
-		w.write("\t\tCache is {:s}inclusive of lower cache levels.\n", d.split.cache_inclusive != 0 ? "" : "not ");
-		w.write("\t\tCache is {:s}complex mapped.\n", d.split.complex_indexing != 0 ? "" : "not ");
-		w.write("\t\tCache is shared by up to {:d} threads, with up to {:d} cores in the package.\n", a.split.maximum_addressable_thread_ids + 1, a.split.maximum_addressable_core_ids + 1);
-		w.write("\n");
+		format_to(out, "\t\tCache is {:s}inclusive of lower cache levels.\n", d.split.cache_inclusive != 0 ? "" : "not ");
+		format_to(out, "\t\tCache is {:s}complex mapped.\n", d.split.complex_indexing != 0 ? "" : "not ");
+		format_to(out, "\t\tCache is shared by up to {:d} threads, with up to {:d} cores in the package.\n", a.split.maximum_addressable_thread_ids + 1, a.split.maximum_addressable_core_ids + 1);
+		format_to(out, "\n");
 	}
 }
 
@@ -555,13 +554,13 @@ void enumerate_extended_topology(cpu_t& cpu) {
 	}
 }
 
-void print_extended_topology(fmt::Writer& w, const cpu_t& cpu) {
+void print_extended_topology(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::extended_topology)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
 		case subleaf_t::main:
-			w.write("Extended topology\n");
-			w.write("\tx2 APIC id: {:#010x}\n", regs[edx]);
+			format_to(out, "Extended topology\n");
+			format_to(out, "\tx2 APIC id: {:#010x}\n", regs[edx]);
 			[[fallthrough]];
 		default:
 			const union
@@ -595,24 +594,24 @@ void print_extended_topology(fmt::Writer& w, const cpu_t& cpu) {
 				} split;
 			} c = { regs[ecx] };
 
-			w.write("\t\tbits to shift: {:d}\n", a.split.shift_distance);
-			w.write("\t\tlogical processors at level type: {:d}\n", b.split.logical_procesors_at_level_type);
-			w.write("\t\tlevel number: {:d}\n", c.split.level_number);
+			format_to(out, "\t\tbits to shift: {:d}\n", a.split.shift_distance);
+			format_to(out, "\t\tlogical processors at level type: {:d}\n", b.split.logical_procesors_at_level_type);
+			format_to(out, "\t\tlevel number: {:d}\n", c.split.level_number);
 			switch(c.split.level_type) {
 			case 0:
-				w.write("\t\tLevel type: invalid\n");
+				format_to(out, "\t\tLevel type: invalid\n");
 				break;
 			case 1:
-				w.write("\t\tlevel type: SMT\n");
+				format_to(out, "\t\tlevel type: SMT\n");
 				break;
 			case 2:
-				w.write("\t\tlevel type: Core\n");
+				format_to(out, "\t\tlevel type: Core\n");
 				break;
 			default:
-				w.write("\t\tlevel type: reserved {:#04x}\n", c.split.level_type);
+				format_to(out, "\t\tlevel type: reserved {:#04x}\n", c.split.level_type);
 				break;
 			}
-			w.write("\n");
+			format_to(out, "\n");
 		}
 	}
 }
@@ -629,12 +628,12 @@ void enumerate_deterministic_tlb(cpu_t& cpu) {
 	}
 }
 
-void print_deterministic_tlb(fmt::Writer& w, const cpu_t& cpu) {
+void print_deterministic_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_tlb)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
 		case subleaf_t::main:
-			w.write("Deterministic Address Translation\n");
+			format_to(out, "Deterministic Address Translation\n");
 			[[fallthrough]];
 		default:
 			{
@@ -692,45 +691,45 @@ void print_deterministic_tlb(fmt::Writer& w, const cpu_t& cpu) {
 				};
 
 				auto print_pages = [](std::uint32_t page_4k, std::uint32_t page_2m, std::uint32_t page_4m, std::uint32_t page_1g) {
-					fmt::MemoryWriter w;
+					fmt::memory_buffer out;
 					if(page_4k) {
-						w << "4K";
+						format_to(out, "4K");
 					}
 					if(page_2m) {
-						if(w.size()) {
-							w << " | ";
+						if(out.size()) {
+							format_to(out, " | ");
 						}
-						w << "2M";
+						format_to(out, "2M");
 					}
 					if(page_4m) {
-						if(w.size()) {
-							w << " | ";
+						if(out.size()) {
+							format_to(out, " | ");
 						}
-						w << "4M";
+						format_to(out, "4M");
 					}
 					if(page_1g) {
-						if(w.size()) {
-							w << " | ";
+						if(out.size()) {
+							format_to(out, " | ");
 						}
-						w << "1G";
+						format_to(out, "1G");
 					}
-					return w.str();
+					return std::string(out.data());
 				};
 
-				w.write("\t{:d}-entry {:s} associative L{:d} {:s} TLB for {:s}, shared by {:d} threads\n", entries,
-				                                                                                           print_associativity(d.split.fully_associative, b.split.ways_of_associativity),
-				                                                                                           d.split.level,
-				                                                                                           print_type(d.split.type),
-				                                                                                           print_pages(b.split.page_4k, b.split.page_2m, b.split.page_4m, b.split.page_1g),
-				                                                                                           d.split.maximum_addressable_thread_ids + 1ui32);
+				format_to(out, "\t{:d}-entry {:s} associative L{:d} {:s} TLB for {:s}, shared by {:d} threads\n", entries,
+				                                                                                                  print_associativity(d.split.fully_associative, b.split.ways_of_associativity),
+				                                                                                                  d.split.level,
+				                                                                                                  print_type(d.split.type),
+				                                                                                                  print_pages(b.split.page_4k, b.split.page_2m, b.split.page_4m, b.split.page_1g),
+				                                                                                                  d.split.maximum_addressable_thread_ids + 1ui32);
 
-				w.write("\n");
+				format_to(out, "\n");
 			}
 		}
 	}
 }
 
-void print_l1_cache_tlb(fmt::Writer& w, const cpu_t & cpu) {
+void print_l1_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::l1_cache_identifiers).at(subleaf_t::main);
 
 	struct tlb_element
@@ -805,18 +804,18 @@ void print_l1_cache_tlb(fmt::Writer& w, const cpu_t & cpu) {
 		                                                                                              cache.lines_per_tag);
 	};
 
-	w.write("Level 1 TLB\n");
-	w.write("\t{:s}\n", print_tlb(a.split.d, "data", "2M"));
-	w.write("\t{:s}\n", print_tlb(a.split.i, "instruction", "2M"));
-	w.write("\t{:s}\n", print_tlb(b.split.d, "data", "4K"));
-	w.write("\t{:s}\n", print_tlb(b.split.i, "instruction", "4K"));
-	w.write("\n");
+	format_to(out, "Level 1 TLB\n");
+	format_to(out, "\t{:s}\n", print_tlb(a.split.d, "data", "2M"));
+	format_to(out, "\t{:s}\n", print_tlb(a.split.i, "instruction", "2M"));
+	format_to(out, "\t{:s}\n", print_tlb(b.split.d, "data", "4K"));
+	format_to(out, "\t{:s}\n", print_tlb(b.split.i, "instruction", "4K"));
+	format_to(out, "\n");
 
-	w.write("Level 1 cache\n");
-	w.write("\t{:s}\n", print_cache(c.split, "data"));
-	w.write("\t{:s}\n", print_cache(d.split, "instruction"));
+	format_to(out, "Level 1 cache\n");
+	format_to(out, "\t{:s}\n", print_cache(c.split, "data"));
+	format_to(out, "\t{:s}\n", print_cache(d.split, "instruction"));
 
-	w.write("\n");
+	format_to(out, "\n");
 }
 
 struct tlb_element
@@ -871,7 +870,7 @@ std::string print_tlb(const tlb_element& tlb, const std::string& type, const std
 	return "{:d}-entry {:s} L2 {:s} TLB for {:s} pages"_format(tlb.entries, print_associativity(tlb.associativity), type, page_size);
 };
 
-void print_l2_cache_tlb(fmt::Writer& w, const cpu_t & cpu) {
+void print_l2_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::l2_cache_identifiers).at(subleaf_t::main);
 	
 	struct l2_cache_info
@@ -926,41 +925,41 @@ void print_l2_cache_tlb(fmt::Writer& w, const cpu_t & cpu) {
 	
 	switch(cpu.vendor & any_silicon) {
 	case amd:
-		w.write("Level 2 TLB\n");
-		w.write("\t{:s}\n", print_tlb(a.split.d, "data", "2M"));
-		w.write("\t{:s}\n", print_tlb(a.split.i, "instruction", "2M"));
-		w.write("\t{:s}\n", print_tlb(b.split.d, "data", "4K"));
-		w.write("\t{:s}\n", print_tlb(b.split.i, "instruction", "4K"));
-		w.write("\n");
+		format_to(out, "Level 2 TLB\n");
+		format_to(out, "\t{:s}\n", print_tlb(a.split.d, "data", "2M"));
+		format_to(out, "\t{:s}\n", print_tlb(a.split.i, "instruction", "2M"));
+		format_to(out, "\t{:s}\n", print_tlb(b.split.d, "data", "4K"));
+		format_to(out, "\t{:s}\n", print_tlb(b.split.i, "instruction", "4K"));
+		format_to(out, "\n");
 
-		w.write("Level 2 cache\n");
-		w.write("\t{:s} {:s} L2 cache with {:d} bytes per line and {:d} lines per tag\n", print_l2_size(c.split.size),
-		                                                                                  print_associativity(c.split.associativity),
-		                                                                                  c.split.line_size,
-		                                                                                  c.split.lines_per_tag);
+		format_to(out, "Level 2 cache\n");
+		format_to(out, "\t{:s} {:s} L2 cache with {:d} bytes per line and {:d} lines per tag\n", print_l2_size(c.split.size),
+		                                                                                         print_associativity(c.split.associativity),
+		                                                                                         c.split.line_size,
+		                                                                                         c.split.lines_per_tag);
 
-		w.write("\n");
+		format_to(out, "\n");
 
-		w.write("Level 3 cache\n");
-		w.write("\t{:s} {:s} L3 cache with {:d} bytes per line and {:d} lines per tag\n", print_l3_size(d.split.size),
-		                                                                                print_associativity(d.split.associativity),
-		                                                                                d.split.line_size,
-		                                                                                d.split.lines_per_tag);
+		format_to(out, "Level 3 cache\n");
+		format_to(out, "\t{:s} {:s} L3 cache with {:d} bytes per line and {:d} lines per tag\n", print_l3_size(d.split.size),
+		                                                                                         print_associativity(d.split.associativity),
+		                                                                                         d.split.line_size,
+		                                                                                         d.split.lines_per_tag);
 		break;
 	case intel:
-		w.write("Level 2 cache\n");
-		w.write("\t{:s} {:s} L2 cache with {:d} bytes per line\n", print_l2_size(c.split.size),
-		                                                           print_associativity(c.split.associativity),
-		                                                           c.split.line_size);
+		format_to(out, "Level 2 cache\n");
+		format_to(out, "\t{:s} {:s} L2 cache with {:d} bytes per line\n", print_l2_size(c.split.size),
+		                                                                  print_associativity(c.split.associativity),
+		                                                                  c.split.line_size);
 		break;
 	default:
-		print_generic(w, cpu, leaf_t::l2_cache_identifiers, subleaf_t::main);
+		print_generic(out, cpu, leaf_t::l2_cache_identifiers, subleaf_t::main);
 		break;
 	}
-	w.write("\n");
+	format_to(out, "\n");
 }
 
-void print_1g_tlb(fmt::Writer& w, const cpu_t& cpu) {
+void print_1g_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::tlb_1g_identifiers).at(subleaf_t::main);
 	
 	const union
@@ -975,14 +974,14 @@ void print_1g_tlb(fmt::Writer& w, const cpu_t& cpu) {
 		tlb_info split; // l2
 	} b = { regs[eax] };
 
-	w.write("1GB page TLB\n");
-	w.write("\tLevel 1\n");
-	w.write("\t\t{:s}\n", print_tlb(a.split.d, "data", "1G"));
-	w.write("\t\t{:s}\n", print_tlb(a.split.i, "instruction", "1G"));
-	w.write("\tLevel 2\n");
-	w.write("\t\t{:s}\n", print_tlb(b.split.d, "data", "1G"));
-	w.write("\t\t{:s}\n", print_tlb(b.split.i, "instruction", "1G"));
-	w.write("\n");
+	format_to(out, "1GB page TLB\n");
+	format_to(out, "\tLevel 1\n");
+	format_to(out, "\t\t{:s}\n", print_tlb(a.split.d, "data", "1G"));
+	format_to(out, "\t\t{:s}\n", print_tlb(a.split.i, "instruction", "1G"));
+	format_to(out, "\tLevel 2\n");
+	format_to(out, "\t\t{:s}\n", print_tlb(b.split.d, "data", "1G"));
+	format_to(out, "\t\t{:s}\n", print_tlb(b.split.i, "instruction", "1G"));
+	format_to(out, "\n");
 }
 
 void enumerate_cache_properties(cpu_t& cpu) {
@@ -998,8 +997,8 @@ void enumerate_cache_properties(cpu_t& cpu) {
 	}
 }
 
-void print_cache_properties(fmt::Writer& w, const cpu_t& cpu) {
-	w.write("Cache properties\n");
+void print_cache_properties(fmt::memory_buffer& out, const cpu_t& cpu) {
+	format_to(out, "Cache properties\n");
 
 	for(const auto& sub : cpu.leaves.at(leaf_t::cache_properties)) {
 		const register_set_t& regs = sub.second;
@@ -1047,43 +1046,43 @@ void print_cache_properties(fmt::Writer& w, const cpu_t& cpu) {
 		                             * (b.split.physical_line_partitions + 1ui64)
 		                             * (sets                             + 1ui64);
 
-		w.write("\t{:s} L{:d} ", print_size(cache_size), a.split.level);
+		format_to(out, "\t{:s} L{:d} ", print_size(cache_size), a.split.level);
 		switch(a.split.type) {
 		case 1:
-			w.write("data");
+			format_to(out, "data");
 			break;
 		case 2:
-			w.write("instruction");
+			format_to(out, "instruction");
 			break;
 		case 3:
-			w.write("unified");
+			format_to(out, "unified");
 			break;
 		}
-		w.write("\n");
-		w.write("\t\t{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} sets = {:s}.\n", b.split.coherency_line_size + 1ui32,
-		                                                                               b.split.associativity_ways  + 1ui32,
-		                                                                               sets                        + 1ui32,
-		                                                                               print_size(cache_size));
+		format_to(out, "\n");
+		format_to(out, "\t\t{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} sets = {:s}.\n", b.split.coherency_line_size + 1ui32,
+		                                                                                      b.split.associativity_ways  + 1ui32,
+		                                                                                      sets                        + 1ui32,
+		                                                                                      print_size(cache_size));
 		if(a.split.self_initializing) {
-			w.write("\t\tSelf-initializing.\n");
+			format_to(out, "\t\tSelf-initializing.\n");
 		}
 		if(a.split.fully_associative) {
-			w.write("\t\tFully associative.\n");
+			format_to(out, "\t\tFully associative.\n");
 		} else {
-			w.write("\t\t{:d}-way set associative.\n", b.split.associativity_ways + 1ui32);
+			format_to(out, "\t\t{:d}-way set associative.\n", b.split.associativity_ways + 1ui32);
 		}
 		if(d.split.writeback_invalidates) {
-			w.write("\t\tWBINVD/INVD does not invalidate lower level caches for other threads.\n");
+			format_to(out, "\t\tWBINVD/INVD does not invalidate lower level caches for other threads.\n");
 		} else {
-			w.write("\t\tWBINVD/INVD invalidate lower level caches for all threads.\n");
+			format_to(out, "\t\tWBINVD/INVD invalidate lower level caches for all threads.\n");
 		}
-		w.write("\t\tCache is {:s}inclusive of lower cache levels.\n", d.split.cache_inclusive != 0 ? "" : "not ");
-		w.write("\t\tCache is shared by up to {:d} threads in the package.\n", a.split.maximum_addressable_thread_ids + 1);
-		w.write("\n");
+		format_to(out, "\t\tCache is {:s}inclusive of lower cache levels.\n", d.split.cache_inclusive != 0 ? "" : "not ");
+		format_to(out, "\t\tCache is shared by up to {:d} threads in the package.\n", a.split.maximum_addressable_thread_ids + 1);
+		format_to(out, "\n");
 	}
 }
 
-void print_extended_apic(fmt::Writer& w, const cpu_t& cpu) {
+void print_extended_apic(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main);
 
 	const union
@@ -1108,78 +1107,76 @@ void print_extended_apic(fmt::Writer& w, const cpu_t& cpu) {
 		} split;
 	} c = { regs[ecx] };
 
-	w.write("Extended APIC\n");
-	w.write("\tExtended APIC ID: {:#010x}\n", regs[eax]);
-	w.write("\tCore ID: {:#04x}\n", b.split.core_id);
-	w.write("\tThreads per core: {:d}\n", (b.split.threads_per_core + 1ui32));
-	w.write("\tNode ID: {:#04x}\n", c.split.node_id);
-	w.write("\tNodes per processor: {:d}\n", (c.split.nodes_per_processor + 1ui32));
-	w.write("\n");
+	format_to(out, "Extended APIC\n");
+	format_to(out, "\tExtended APIC ID: {:#010x}\n", regs[eax]);
+	format_to(out, "\tCore ID: {:#04x}\n", b.split.core_id);
+	format_to(out, "\tThreads per core: {:d}\n", (b.split.threads_per_core + 1ui32));
+	format_to(out, "\tNode ID: {:#04x}\n", c.split.node_id);
+	format_to(out, "\tNodes per processor: {:d}\n", (c.split.nodes_per_processor + 1ui32));
+	format_to(out, "\n");
 }
 
 std::string to_string(const cache_t& cache) {
-	using namespace fmt::literals;
-	fmt::MemoryWriter w;
-	w.write("{:s} L{:d} ", print_size(cache.total_size), cache.level);
+	fmt::memory_buffer out;
+	format_to(out, "{:s} L{:d} ", print_size(cache.total_size), cache.level);
 	switch(cache.type) {
 	case 1:
-		w.write("data");
+		format_to(out, "data");
 		break;
 	case 2:
-		w.write("instruction");
+		format_to(out, "instruction");
 		break;
 	case 3:
-		w.write("unified");
+		format_to(out, "unified");
 		break;
 	}
-	w.write("\n");
-	w.write("\t\t{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:s}.\n", cache.line_size,
-	                                                                                                      cache.ways,
-	                                                                                                      cache.line_partitions,
-	                                                                                                      cache.sets,
-	                                                                                                      print_size(cache.total_size));
+	format_to(out, "\n");
+	format_to(out, "\t\t{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:s}.\n", cache.line_size,
+	                                                                                                             cache.ways,
+	                                                                                                             cache.line_partitions,
+	                                                                                                             cache.sets,
+	                                                                                                             print_size(cache.total_size));
 	if(cache.self_initializing) {
-		w.write("\t\tSelf-initializing.\n");
+		format_to(out, "\t\tSelf-initializing.\n");
 	}
 	if(cache.fully_associative) {
-		w.write("\t\tFully associative.\n");
+		format_to(out, "\t\tFully associative.\n");
 	} else {
-		w.write("\t\t{:d}-way set associative.\n", cache.ways);
+		format_to(out, "\t\t{:d}-way set associative.\n", cache.ways);
 	}
 	if(cache.invalidates_lower_levels) {
-		w.write("\t\tWBINVD/INVD does not invalidate lower level caches for other threads.\n");
+		format_to(out, "\t\tWBINVD/INVD does not invalidate lower level caches for other threads.\n");
 	} else {
-		w.write("\t\tWBINVD/INVD invalidate lower level caches for all threads.\n");
+		format_to(out, "\t\tWBINVD/INVD invalidate lower level caches for all threads.\n");
 	}
-	w.write("\t\tCache is {:s}inclusive of lower cache levels.\n", cache.inclusive ? "" : "not ");
-	w.write("\t\tCache is {:s}direct mapped.\n", cache.direct_mapped ? "not " : "");
-	w.write("\t\tCache is shared by up to {:d} threads.\n", cache.sharing_mask);
-	w.write("\n");
-	return w.str();
+	format_to(out, "\t\tCache is {:s}inclusive of lower cache levels.\n", cache.inclusive ? "" : "not ");
+	format_to(out, "\t\tCache is {:s}direct mapped.\n", cache.direct_mapped ? "not " : "");
+	format_to(out, "\t\tCache is shared by up to {:d} threads.\n", cache.sharing_mask);
+	format_to(out, "\n");
+	return out.data();
 }
 
 std::string to_short_string(const cache_t& cache) {
-	using namespace fmt::literals;
-	fmt::MemoryWriter w;
-	w.write("{:s} L{:d} ", print_size(cache.total_size), cache.level);
+	fmt::memory_buffer out;
+	format_to(out, "{:s} L{:d} ", print_size(cache.total_size), cache.level);
 	switch(cache.type) {
 	case 1:
-		w.write("data       ");
+		format_to(out, "data       ");
 		break;
 	case 2:
-		w.write("instruction");
+		format_to(out, "instruction");
 		break;
 	case 3:
-		w.write("unified    ");
+		format_to(out, "unified    ");
 		break;
 	}
 	if(cache.fully_associative) {
-		w.write(" fully associative     ");
+		format_to(out, " fully associative     ");
 	} else {
-		w.write(" {:>2d}-way set associative", cache.ways);
+		format_to(out, " {:>2d}-way set associative", cache.ways);
 	}
-	w.write(" with {:>5d} sets, {:d} bytes per line", cache.sets, cache.line_size);
-	return w.str();
+	format_to(out, " with {:>5d} sets, {:d} bytes per line", cache.sets, cache.line_size);
+	return out.data();
 }
 
 constexpr full_apic_id_t split_apic_id(std::uint32_t id, std::uint32_t logical_mask_width, std::uint32_t physical_mask_width) noexcept {
@@ -1542,7 +1539,7 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 	return machine;
 }
 
-void print_topology(fmt::Writer& w, const system_t& machine) {
+void print_topology(fmt::memory_buffer& out, const system_t& machine) {
 	const std::uint32_t total_addressable_cores = gsl::narrow_cast<std::uint32_t>(machine.all_cores.size());
 
 	std::multimap<std::uint32_t, std::string> cache_output;
@@ -1567,9 +1564,9 @@ void print_topology(fmt::Writer& w, const system_t& machine) {
 	}
 
 	for(const auto& p : cache_output) {
-		w.write("{:s}\n", p.second);
+		format_to(out, "{:s}\n", p.second);
 	}
-	w.write("\n");
+	format_to(out, "\n");
 
 	std::uint32_t cores_covered_package  = 0ui32;
 	std::uint32_t cores_covered_physical = 0ui32;
@@ -1580,41 +1577,41 @@ void print_topology(fmt::Writer& w, const system_t& machine) {
 			std::uint32_t logical_per_physical = 0ui32;
 			for(const auto& logical : physical.second.logical_cores) {
 				for(std::uint32_t i = 0; i < cores_covered_logical; ++i) {
-					w.write("-");
+					format_to(out, "-");
 				}
 				for(std::uint32_t i = 0; i < 1; ++i) {
-					w.write("*");
+					format_to(out, "*");
 					++cores_covered_logical;
 					++logical_per_physical;
 					++logical_per_package;
 				}
 				for(std::uint32_t i = cores_covered_logical; i < total_addressable_cores; ++i) {
-					w.write("-");
+					format_to(out, "-");
 				}
-				w.write(" logical  {:d}:{:d}:{:d} apic id: {:#04x}\n", package.first, physical.first, logical.first, logical.second.full_apic_id);
+				format_to(out, " logical  {:d}:{:d}:{:d} apic id: {:#04x}\n", package.first, physical.first, logical.first, logical.second.full_apic_id);
 			}
 			for(std::uint32_t i = 0; i < cores_covered_physical; ++i) {
-				w.write("-");
+				format_to(out, "-");
 			}
 			for(std::uint32_t i = 0; i < logical_per_physical; ++i) {
-				w.write("*");
+				format_to(out, "*");
 				++cores_covered_physical;
 			}
 			for(std::uint32_t i = cores_covered_physical; i < total_addressable_cores; ++i) {
-				w.write("-");
+				format_to(out, "-");
 			}
-			w.write(" physical {:d}:{:d}\n", package.first, physical.first);
+			format_to(out, " physical {:d}:{:d}\n", package.first, physical.first);
 		}
 		for(std::uint32_t i = 0; i < cores_covered_package; ++i) {
-			w.write("-");
+			format_to(out, "-");
 		}
 		for(std::uint32_t i = 0; i < logical_per_package; ++i) {
-			w.write("*");
+			format_to(out, "*");
 			++cores_covered_package;
 		}
 		for(std::uint32_t i = cores_covered_package; i < total_addressable_cores; ++i) {
-			w.write("-");
+			format_to(out, "-");
 		}
-		w.write(" package  {:d}\n", package.first);
+		format_to(out, " package  {:d}\n", package.first);
 	}
 }
