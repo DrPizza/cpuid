@@ -441,10 +441,9 @@ void print_cache_tlb_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_deterministic_cache(cpu_t& cpu) {
-	register_set_t regs = { 0 };
 	subleaf_t sub = subleaf_t::main;
 	while(true) {
-		cpuid(regs, leaf_t::deterministic_cache, sub);
+		register_set_t regs = cpuid(leaf_t::deterministic_cache, sub);
 		if((regs[eax] & 0x0000'001fui32) == 0) {
 			break;
 		}
@@ -517,10 +516,10 @@ void print_deterministic_cache(fmt::memory_buffer& out, const cpu_t& cpu) {
 		}
 		format_to(out, "\n");
 		format_to(out, "\t\t{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:s}.\n", b.split.coherency_line_size      + 1ui32,
-		                                                                                                      b.split.associativity_ways       + 1ui32,
-		                                                                                                      b.split.physical_line_partitions + 1ui32,
-		                                                                                                      sets                             + 1ui32,
-		                                                                                                      print_size(cache_size));
+		                                                                                                             b.split.associativity_ways       + 1ui32,
+		                                                                                                             b.split.physical_line_partitions + 1ui32,
+		                                                                                                             sets                             + 1ui32,
+		                                                                                                             print_size(cache_size));
 		if(a.split.self_initializing) {
 			format_to(out, "\t\tSelf-initializing.\n");
 		}
@@ -542,11 +541,9 @@ void print_deterministic_cache(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_extended_topology(cpu_t& cpu) {
-	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::extended_topology, subleaf_t::main);
-	cpu.leaves[leaf_t::extended_topology][subleaf_t::main] = regs;
+	cpu.leaves[leaf_t::extended_topology][subleaf_t::main] = cpuid(leaf_t::extended_topology, subleaf_t::main);
 	for(subleaf_t sub = subleaf_t{ 1 }; ; ++sub) {
-		cpuid(regs, leaf_t::extended_topology, sub);
+		register_set_t regs = cpuid(leaf_t::extended_topology, sub);
 		if((regs[ecx] & 0x0000'ff00ui32) == 0ui32) {
 			break;
 		}
@@ -617,14 +614,12 @@ void print_extended_topology(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_deterministic_tlb(cpu_t& cpu) {
-	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::deterministic_tlb, subleaf_t::main);
+	register_set_t regs = cpuid(leaf_t::deterministic_tlb, subleaf_t::main);
 	cpu.leaves[leaf_t::deterministic_tlb][subleaf_t::main] = regs;
 
 	const subleaf_t limit = subleaf_t{ regs[eax] };
 	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
-		cpuid(regs, leaf_t::deterministic_tlb, sub);
-		cpu.leaves[leaf_t::deterministic_tlb][sub] = regs;
+		cpu.leaves[leaf_t::deterministic_tlb][sub] = cpuid(leaf_t::deterministic_tlb, sub);
 	}
 }
 
@@ -985,10 +980,9 @@ void print_1g_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_cache_properties(cpu_t& cpu) {
-	register_set_t regs = { 0 };
 	subleaf_t sub = subleaf_t::main;
 	while(true) {
-		cpuid(regs, leaf_t::cache_properties, sub);
+		register_set_t regs = cpuid(leaf_t::cache_properties, sub);
 		if((regs[eax] & 0xfui32) == 0) {
 			break;
 		}

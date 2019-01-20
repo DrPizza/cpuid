@@ -420,7 +420,7 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::kvm_features, {
+	{ leaf_t::kvm_features, { // https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/virtual/kvm/cpuid.txt
 		{ subleaf_t::main, {
 			{ eax, {
 				{ kvm                    , 0x0000'0001ui32, "CLOCKSOURCE"        , "kvmclock MSRs available"               },
@@ -428,7 +428,16 @@ const feature_map_t all_features = {
 				{ kvm                    , 0x0000'0004ui32, "MMU_OP"             , "Deprecated"                            },
 				{ kvm                    , 0x0000'0008ui32, "CLOCKSOURCE_2"      , "More kvmclock MSRs available"          },
 				{ kvm                    , 0x0000'0010ui32, "ASYNC_PF"           , "Async PF supported"                    },
+				{ kvm                    , 0x0000'0020ui32, "STEAL_TIME"         , "Steal time MSR available"              },
+				{ kvm                    , 0x0000'0040ui32, "EOI"                , "End of interrupt MSR available"        },
+				{ kvm                    , 0x0000'0080ui32, "UNHALT"             , "Paravirtualized spinlocks supported"   },
+				{ kvm                    , 0x0000'0200ui32, "TLB_FLUSH"          , "Paravirtualized TLB flush supported"   },
+				{ kvm                    , 0x0000'0400ui32, "ASYNC_PF_VMEXIT"    , "Async PF vmexit supported"             },
+				{ kvm                    , 0x0000'0800ui32, "SEND_IPI"           , "Paravirtualized IPI supported"         },
 				{ kvm                    , 0x0100'0000ui32, "CLOCKSOURCE_STABLE" , "Guest-side clock should not be warped" },
+			}},
+			{ edx, {
+				{ kvm                    , 0x0000'0001ui32, "REALTIME"           , "vCPUs never pre-empted forever"        },
 			}}
 		}}
 	}},

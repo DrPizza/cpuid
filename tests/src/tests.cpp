@@ -50,7 +50,10 @@ public:
 		};
 
 		for(const auto& f : flags) {
-			Assert::AreEqual(f.second, parse_flag_spec(f.first));
+			const flag_spec_t spec = parse_flag_spec(f.first);
+			const std::string message = f.first + " parses to " + to_string(spec);
+			Logger::WriteMessage(message.c_str());
+			Assert::AreEqual(f.second, spec);
 		}
 	}
 };

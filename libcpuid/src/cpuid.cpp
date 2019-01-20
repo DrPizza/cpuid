@@ -267,12 +267,12 @@ const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
 void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf);
 	format_to(out, "{:#010x} {:#010x} {:#010x}: {:#010x} {:#010x} {:#010x} {:#010x}\n", cpu.apic_id,
-	                                                                             static_cast<std::uint32_t>(leaf),
-	                                                                             static_cast<std::uint32_t>(subleaf),
-	                                                                             regs[eax],
-	                                                                             regs[ebx],
-	                                                                             regs[ecx],
-	                                                                             regs[edx]);
+	                                                                                    static_cast<std::uint32_t>(leaf),
+	                                                                                    static_cast<std::uint32_t>(subleaf),
+	                                                                                    regs[eax],
+	                                                                                    regs[ebx],
+	                                                                                    regs[ecx],
+	                                                                                    regs[edx]);
 
 }
 
@@ -289,13 +289,11 @@ void print_generic(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_leaf_brute_force(cpu_t& cpu, leaf_t leaf) {
-	register_set_t regs = { 0 };
-	cpuid(regs, leaf, subleaf_t::main);
+	register_set_t regs = cpuid(leaf, subleaf_t::main);
 	cpu.leaves[leaf][subleaf_t::main] = regs;
 	for(subleaf_t subleaf = subleaf_t{ 1 }; ; ++subleaf) {
 		register_set_t previous = regs;
-		regs = { 0 };
-		cpuid(regs, leaf, subleaf);
+		regs = cpuid(leaf, subleaf);
 		if(regs[eax] == 0ui32
 		&& regs[ebx] == 0ui32
 		&& (regs[ecx] == 0ui32 || regs[ecx] == static_cast<std::uint32_t>(subleaf))
@@ -313,7 +311,6 @@ void enumerate_leaf_brute_force(cpu_t& cpu, leaf_t leaf) {
 }
 
 void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool brute_force, bool skip_vendor_check, bool skip_feature_check) {
-	register_set_t regs = { 0 };
 	const auto it = descriptors.find(leaf);
 	if(!brute_force
 	&& it != descriptors.end()) {
@@ -326,8 +323,7 @@ void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool brute_force, bool skip_vendor_
 				if(it->second.enumerator) {
 					it->second.enumerator(cpu);
 				} else {
-					cpuid(regs, leaf, subleaf_t::main);
-					cpu.leaves[leaf][subleaf_t::main] = regs;
+					cpu.leaves[leaf][subleaf_t::main] = cpuid(leaf, subleaf_t::main);
 				}
 			}
 		}
@@ -594,20 +590,18 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_
 	std::map<std::uint32_t, cpu_t> logical_cpus;
 	run_on_every_core([=, &logical_cpus]() {
 		cpu_t cpu = {};
-		register_set_t regs = { 0 };
-
-		cpuid(regs, leaf_t::basic_info, subleaf_t::main);
+		register_set_t regs = cpuid(leaf_t::basic_info, subleaf_t::main);
 		const leaf_t highest_leaf = leaf_t{ regs[eax] };
 		cpu.vendor = get_vendor_from_name(regs);
 
-		cpuid(regs, leaf_t::version_info, subleaf_t::main);
+		regs = cpuid(leaf_t::version_info, subleaf_t::main);
 		cpu.model = get_model(cpu.vendor, regs);
 
 		for(leaf_t leaf = leaf_t::basic_info; leaf <= highest_leaf; ++leaf) {
 			enumerate_leaf(cpu, leaf, brute_force, skip_vendor_check, skip_feature_check);
 		}
 
-		cpuid(regs, leaf_t::hypervisor_limit, subleaf_t::main);
+		regs = cpuid(leaf_t::hypervisor_limit, subleaf_t::main);
 		if(regs[eax] != 0ui32) {
 			const vendor_t hypervisor = get_hypervisor_from_name(regs);
 			// something is set, and it looks like a hypervisor
@@ -621,7 +615,7 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_
 
 				if(hypervisor & hyper_v) {
 					// xen with viridian extensions masquerades as hyper-v, and puts its own cpuid leaves 0x100 further up
-					cpuid(regs, leaf_t::xen_limit_offset, subleaf_t::main);
+					regs = cpuid(leaf_t::xen_limit_offset, subleaf_t::main);
 					const vendor_t xen_hypervisor = get_hypervisor_from_name(regs);
 
 					if(xen_hypervisor & xen_hvm) {
@@ -636,7 +630,7 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_
 				}
 			}
 		}
-		cpuid(regs, leaf_t::extended_limit, subleaf_t::main);
+		regs = cpuid(leaf_t::extended_limit, subleaf_t::main);
 		const leaf_t highest_extended_leaf = leaf_t{ regs[eax] };
 
 		for(leaf_t leaf = leaf_t::extended_limit; leaf <= highest_extended_leaf; ++leaf) {
@@ -731,9 +725,53 @@ flag_spec_t parse_flag_spec(const std::string& flag_description) {
 	return spec;
 }
 
-void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const std::string& flag_description) {
-	const flag_spec_t spec = parse_flag_spec(flag_description);
+std::string to_string(register_t reg) {
+	switch(reg) {
+	case eax:
+		return "EAX";
+	case ebx:
+		return "EBX";
+	case ecx:
+		return "ECX";
+	case edx:
+		return "EDX";
+	}
+}
 
+std::string to_string(const flag_spec_t& spec) {
+	// named flag, unknown bit:
+	// CPUID.(EAX=xxH, ECX=xxH):reg.name
+	// named flag, specific bit:
+	// CPUID.(EAX=xxH, ECX=xxH):reg.name[yy]
+	// named flag, multibit:
+	// CPUID.(EAX=xxH, ECX=xxH):reg.name[high:low]
+	// unnamed flag, unknown bit:
+	// CPUID.(EAX=xxH, ECX=xxH):reg
+	// unnamed flag, single bit:
+	// CPUID.(EAX=xxH, ECX=xxH):reg[yy]
+	// unnamed flag, multibit:
+	// CPUID.(EAX=xxH, ECX=xxH):reg[high:low]
+	if(spec.flag_name != "") {
+		if(spec.flag_start == 0xffff'ffffui32 && spec.flag_end == 0xffff'ffffui32) {
+			return fmt::format("CPUID.(EAX={:02X}H, ECX={:02X}H):{:s}.{:s}"       , spec.selector_eax, spec.selector_ecx, to_string(spec.flag_register), boost::algorithm::to_upper_copy(spec.flag_name));
+		} else if(spec.flag_start == spec.flag_end) {
+			return fmt::format("CPUID.(EAX={:02X}H, ECX={:02X}H):{:s}.{:s}[{}]"   , spec.selector_eax, spec.selector_ecx, to_string(spec.flag_register), boost::algorithm::to_upper_copy(spec.flag_name), spec.flag_end);
+		} else {
+			return fmt::format("CPUID.(EAX={:02X}H, ECX={:02X}H):{:s}.{:s}[{}:{}]", spec.selector_eax, spec.selector_ecx, to_string(spec.flag_register), boost::algorithm::to_upper_copy(spec.flag_name), spec.flag_end, spec.flag_start);
+		}
+	} else {
+		if(spec.flag_start == 0xffff'ffffui32 && spec.flag_end == 0xffff'ffffui32) {
+			return fmt::format("CPUID.(EAX={:02X}H, ECX={:02X}H):{:s}"            , spec.selector_eax, spec.selector_ecx, to_string(spec.flag_register));
+		} else if(spec.flag_start == spec.flag_end) {
+			return fmt::format("CPUID.(EAX={:02X}H, ECX={:02X}H):{:s}[{}]"        , spec.selector_eax, spec.selector_ecx, to_string(spec.flag_register),                                                  spec.flag_end);
+		} else {
+			return fmt::format("CPUID.(EAX={:02X}H, ECX={:02X}H):{:s}[{}:{}]"     , spec.selector_eax, spec.selector_ecx, to_string(spec.flag_register),                                                  spec.flag_end, spec.flag_start);
+		}
+	}
+}
+
+void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const flag_spec_t& spec) {
+	const std::string flag_description = to_string(spec);
 	const std::string flag_name_alternative = boost::algorithm::replace_all_copy(spec.flag_name, "_", ".");
 
 	const leaf_t    leaf    = static_cast<leaf_t   >(spec.selector_eax);

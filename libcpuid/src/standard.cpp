@@ -153,10 +153,6 @@ void print_serial_number(fmt::memory_buffer& out, const cpu_t& cpu) {
 void print_mwait_parameters(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_t::monitor_mwait).at(subleaf_t::main);
 
-	//if(regs[eax] == 0ui32 && regs[ebx] == 0ui32) {
-	//	return;
-	//}
-
 	const union
 	{
 		std::uint32_t full;
@@ -230,14 +226,12 @@ void print_thermal_and_power(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_extended_features(cpu_t& cpu) {
-	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::extended_features, subleaf_t::main);
+	register_set_t regs = cpuid(leaf_t::extended_features, subleaf_t::main);
 	cpu.leaves[leaf_t::extended_features][subleaf_t::main] = regs;
 
 	const subleaf_t limit = subleaf_t{ regs[eax] };
 	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
-		cpuid(regs, leaf_t::extended_features, sub);
-		cpu.leaves[leaf_t::extended_features][sub] = regs;
+		cpu.leaves[leaf_t::extended_features][sub] = cpuid(leaf_t::extended_features, sub);
 	}
 }
 
@@ -386,18 +380,16 @@ void print_performance_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_extended_state(cpu_t& cpu) {
-	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::extended_state, subleaf_t::extended_state_main);
+	register_set_t regs = cpuid(leaf_t::extended_state, subleaf_t::extended_state_main);
 	cpu.leaves[leaf_t::extended_state][subleaf_t::extended_state_main] = regs;
 	const std::uint64_t valid_bits = regs[eax] | (gsl::narrow_cast<std::uint64_t>(regs[edx]) << 32ui64);
 
-	cpuid(regs, leaf_t::extended_state, subleaf_t::extended_state_sub);
-	cpu.leaves[leaf_t::extended_state][subleaf_t::extended_state_sub] = regs;
+	cpu.leaves[leaf_t::extended_state][subleaf_t::extended_state_sub] = cpuid(leaf_t::extended_state, subleaf_t::extended_state_sub);
 
 	std::uint64_t mask = 0x1ui64 << 2ui32;
 	for(subleaf_t i = subleaf_t{ 2ui32 }; i < subleaf_t{ 63ui32 }; ++i, mask <<= 1ui64) {
 		if(valid_bits & mask) {
-			cpuid(regs, leaf_t::extended_state, i);
+			regs = cpuid(leaf_t::extended_state, i);
 			if(regs[eax] != 0ui32
 			|| regs[ebx] != 0ui32
 			|| regs[ecx] != 0ui32
@@ -407,7 +399,7 @@ void enumerate_extended_state(cpu_t& cpu) {
 		}
 	}
 	if(cpu.vendor & amd) {
-		cpuid(regs, leaf_t::extended_state, subleaf_t{ 0x3e });
+		regs = cpuid(leaf_t::extended_state, subleaf_t{ 0x3e });
 		if(regs[ebx] != 0ui32) {
 			cpu.leaves[leaf_t::extended_state][subleaf_t{ 0x3e }] = regs;
 		}
@@ -478,16 +470,14 @@ void print_extended_state(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_rdt_monitoring(cpu_t& cpu) {
-	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::rdt_monitoring, subleaf_t::rdt_monitoring_main);
+	register_set_t regs = cpuid(leaf_t::rdt_monitoring, subleaf_t::rdt_monitoring_main);
 	cpu.leaves[leaf_t::rdt_monitoring][subleaf_t::rdt_monitoring_main] = regs;
 
 	const std::uint32_t valid_bits = regs[edx];
 	std::uint32_t mask = 0x1ui32 << 1ui32;
 	for(subleaf_t i = subleaf_t::rdt_monitoring_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1ui32) {
 		if(valid_bits & mask) {
-			cpuid(regs, leaf_t::rdt_monitoring, i);
-			cpu.leaves[leaf_t::rdt_monitoring][i] = regs;
+			cpu.leaves[leaf_t::rdt_monitoring][i] = cpuid(leaf_t::rdt_monitoring, i);
 		}
 	}
 }
@@ -531,16 +521,14 @@ void print_rdt_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_rdt_allocation(cpu_t& cpu) {
-	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::rdt_allocation, subleaf_t::rdt_allocation_main);
+	register_set_t regs = cpuid(leaf_t::rdt_allocation, subleaf_t::rdt_allocation_main);
 	cpu.leaves[leaf_t::rdt_allocation][subleaf_t::rdt_allocation_main] = regs;
 
 	const std::uint32_t valid_bits = regs[edx];
 	std::uint32_t mask = 0x1ui32 << 1ui32;
 	for(subleaf_t i = subleaf_t::rdt_cat_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1ui32) {
 		if(valid_bits & mask) {
-			cpuid(regs, leaf_t::rdt_allocation, i);
-			cpu.leaves[leaf_t::rdt_allocation][i] = regs;
+			cpu.leaves[leaf_t::rdt_allocation][i] = cpuid(leaf_t::rdt_allocation, i);
 		}
 	}
 }
@@ -647,15 +635,11 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_sgx_info(cpu_t& cpu) {
-	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::sgx_info, subleaf_t::sgx_capabilities);
-	cpu.leaves[leaf_t::sgx_info][subleaf_t::sgx_capabilities] = regs;
-
-	cpuid(regs, leaf_t::sgx_info, subleaf_t::sgx_attributes);
-	cpu.leaves[leaf_t::sgx_info][subleaf_t::sgx_attributes] = regs;
+	cpu.leaves[leaf_t::sgx_info][subleaf_t::sgx_capabilities] = cpuid(leaf_t::sgx_info, subleaf_t::sgx_capabilities);
+	cpu.leaves[leaf_t::sgx_info][subleaf_t::sgx_attributes  ] = cpuid(leaf_t::sgx_info, subleaf_t::sgx_attributes  );
 
 	for(subleaf_t i = subleaf_t{ 2 }; ; ++i) {
-		cpuid(regs, leaf_t::sgx_info, i);
+		register_set_t regs = cpuid(leaf_t::sgx_info, i);
 		if((regs[eax] & 0x0000'000fui32) == 0ui32) {
 			break;
 		}
@@ -730,6 +714,7 @@ void print_sgx_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 						std::uint32_t epc_section_size_low_bits : 20;
 					} split;
 				} c = { regs[ecx] };
+
 				const union
 				{
 					std::uint32_t full;
@@ -761,14 +746,12 @@ void print_sgx_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_processor_trace(cpu_t& cpu) {
-	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::processor_trace, subleaf_t::main);
+	register_set_t regs = cpuid(leaf_t::processor_trace, subleaf_t::main);
 	cpu.leaves[leaf_t::processor_trace][subleaf_t::main] = regs;
 
 	const subleaf_t limit = subleaf_t{ regs[eax] };
 	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
-		cpuid(regs, leaf_t::processor_trace, sub);
-		cpu.leaves[leaf_t::processor_trace][sub] = regs;
+		cpu.leaves[leaf_t::processor_trace][sub] = cpuid(leaf_t::processor_trace, sub);
 	}
 }
 
@@ -860,14 +843,12 @@ void print_processor_frequency(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_system_on_chip_vendor(cpu_t& cpu) {
-	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::system_on_chip_vendor, subleaf_t::main);
+	register_set_t regs = cpuid(leaf_t::system_on_chip_vendor, subleaf_t::main);
 	cpu.leaves[leaf_t::system_on_chip_vendor][subleaf_t::main] = regs;
 
 	const subleaf_t limit = subleaf_t{ regs[eax] };
 	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
-		cpuid(regs, leaf_t::system_on_chip_vendor, sub);
-		cpu.leaves[leaf_t::system_on_chip_vendor][sub] = regs;
+		cpu.leaves[leaf_t::system_on_chip_vendor][sub] = cpuid(leaf_t::system_on_chip_vendor, sub);
 	}
 }
 
@@ -931,12 +912,10 @@ void print_system_on_chip_vendor(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_pconfig(cpu_t& cpu) {
-	register_set_t regs = { 0 };
-	cpuid(regs, leaf_t::pconfig, subleaf_t::main);
-	cpu.leaves[leaf_t::pconfig][subleaf_t::main] = regs;
+	cpu.leaves[leaf_t::pconfig][subleaf_t::main] = cpuid(leaf_t::pconfig, subleaf_t::main);
 
-	for(subleaf_t sub = subleaf_t{ 0x1ui32 };; ++sub) {
-		cpuid(regs, leaf_t::pconfig, sub);
+	for(subleaf_t sub = subleaf_t{ 0x1ui32 }; ; ++sub) {
+		register_set_t regs = cpuid(leaf_t::pconfig, sub);
 		if(0 == (regs[eax] & 0x0000'0001ui32)) {
 			break;
 		}

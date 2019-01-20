@@ -41,9 +41,9 @@ void print_hyper_v_signature(fmt::memory_buffer& out, const cpu_t& cpu) {
 	} a = { regs[eax] };
 
 	format_to(out, "\tSignature: {:c}{:c}{:c}{:c}\n", gsl::narrow_cast<char>(a.split.signature_1),
-	                                           gsl::narrow_cast<char>(a.split.signature_2),
-	                                           gsl::narrow_cast<char>(a.split.signature_3),
-	                                           gsl::narrow_cast<char>(a.split.signature_4));
+	                                                  gsl::narrow_cast<char>(a.split.signature_2),
+	                                                  gsl::narrow_cast<char>(a.split.signature_3),
+	                                                  gsl::narrow_cast<char>(a.split.signature_4));
 	format_to(out, "\n");
 }
 
@@ -240,13 +240,9 @@ void print_xen_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 
 void enumerate_xen_time(cpu_t& cpu) {
 	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_time : leaf_t::xen_time_offset;
-	register_set_t regs = {};
-	cpuid(regs, leaf, subleaf_t::xen_time_main);
-	cpu.leaves[leaf][subleaf_t::xen_time_main] = regs;
-	cpuid(regs, leaf, subleaf_t::xen_time_tsc_offset);
-	cpu.leaves[leaf][subleaf_t::xen_time_tsc_offset] = regs;
-	cpuid(regs, leaf, subleaf_t::xen_time_host);
-	cpu.leaves[leaf][subleaf_t::xen_time_host] = regs;
+	cpu.leaves[leaf][subleaf_t::xen_time_main      ] = cpuid(leaf, subleaf_t::xen_time_main      );
+	cpu.leaves[leaf][subleaf_t::xen_time_tsc_offset] = cpuid(leaf, subleaf_t::xen_time_tsc_offset);
+	cpu.leaves[leaf][subleaf_t::xen_time_host      ] = cpuid(leaf, subleaf_t::xen_time_host      );
 }
 
 void print_xen_time(fmt::memory_buffer& out, const cpu_t& cpu) {

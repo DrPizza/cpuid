@@ -332,13 +332,15 @@ inline bool operator==(const cpu_t& lhs, const cpu_t& rhs) noexcept {
 	    && lhs.leaves                  == rhs.leaves;
 }
 
-inline void cpuid(register_set_t& regs, leaf_t leaf, subleaf_t subleaf) noexcept {
+inline register_set_t cpuid(leaf_t leaf, subleaf_t subleaf) noexcept {
+	register_set_t regs = {};
 	std::array<int, 4> raw_regs;
 	__cpuidex(raw_regs.data(), gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf));
 	regs[eax] = gsl::narrow_cast<std::uint32_t>(raw_regs[eax]);
 	regs[ebx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ebx]);
 	regs[ecx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ecx]);
 	regs[edx] = gsl::narrow_cast<std::uint32_t>(raw_regs[edx]);
+	return regs;
 }
 
 void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf);
@@ -355,7 +357,6 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_vendor_check, bool skip_feature_check);
 
 void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_cpus, file_format format);
-void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const std::string& flag_description);
 void print_leaves(fmt::memory_buffer& out, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check);
 
 struct flag_spec_t
@@ -368,13 +369,14 @@ struct flag_spec_t
 	std::uint32_t flag_end      = 0xffff'ffffui32;
 };
 
+void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const flag_spec_t& flag_description);
+flag_spec_t parse_flag_spec(const std::string& flag_description);
+std::string to_string(const flag_spec_t& spec);
 
 inline bool operator==(const flag_spec_t& lhs, const flag_spec_t& rhs) noexcept {
 	return std::tie(lhs.selector_eax, lhs.selector_ecx, lhs.flag_register, lhs.flag_name, lhs.flag_start, lhs.flag_end)
 	    == std::tie(rhs.selector_eax, rhs.selector_ecx, rhs.flag_register, rhs.flag_name, rhs.flag_start, rhs.flag_end);
 }
-
-flag_spec_t parse_flag_spec(const std::string& flag_description);
 
 struct cache_instance_t
 {

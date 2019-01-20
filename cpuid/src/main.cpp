@@ -145,7 +145,8 @@ int main(int argc, char* argv[]) try {
 			const cpu_t& cpu = logical_cpus.at(chosen_id);
 			fmt::memory_buffer out;
 			if(std::holds_alternative<std::string>(args.at("--single-value"))) {
-				const std::string flag_spec = std::get<std::string>(args.at("--single-value"));
+				const std::string flag_spec_raw = std::get<std::string>(args.at("--single-value"));
+				const flag_spec_t flag_spec = parse_flag_spec(flag_spec_raw);
 				print_single_flag(out, cpu, flag_spec);
 			} else {
 				print_leaves(out, cpu, skip_vendor_check, skip_feature_check);
