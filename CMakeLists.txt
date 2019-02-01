@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.11)
+cmake_minimum_required (VERSION 3.10)
 
 set(VCPKG_TARGET_ARCHITECTURE x64)
 if(WIN32)
@@ -13,8 +13,8 @@ set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
-set(CMAKE_GENERATOR_PLATFORM x64)
 if(MSVC)
+    set(CMAKE_GENERATOR_PLATFORM x64)
     set(CMAKE_GENERATOR_TOOLSET v141,host=x64)
     set(CMAKE_VS_PLATFORM_NAME Win64)
 else()
@@ -61,7 +61,10 @@ macro(configure_msvc_runtime)
   endif()
 endmacro()
 
-project(cpuid)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+project(cpuid VERSION 1.0.0 LANGUAGES CXX)
 
 if(MSVC)
     set(MSVC_RUNTIME "static")
@@ -77,6 +80,8 @@ if(MSVC)
         set(CMAKE_${i}_LINKER_FLAGS_RELEASE "${CMAKE_${i}_LINKER_FLAGS_RELEASE} -opt:ref -opt:icf")
     endforeach()
     configure_msvc_runtime()
+else()
+    
 endif()
 
 set(Boost_USE_STATIC_LIBS ON)
