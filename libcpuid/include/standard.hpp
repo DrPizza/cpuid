@@ -1,4 +1,4 @@
-#ifndef STANDARD_HPP
+﻿#ifndef STANDARD_HPP
 #define STANDARD_HPP
 
 #include "cpuid.hpp"
