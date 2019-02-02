@@ -50,17 +50,17 @@ void run_on_every_core(Fn&& f) {
 }
 
 inline std::uint32_t simple_mask(const std::uint32_t length) noexcept {
-	if(length == 32ui32) {
-		return 0xffff'ffffui32;
-	} else if(length == 0ui32) {
-		return 0ui32;
+	if(length == 32u32) {
+		return 0xffff'ffffu32;
+	} else if(length == 0u32) {
+		return 0u32;
 	} else {
-		return (1ui32 << length) - 1ui32;
+		return (1u32 << length) - 1u32;
 	}
 };
 
 inline std::uint32_t range_mask(const std::uint32_t start, const std::uint32_t end) noexcept {
-	return simple_mask(end + 1ui32) ^ simple_mask(start);
+	return simple_mask(end + 1u32) ^ simple_mask(start);
 };
 
 namespace fmt {

@@ -111,7 +111,7 @@ void print_hyper_v_enlightenment_recs(fmt::memory_buffer& out, const cpu_t& cpu)
 	format_to(out, "Hyper-V recommendations\n");
 	print_features(out, cpu, leaf_t::hyper_v_enlightenment_recs, subleaf_t::main, eax);
 	format_to(out, "\n");
-	if(regs[ebx] != 0xffff'ffffui32) {
+	if(regs[ebx] != 0xffff'ffffu32) {
 		format_to(out, "\tTimes to retry spinlocks before notifying hypervisor: {:d}\n", regs[ebx]);
 	} else {
 		format_to(out, "\tNever retry spinlocks before notifying hypervisor\n");
@@ -287,7 +287,7 @@ void print_xen_hvm_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
 	format_to(out, "Xen HVM features\n");
 	print_features(out, cpu, leaf, subleaf_t::main, eax);
-	if(0x0000'0008ui32 & cpu.leaves.at(leaf).at(subleaf_t::main).at(eax)) {
+	if(0x0000'0008u32 & cpu.leaves.at(leaf).at(subleaf_t::main).at(eax)) {
 		format_to(out, "\tVCPU ID: {:#010x}\n", regs[ebx]);
 	}
 	format_to(out, "\n");
