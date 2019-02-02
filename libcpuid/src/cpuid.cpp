@@ -353,10 +353,10 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					const leaf_type        leaf    = static_cast<leaf_type   >(std::stoul(m[2].str(), nullptr, 16));
 					const subleaf_type     subleaf = static_cast<subleaf_type>(std::stoul(m[3].str(), nullptr, 16));
 					const register_set_t regs   = {
-						std::stoul(m[4].str(), nullptr, 16),
-						std::stoul(m[5].str(), nullptr, 16),
-						std::stoul(m[6].str(), nullptr, 16),
-						std::stoul(m[7].str(), nullptr, 16)
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[4].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[5].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[6].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[7].str(), nullptr, 16))
 					};
 					logical_cpus[apic_id].leaves[leaf][subleaf] = regs;
 				} else {
@@ -384,10 +384,10 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					const leaf_type         leaf    = static_cast<leaf_type   >(std::stoul(m[1].str(), nullptr, 16));
 					const subleaf_type      subleaf = static_cast<subleaf_type>(std::stoul(m[2].str(), nullptr, 16));
 					const register_set_t regs    = {
-						std::stoul(m[3].str(), nullptr, 16),
-						std::stoul(m[4].str(), nullptr, 16),
-						std::stoul(m[5].str(), nullptr, 16),
-						std::stoul(m[6].str(), nullptr, 16)
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[3].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[4].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[5].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[6].str(), nullptr, 16))
 					};
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
 				} else {
@@ -416,10 +416,10 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					std::string section       = m[1].str();
 					std::uint32_t idx         = std::stoul(m[2].str());
 					const register_set_t regs = {
-						std::stoul(m[3].str(), nullptr, 16),
-						std::stoul(m[4].str(), nullptr, 16),
-						std::stoul(m[5].str(), nullptr, 16),
-						std::stoul(m[6].str(), nullptr, 16)
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[3].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[4].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[5].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[6].str(), nullptr, 16))
 					};
 					leaf_type       leaf{ idx };
 					subleaf_type subleaf{ idx };
