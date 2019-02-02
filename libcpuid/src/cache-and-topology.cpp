@@ -1190,7 +1190,7 @@ std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noe
 	entries *= 2;
 	entries -= 1;
 	unsigned long idx = 0;
-	_BitScanReverse(&idx, entries);
+	bit_scan_reverse(&idx, entries);
 	idx += 1;
 	return std::make_pair((1_u32 << idx) - 1_u32, idx);
 }

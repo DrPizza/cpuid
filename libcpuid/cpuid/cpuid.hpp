@@ -2,44 +2,19 @@
 #define CPUID_HPP
 
 #include <cstddef>
-#include <cstdint>
 #include <array>
 #include <map>
 
 #include <gsl/gsl>
 #include <fmt/format.h>
 
+#include "suffixes.hpp"
+
 #if defined(_MSC_VER)
 #define UNREACHABLE() __assume(0)
 #else
 #define UNREACHABLE() __builtin_unreachable()
 #endif
-
-constexpr std::uint_least64_t operator "" _u64(unsigned long long arg) {
-	return static_cast<std::uint_least64_t>(arg);
-}
-constexpr std::uint_least32_t operator "" _u32(unsigned long long arg) {
-	return static_cast<std::uint_least32_t>(arg);
-}
-constexpr std::uint_least16_t operator "" _u16(unsigned long long arg) {
-	return static_cast<std::uint_least16_t>(arg);
-}
-constexpr std::uint_least8_t operator "" _u8(unsigned long long arg) {
-	return static_cast<std::uint_least8_t>(arg);
-}
-
-constexpr std::int_least64_t operator "" _i64(unsigned long long arg) {
-	return static_cast<std::int_least64_t>(arg);
-}
-constexpr std::int_least32_t operator "" _i32(unsigned long long arg) {
-	return static_cast<std::int_least32_t>(arg);
-}
-constexpr std::int_least16_t operator "" _i16(unsigned long long arg) {
-	return static_cast<std::int_least16_t>(arg);
-}
-constexpr std::int_least8_t operator "" _i8(unsigned long long arg) {
-	return static_cast<std::int_least8_t>(arg);
-}
 
 enum struct leaf_type : std::uint32_t
 {
@@ -363,35 +338,7 @@ inline bool operator==(const cpu_t& lhs, const cpu_t& rhs) noexcept {
 	    && lhs.leaves                  == rhs.leaves;
 }
 
-#if defined(_MSC_VER)
-
-inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
-	register_set_t regs = {};
-	std::array<int, 4> raw_regs;
-	__cpuidex(raw_regs.data(), gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf));
-	regs[eax] = gsl::narrow_cast<std::uint32_t>(raw_regs[eax]);
-	regs[ebx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ebx]);
-	regs[ecx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ecx]);
-	regs[edx] = gsl::narrow_cast<std::uint32_t>(raw_regs[edx]);
-	return regs;
-}
-
-#else
-
-#include <cpuid.h>
-
-inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
-	register_set_t regs = {};
-	std::array<unsigned int, 4> raw_regs;
-	__get_cpuid_count(gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf), &raw_regs[eax], &raw_regs[ebx], &raw_regs[ecx], &raw_regs[edx]);
-	regs[eax] = gsl::narrow_cast<std::uint32_t>(raw_regs[eax]);
-	regs[ebx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ebx]);
-	regs[ecx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ecx]);
-	regs[edx] = gsl::narrow_cast<std::uint32_t>(raw_regs[edx]);
-	return regs;
-}
-
-#endif
+register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept;
 
 void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf, subleaf_type subleaf);
 

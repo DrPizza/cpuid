@@ -48,7 +48,7 @@
 
 #else // defined(_WIN32)
 
-// linux system headers go here
+#include <cpuid.h>
 
 #endif
 

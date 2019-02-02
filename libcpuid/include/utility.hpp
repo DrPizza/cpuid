@@ -22,6 +22,8 @@
 
 #include <fmt/format.h>
 
+#include "suffixes.hpp"
+
 template<typename Fn>
 void run_on_every_core(Fn&& f) {
 	std::thread bouncer = std::thread([&]() {
@@ -53,28 +55,8 @@ void run_on_every_core(Fn&& f) {
 	bouncer.join();
 }
 
-#if !defined(_MSC_VER)
-
-#include <cpuid.h>
-
-unsigned char inline _BitScanReverse(unsigned long* index, unsigned int mask) {
-	if(mask) {
-		*index = 31 - __builtin_clz(mask);
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
-unsigned char inline _BitScanForward(unsigned long* index, unsigned int mask) {
-	if(mask) {
-		*index = __builtin_ctz(mask);
-		return 1;
-	} else {
-		return 0;
-	}
-}
-#endif
+unsigned char bit_scan_reverse(unsigned long* index, unsigned int mask);
+unsigned char bit_scan_forward(unsigned long* index, unsigned int mask);
 
 inline std::uint32_t simple_mask(const std::uint32_t length) noexcept {
 	if(length == 32_u32) {

@@ -21,6 +21,35 @@
 
 #include <fmt/format.h>
 
+#if defined(_MSC_VER)
+
+inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
+	register_set_t regs = {};
+	std::array<int, 4> raw_regs;
+	__cpuidex(raw_regs.data(), gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf));
+	regs[eax] = gsl::narrow_cast<std::uint32_t>(raw_regs[eax]);
+	regs[ebx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ebx]);
+	regs[ecx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ecx]);
+	regs[edx] = gsl::narrow_cast<std::uint32_t>(raw_regs[edx]);
+	return regs;
+}
+
+#else
+
+inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
+	register_set_t regs = {};
+	std::array<unsigned int, 4> raw_regs;
+	__get_cpuid_count(gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf), &raw_regs[eax], &raw_regs[ebx], &raw_regs[ecx], &raw_regs[edx]);
+	regs[eax] = gsl::narrow_cast<std::uint32_t>(raw_regs[eax]);
+	regs[ebx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ebx]);
+	regs[ecx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ecx]);
+	regs[edx] = gsl::narrow_cast<std::uint32_t>(raw_regs[edx]);
+	return regs;
+}
+
+#endif
+
+
 template<std::size_t N, std::size_t... Is>
 constexpr std::array<char, N - 1> to_array(const char(&str)[N], std::index_sequence<Is...>) {
 	return { str[Is]... };
@@ -801,7 +830,7 @@ void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const flag_spe
 					if(lower_mnemonic == spec.flag_name
 					|| lower_mnemonic == flag_name_alternative) {
 						unsigned long shift_amount = 0;
-						_BitScanForward(&shift_amount, feature.mask);
+						bit_scan_forward(&shift_amount, feature.mask);
 						const std::uint32_t result = (value & feature.mask) >> shift_amount;
 
 						format_to(out, "cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, result);
@@ -814,7 +843,7 @@ void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const flag_spe
 		if(!handled && spec.flag_start != 0xffff'ffff_u32 && spec.flag_end != 0xffff'ffff_u32) {
 			const std::uint32_t mask = range_mask(spec.flag_start, spec.flag_end);
 			unsigned long shift_amount = 0;
-			_BitScanForward(&shift_amount, mask);
+			bit_scan_forward(&shift_amount, mask);
 			const std::uint32_t result = (value & mask) >> shift_amount;
 			format_to(out, "cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, result);
 			handled = true;
