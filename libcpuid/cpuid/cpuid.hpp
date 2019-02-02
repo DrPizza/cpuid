@@ -36,7 +36,7 @@ constexpr std::int_least8_t operator "" _i8(unsigned long long arg) {
 	return static_cast<std::int_least8_t>(arg);
 }
 
-enum struct leaf_t : std::uint32_t
+enum struct leaf_type : std::uint32_t
 {
 	basic_info                        = 0x0000'0000_u32,
 	version_info                      = 0x0000'0001_u32,
@@ -129,21 +129,21 @@ enum struct leaf_t : std::uint32_t
 	none                              = 0x0000'0000_u32,
 };
 
-constexpr inline leaf_t operator++(leaf_t& lhs) {
-	lhs = static_cast<leaf_t>(static_cast<std::uint32_t>(lhs) + 1);
+constexpr inline leaf_type operator++(leaf_type& lhs) {
+	lhs = static_cast<leaf_type>(static_cast<std::uint32_t>(lhs) + 1);
 	return lhs;
 }
 
-constexpr inline leaf_t operator+=(leaf_t& lhs, std::uint32_t rhs) {
-	lhs = static_cast<leaf_t>(static_cast<std::uint32_t>(lhs) + rhs);
+constexpr inline leaf_type operator+=(leaf_type& lhs, std::uint32_t rhs) {
+	lhs = static_cast<leaf_type>(static_cast<std::uint32_t>(lhs) + rhs);
 	return lhs;
 }
 
-constexpr inline leaf_t operator+(const leaf_t& lhs, std::uint32_t rhs) {
-	return static_cast<leaf_t>(static_cast<std::uint32_t>(lhs) + rhs);
+constexpr inline leaf_type operator+(const leaf_type& lhs, std::uint32_t rhs) {
+	return static_cast<leaf_type>(static_cast<std::uint32_t>(lhs) + rhs);
 }
 
-enum struct subleaf_t : std::uint32_t
+enum struct subleaf_type : std::uint32_t
 {
 	main                                   = 0x0000'0000_u32,
 	extended_features_main                 = 0x0000'0000_u32,
@@ -169,32 +169,30 @@ enum struct subleaf_t : std::uint32_t
 	none                                   = 0x0000'0000_u32,
 };
 
-constexpr inline subleaf_t operator++(subleaf_t& lhs) {
-	lhs = static_cast<subleaf_t>(static_cast<std::uint32_t>(lhs) + 1);
+constexpr inline subleaf_type operator++(subleaf_type& lhs) {
+	lhs = static_cast<subleaf_type>(static_cast<std::uint32_t>(lhs) + 1);
 	return lhs;
 }
 
-constexpr inline subleaf_t operator+=(subleaf_t& lhs, std::uint32_t offset) {
-	lhs = static_cast<subleaf_t>(static_cast<std::uint32_t>(lhs) + offset);
+constexpr inline subleaf_type operator+=(subleaf_type& lhs, std::uint32_t offset) {
+	lhs = static_cast<subleaf_type>(static_cast<std::uint32_t>(lhs) + offset);
 	return lhs;
 }
 
-enum register_t : std::uint8_t
+enum register_type : std::uint8_t
 {
 	eax,
 	ebx,
 	ecx,
 	edx,
-
-	none = 0x00ui8,
 };
 
-constexpr inline register_t operator++(register_t& lhs) {
-	lhs = static_cast<register_t>(static_cast<std::uint8_t>(lhs) + 1);
+constexpr inline register_type operator++(register_type& lhs) {
+	lhs = static_cast<register_type>(static_cast<std::uint8_t>(lhs) + 1);
 	return lhs;
 }
 
-enum vendor_t : std::uint32_t
+enum vendor_type : std::uint32_t
 {
 	unknown        = 0x0000'0000_u32,
 	// silicon
@@ -224,11 +222,11 @@ enum vendor_t : std::uint32_t
 	any            = 0xffff'ffff_u32,
 };
 
-constexpr inline vendor_t operator|(const vendor_t& lhs, const vendor_t& rhs) {
-	return static_cast<vendor_t>(static_cast<std::uint32_t>(lhs) | static_cast<std::uint32_t>(rhs));
+constexpr inline vendor_type operator|(const vendor_type& lhs, const vendor_type& rhs) {
+	return static_cast<vendor_type>(static_cast<std::uint32_t>(lhs) | static_cast<std::uint32_t>(rhs));
 }
 
-inline std::string to_string(vendor_t vendor) {
+inline std::string to_string(vendor_type vendor) {
 	std::string silicon;
 	std::string hypervisor;
 
@@ -307,10 +305,10 @@ inline std::string to_string(vendor_t vendor) {
 }
 
 using register_set_t = std::array<std::uint32_t, 4>;
-using subleaves_t    = std::map<subleaf_t, register_set_t>;
-using leaves_t       = std::map<leaf_t, subleaves_t>;
+using subleaves_t    = std::map<subleaf_type, register_set_t>;
+using leaves_t       = std::map<leaf_type, subleaves_t>;
 
-vendor_t get_vendor_from_name(const register_set_t& regs);
+vendor_type get_vendor_from_name(const register_set_t& regs);
 
 struct id_info_t
 {
@@ -348,7 +346,7 @@ inline bool operator==(const model_t& lhs, const model_t& rhs) noexcept {
 struct cpu_t
 {
 	std::uint32_t apic_id;
-	vendor_t vendor;
+	vendor_type vendor;
 	model_t model;
 	leaves_t leaves;
 };
@@ -360,7 +358,7 @@ inline bool operator==(const cpu_t& lhs, const cpu_t& rhs) noexcept {
 	    && lhs.leaves                  == rhs.leaves;
 }
 
-inline register_set_t cpuid(leaf_t leaf, subleaf_t subleaf) noexcept {
+inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
 	register_set_t regs = {};
 	std::array<int, 4> raw_regs;
 	__cpuidex(raw_regs.data(), gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf));
@@ -371,7 +369,7 @@ inline register_set_t cpuid(leaf_t leaf, subleaf_t subleaf) noexcept {
 	return regs;
 }
 
-void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf);
+void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf, subleaf_type subleaf);
 
 enum struct file_format
 {
@@ -391,7 +389,7 @@ struct flag_spec_t
 {
 	std::uint32_t selector_eax  = 0_u32;
 	std::uint32_t selector_ecx  = 0_u32;
-	register_t    flag_register = eax;
+	register_type flag_register = eax;
 	std::string   flag_name     = "";
 	std::uint32_t flag_start    = 0xffff'ffff_u32;
 	std::uint32_t flag_end      = 0xffff'ffff_u32;

@@ -22,15 +22,15 @@ std::string print_size(std::size_t cache_bytes) {
 
 enum cache_type_t : std::uint8_t
 {
-	data_tlb        = 0x01ui8,
-	instruction_tlb = 0x02ui8,
-	unified_tlb     = 0x04ui8,
-	all_tlb         = 0x07ui8,
-	data            = 0x10ui8,
-	instructions    = 0x20ui8,
-	unified         = 0x40ui8,
-	all_cache       = 0x70ui8,
-	trace           = 0x80ui8,
+	data_tlb        = 0x01_u8,
+	instruction_tlb = 0x02_u8,
+	unified_tlb     = 0x04_u8,
+	all_tlb         = 0x07_u8,
+	data            = 0x10_u8,
+	instructions    = 0x20_u8,
+	unified         = 0x40_u8,
+	all_cache       = 0x70_u8,
+	trace           = 0x80_u8,
 };
 
 std::string to_string(cache_type_t type) {
@@ -82,13 +82,13 @@ std::string to_string(cache_level_t level) {
 
 enum cache_attributes_t : std::uint8_t
 {
-	no_attributes      = 0x00ui8,
-	pages_4k           = 0x01ui8,
-	pages_2m           = 0x02ui8,
-	pages_4m           = 0x04ui8,
-	pages_1g           = 0x08ui8,
-	all_page_sizes     = 0x0fui8,
-	sectored_two_lines = 0x10ui8,
+	no_attributes      = 0x00_u8,
+	pages_4k           = 0x01_u8,
+	pages_2m           = 0x02_u8,
+	pages_4m           = 0x04_u8,
+	pages_1g           = 0x08_u8,
+	all_page_sizes     = 0x0f_u8,
+	sectored_two_lines = 0x10_u8,
 };
 
 constexpr cache_attributes_t operator|(const cache_attributes_t& lhs, const cache_attributes_t& rhs) noexcept {
@@ -98,7 +98,7 @@ constexpr cache_attributes_t operator|(const cache_attributes_t& lhs, const cach
 std::string to_string(cache_attributes_t attrs) {
 	fmt::memory_buffer out;
 	const std::uint8_t page = gsl::narrow_cast<std::uint8_t>(attrs & all_page_sizes);
-	std::uint8_t mask = 1ui8;
+	std::uint8_t mask = 1_u8;
 	bool needs_separator = false;
 	do {
 		switch(page & mask) {
@@ -134,7 +134,7 @@ std::string to_string(cache_attributes_t attrs) {
 			needs_separator = true;
 			break;
 		}
-		mask <<= 1ui8;
+		mask <<= 1_u8;
 	} while(mask & all_page_sizes);
 	return out.data();
 }
@@ -143,7 +143,7 @@ enum cache_associativity_t : std::uint8_t
 {
 	unknown_associativity,
 	direct_mapped,
-	fully_associative = 0xffui8
+	fully_associative = 0xff_u8
 };
 
 std::string to_string(cache_associativity_t assoc) {
@@ -152,7 +152,7 @@ std::string to_string(cache_associativity_t assoc) {
 		return "unknown associativity";
 	case 1:
 		return "direct mapped";
-	case 0xffui8:
+	case 0xff_u8:
 		return "fully associative";
 	default:
 		return fmt::format("{0:d}-way set associative", assoc);
@@ -344,19 +344,19 @@ decomposed_cache_t decompose_cache_descriptors(const cpu_t& cpu, const register_
 	decomposed_cache_t decomposed;
 	const auto bytes = gsl::as_bytes(gsl::make_span(regs));
 	std::ptrdiff_t idx = 0;
-	for(register_t r = eax; r <= edx; ++r, idx += sizeof(std::uint32_t)) {
+	for(register_type r = eax; r <= edx; ++r, idx += sizeof(std::uint32_t)) {
 		if(regs[r] & 0x8000'0000_u32) {
 			continue;
 		}
 		for(std::ptrdiff_t j = 0; j < sizeof(std::uint32_t); ++j) {
 			const std::uint8_t value = gsl::to_integer<std::uint8_t>(bytes[idx + j]);
 			switch(value) {
-			case 0x00ui8:
+			case 0x00_u8:
 				break;
-			case 0x40ui8:
+			case 0x40_u8:
 				decomposed.non_conformant_descriptors.push_back("No 2nd-level cache or, if processor contains a valid 2nd-level cache, no 3rd-level cache");
 				break;
-			case 0x49ui8:
+			case 0x49_u8:
 				{
 					const auto it = dual_cache_descriptors.find(value);
 					if(cpu.model.family == 0x0f && cpu.model.model == 0x06) {
@@ -366,14 +366,14 @@ decomposed_cache_t decompose_cache_descriptors(const cpu_t& cpu, const register_
 					}
 				}
 				break;
-			case 0xf0ui8:
+			case 0xf0_u8:
 				decomposed.non_conformant_descriptors.push_back("64-byte prefetching");
 				break;
-			case 0xf1ui8:
+			case 0xf1_u8:
 				decomposed.non_conformant_descriptors.push_back("128-byte prefetching");
 				break;
-			case 0xfeui8:
-			case 0xffui8:
+			case 0xfe_u8:
+			case 0xff_u8:
 				break;
 			default:
 				{
@@ -416,7 +416,7 @@ decomposed_cache_t decompose_cache_descriptors(const cpu_t& cpu, const register_
 }
 
 void print_cache_tlb_info(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::cache_and_tlb).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::cache_and_tlb).at(subleaf_type::main);
 
 	if((regs[eax] & 0x0000'00ff_u32) != 0x0000'0001_u32) {
 		return;
@@ -441,13 +441,13 @@ void print_cache_tlb_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_deterministic_cache(cpu_t& cpu) {
-	subleaf_t sub = subleaf_t::main;
+	subleaf_type sub = subleaf_type::main;
 	while(true) {
-		register_set_t regs = cpuid(leaf_t::deterministic_cache, sub);
+		register_set_t regs = cpuid(leaf_type::deterministic_cache, sub);
 		if((regs[eax] & 0x0000'001f_u32) == 0) {
 			break;
 		}
-		cpu.leaves[leaf_t::deterministic_cache][subleaf_t{ sub }] = regs;
+		cpu.leaves[leaf_type::deterministic_cache][subleaf_type{ sub }] = regs;
 		++sub;
 	}
 }
@@ -455,7 +455,7 @@ void enumerate_deterministic_cache(cpu_t& cpu) {
 void print_deterministic_cache(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "Deterministic cache\n");
 
-	for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_cache)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::deterministic_cache)) {
 		const register_set_t& regs = sub.second;
 
 		const union
@@ -541,21 +541,21 @@ void print_deterministic_cache(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_extended_topology(cpu_t& cpu) {
-	cpu.leaves[leaf_t::extended_topology][subleaf_t::main] = cpuid(leaf_t::extended_topology, subleaf_t::main);
-	for(subleaf_t sub = subleaf_t{ 1 }; ; ++sub) {
-		register_set_t regs = cpuid(leaf_t::extended_topology, sub);
+	cpu.leaves[leaf_type::extended_topology][subleaf_type::main] = cpuid(leaf_type::extended_topology, subleaf_type::main);
+	for(subleaf_type sub = subleaf_type{ 1 }; ; ++sub) {
+		register_set_t regs = cpuid(leaf_type::extended_topology, sub);
 		if((regs[ecx] & 0x0000'ff00_u32) == 0_u32) {
 			break;
 		}
-		cpu.leaves[leaf_t::extended_topology][sub] = regs;
+		cpu.leaves[leaf_type::extended_topology][sub] = regs;
 	}
 }
 
 void print_extended_topology(fmt::memory_buffer& out, const cpu_t& cpu) {
-	for(const auto& sub : cpu.leaves.at(leaf_t::extended_topology)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::extended_topology)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
-		case subleaf_t::main:
+		case subleaf_type::main:
 			format_to(out, "Extended topology\n");
 			format_to(out, "\tx2 APIC id: {:#010x}\n", regs[edx]);
 			[[fallthrough]];
@@ -614,20 +614,20 @@ void print_extended_topology(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_deterministic_tlb(cpu_t& cpu) {
-	register_set_t regs = cpuid(leaf_t::deterministic_tlb, subleaf_t::main);
-	cpu.leaves[leaf_t::deterministic_tlb][subleaf_t::main] = regs;
+	register_set_t regs = cpuid(leaf_type::deterministic_tlb, subleaf_type::main);
+	cpu.leaves[leaf_type::deterministic_tlb][subleaf_type::main] = regs;
 
-	const subleaf_t limit = subleaf_t{ regs[eax] };
-	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
-		cpu.leaves[leaf_t::deterministic_tlb][sub] = cpuid(leaf_t::deterministic_tlb, sub);
+	const subleaf_type limit = subleaf_type{ regs[eax] };
+	for(subleaf_type sub = subleaf_type{ 1 }; sub < limit; ++sub) {
+		cpu.leaves[leaf_type::deterministic_tlb][sub] = cpuid(leaf_type::deterministic_tlb, sub);
 	}
 }
 
 void print_deterministic_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
-	for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_tlb)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::deterministic_tlb)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
-		case subleaf_t::main:
+		case subleaf_type::main:
 			format_to(out, "Deterministic Address Translation\n");
 			[[fallthrough]];
 		default:
@@ -725,7 +725,7 @@ void print_deterministic_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_l1_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::l1_cache_identifiers).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::l1_cache_identifiers).at(subleaf_type::main);
 
 	struct tlb_element
 	{
@@ -774,11 +774,11 @@ void print_l1_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 
 	auto print_associativity = [](std::uint8_t assoc) -> std::string {
 		switch(assoc) {
-		case 0ui8:
+		case 0_u8:
 			return "unknown assocativity";
-		case 1ui8:
+		case 1_u8:
 			return "direct-mapped";
-		case 0xffui8:
+		case 0xff_u8:
 			return "fully associative";
 		default:
 			return std::to_string(gsl::narrow_cast<std::uint32_t>(assoc)) + "-way associative";
@@ -866,7 +866,7 @@ std::string print_tlb(const tlb_element& tlb, const std::string& type, const std
 };
 
 void print_l2_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::l2_cache_identifiers).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::l2_cache_identifiers).at(subleaf_type::main);
 	
 	struct l2_cache_info
 	{
@@ -948,14 +948,14 @@ void print_l2_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 		                                                                  c.split.line_size);
 		break;
 	default:
-		print_generic(out, cpu, leaf_t::l2_cache_identifiers, subleaf_t::main);
+		print_generic(out, cpu, leaf_type::l2_cache_identifiers, subleaf_type::main);
 		break;
 	}
 	format_to(out, "\n");
 }
 
 void print_1g_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::tlb_1g_identifiers).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::tlb_1g_identifiers).at(subleaf_type::main);
 	
 	const union
 	{
@@ -980,13 +980,13 @@ void print_1g_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_cache_properties(cpu_t& cpu) {
-	subleaf_t sub = subleaf_t::main;
+	subleaf_type sub = subleaf_type::main;
 	while(true) {
-		register_set_t regs = cpuid(leaf_t::cache_properties, sub);
+		register_set_t regs = cpuid(leaf_type::cache_properties, sub);
 		if((regs[eax] & 0xf_u32) == 0) {
 			break;
 		}
-		cpu.leaves[leaf_t::cache_properties][subleaf_t{ sub }] = regs;
+		cpu.leaves[leaf_type::cache_properties][subleaf_type{ sub }] = regs;
 		++sub;
 	}
 }
@@ -994,7 +994,7 @@ void enumerate_cache_properties(cpu_t& cpu) {
 void print_cache_properties(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "Cache properties\n");
 
-	for(const auto& sub : cpu.leaves.at(leaf_t::cache_properties)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::cache_properties)) {
 		const register_set_t& regs = sub.second;
 
 		const union
@@ -1077,7 +1077,7 @@ void print_cache_properties(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_extended_apic(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::extended_apic).at(subleaf_type::main);
 
 	const union
 	{
@@ -1196,7 +1196,7 @@ std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noe
 }
 
 system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
-	vendor_t vendor = vendor_t::unknown;
+	vendor_type vendor = vendor_type::unknown;
 	system_t machine = {};
 	bool enumerated_caches = false;
 	std::for_each(std::begin(logical_cpus), std::end(logical_cpus), [&machine, &enumerated_caches, &vendor](const std::pair<std::uint32_t, cpu_t>& p) {
@@ -1209,8 +1209,8 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 		vendor = cpu.vendor;
 		switch(cpu.vendor & any_silicon) {
 		case intel:
-			if(cpu.leaves.find(leaf_t::extended_topology) != cpu.leaves.end()) {
-				for(const auto& sub : cpu.leaves.at(leaf_t::extended_topology)) {
+			if(cpu.leaves.find(leaf_type::extended_topology) != cpu.leaves.end()) {
+				for(const auto& sub : cpu.leaves.at(leaf_type::extended_topology)) {
 					const register_set_t& regs = sub.second;
 
 					const union
@@ -1250,8 +1250,8 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 					}
 				}
 			}
-			if(cpu.leaves.find(leaf_t::deterministic_cache) != cpu.leaves.end()) {
-				for(const auto& sub : cpu.leaves.at(leaf_t::deterministic_cache)) {
+			if(cpu.leaves.find(leaf_type::deterministic_cache) != cpu.leaves.end()) {
+				for(const auto& sub : cpu.leaves.at(leaf_type::deterministic_cache)) {
 					const register_set_t& regs = sub.second;
 
 					const union
@@ -1293,13 +1293,13 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 					} d = { regs[edx] };
 
 					switch(sub.first) {
-					case subleaf_t::main:
+					case subleaf_type::main:
 						if(machine.logical_mask_width == 0_u32) {
 							const union
 							{
 								std::uint32_t full;
 								id_info_t     split;
-							} leaf_1_b = { cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main).at(ebx) };
+							} leaf_1_b = { cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main).at(ebx) };
 
 							const std::uint32_t total_possible_cores = leaf_1_b.split.maximum_addressable_ids;
 							const std::uint32_t total_cores_in_package = a.split.maximum_addressable_core_ids + 1_u32;
@@ -1339,11 +1339,11 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 						break;
 					}
 				}
-			} else if(cpu.leaves.find(leaf_t::cache_and_tlb) != cpu.leaves.end()) {
+			} else if(cpu.leaves.find(leaf_type::cache_and_tlb) != cpu.leaves.end()) {
 				machine.logical_mask_width = 0_u32;
 				machine.physical_mask_width = 0_u32;
 				
-				decomposed_cache_t decomposed = decompose_cache_descriptors(cpu, cpu.leaves.at(leaf_t::cache_and_tlb).at(subleaf_t::main));
+				decomposed_cache_t decomposed = decompose_cache_descriptors(cpu, cpu.leaves.at(leaf_type::cache_and_tlb).at(subleaf_type::main));
 				std::vector<gsl::not_null<const cache_descriptor_t*>> combined;
 				combined.reserve(decomposed.cache_descriptors.size() + decomposed.other_descriptors.size());
 				combined.insert(combined.end(), decomposed.other_descriptors.begin(), decomposed.other_descriptors.end());
@@ -1386,8 +1386,8 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 			}
 			break;
 		case amd:
-			if(cpu.leaves.find(leaf_t::extended_apic) != cpu.leaves.end()) {
-				const register_set_t& regs = cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main);
+			if(cpu.leaves.find(leaf_type::extended_apic) != cpu.leaves.end()) {
+				const register_set_t& regs = cpu.leaves.at(leaf_type::extended_apic).at(subleaf_type::main);
 				const union
 				{
 					std::uint32_t full;
@@ -1400,8 +1400,8 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 				} b = { regs[ebx] };
 				machine.logical_mask_width = generate_mask(b.split.threads_per_core).second;
 			}
-			if(cpu.leaves.find(leaf_t::cache_properties) != cpu.leaves.end()) {
-				for(const auto& sub : cpu.leaves.at(leaf_t::cache_properties)) {
+			if(cpu.leaves.find(leaf_type::cache_properties) != cpu.leaves.end()) {
+				for(const auto& sub : cpu.leaves.at(leaf_type::cache_properties)) {
 					const register_set_t& regs = sub.second;
 					const union
 					{
@@ -1465,8 +1465,8 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 					machine.all_caches.push_back(cache);
 				}
 			}
-			if(cpu.leaves.find(leaf_t::address_limits) != cpu.leaves.end()) {
-				const register_set_t& regs = cpu.leaves.at(leaf_t::address_limits).at(subleaf_t::main);
+			if(cpu.leaves.find(leaf_type::address_limits) != cpu.leaves.end()) {
+				const register_set_t& regs = cpu.leaves.at(leaf_type::address_limits).at(subleaf_type::main);
 				const union
 				{
 					std::uint32_t full;

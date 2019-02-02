@@ -31,8 +31,8 @@ constexpr std::array<char, N - 1> to_array(const char(&str)[N]) {
 	return to_array(str, std::make_index_sequence<N - 1>{});
 }
 
-vendor_t get_vendor_from_name(const register_set_t& regs) {
-	static const std::map<std::array<char, 12>, vendor_t> vendors = {
+vendor_type get_vendor_from_name(const register_set_t& regs) {
+	static const std::map<std::array<char, 12>, vendor_type> vendors = {
 		{ to_array("AMDisbetter!"), amd },
 		{ to_array("AuthenticAMD"), amd },
 		{ to_array("CentaurHauls"), centaur },
@@ -59,8 +59,8 @@ vendor_t get_vendor_from_name(const register_set_t& regs) {
 	return it != vendors.end() ? it->second : unknown;
 }
 
-vendor_t get_hypervisor_from_name(const register_set_t& regs) {
-	static const std::map<std::array<char, 12>, vendor_t> vendors = {
+vendor_type get_hypervisor_from_name(const register_set_t& regs) {
+	static const std::map<std::array<char, 12>, vendor_type> vendors = {
 		{ to_array("bhyve byhve "), bhyve },
 		{ to_array("KVMKVMKVM\0\0\0"), kvm },
 		{ to_array("Microsoft Hv"), hyper_v },
@@ -79,7 +79,7 @@ vendor_t get_hypervisor_from_name(const register_set_t& regs) {
 	return it != vendors.end() ? it->second : unknown;
 }
 
-model_t get_model(vendor_t vendor, const register_set_t& regs) noexcept {
+model_t get_model(vendor_type vendor, const register_set_t& regs) noexcept {
 	const union
 	{
 		std::uint32_t full;
@@ -125,19 +125,19 @@ uint8_t get_local_apic_id(const register_set_t& regs) noexcept {
 uint32_t get_apic_id(const cpu_t& cpu) {
 	switch(cpu.vendor & any_silicon) {
 	case intel:
-		if(cpu.leaves.find(leaf_t::extended_topology) != cpu.leaves.end()) {
-			return cpu.leaves.at(leaf_t::extended_topology).at(subleaf_t::main).at(edx);
+		if(cpu.leaves.find(leaf_type::extended_topology) != cpu.leaves.end()) {
+			return cpu.leaves.at(leaf_type::extended_topology).at(subleaf_type::main).at(edx);
 		}
 		break;
 	case amd:
-		if(cpu.leaves.find(leaf_t::extended_apic) != cpu.leaves.end()) {
-			return cpu.leaves.at(leaf_t::extended_apic).at(subleaf_t::main).at(eax);
+		if(cpu.leaves.find(leaf_type::extended_apic) != cpu.leaves.end()) {
+			return cpu.leaves.at(leaf_type::extended_apic).at(subleaf_type::main).at(eax);
 		}
 		break;
 	default:
 		break;
 	}
-	return get_local_apic_id(cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main));
+	return get_local_apic_id(cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main));
 }
 
 using leaf_print = void(*)(fmt::memory_buffer& out, const cpu_t& cpu);
@@ -145,9 +145,9 @@ using leaf_enumerate = void(*)(cpu_t& cpu);
 
 struct filter_t
 {
-	leaf_t leaf;
-	subleaf_t subleaf;
-	register_t reg;
+	leaf_type leaf;
+	subleaf_type subleaf;
+	register_type reg;
 	std::uint32_t mask;
 };
 
@@ -162,7 +162,7 @@ constexpr static filter_t no_filter = { };
 
 struct leaf_descriptor_t
 {
-	vendor_t vendor;
+	vendor_type vendor;
 	leaf_enumerate enumerator;
 	leaf_print printer;
 	filter_t filter;
@@ -174,97 +174,97 @@ void enumerate_null(cpu_t&) noexcept {
 void print_null(fmt::memory_buffer&, const cpu_t&) noexcept {
 }
 
-const std::multimap<leaf_t, leaf_descriptor_t> descriptors = {
-	{ leaf_t::basic_info                     , { any                    , nullptr                        , print_basic_info                     , {} } },
-	{ leaf_t::version_info                   , { any                    , nullptr                        , print_version_info                   , {} } },
-	{ leaf_t::cache_and_tlb                  , { intel                  , nullptr                        , print_cache_tlb_info                 , {} } },
-	{ leaf_t::serial_number                  , { intel       | transmeta, nullptr                        , print_serial_number                  , { leaf_t::version_info                   , subleaf_t::main, edx, 0x0004'0000_u32 } } },
-	{ leaf_t::deterministic_cache            , { intel                  , enumerate_deterministic_cache  , print_deterministic_cache            , {} } },
-	{ leaf_t::monitor_mwait                  , { intel | amd            , nullptr                        , print_mwait_parameters               , { leaf_t::version_info                   , subleaf_t::main, ecx, 0x0000'0008_u32 } } },
-	{ leaf_t::thermal_and_power              , { intel | amd            , nullptr                        , print_thermal_and_power              , {} } },
-	{ leaf_t::extended_features              , { any                    , enumerate_extended_features    , print_extended_features              , {} } },
-	{ leaf_t::reserved_1                     , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::direct_cache_access            , { intel                  , nullptr                        , print_direct_cache_access            , { leaf_t::version_info                   , subleaf_t::main, ecx, 0x0004'0000_u32 } } },
-	{ leaf_t::performance_monitoring         , { intel                  , nullptr                        , print_performance_monitoring         , { leaf_t::version_info                   , subleaf_t::main, ecx, 0x0000'8000_u32 } } },
-	{ leaf_t::extended_topology              , { intel                  , enumerate_extended_topology    , print_extended_topology              , {} } },
-	{ leaf_t::reserved_2                     , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_state                 , { intel | amd            , enumerate_extended_state       , print_extended_state                 , { leaf_t::version_info                   , subleaf_t::main, ecx, 0x0400'0000_u32 } } },
-	{ leaf_t::reserved_3                     , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::rdt_monitoring                 , { intel                  , enumerate_rdt_monitoring       , print_rdt_monitoring                 , { leaf_t::extended_features              , subleaf_t::main, ebx, 0x0000'1000_u32 } } },
-	{ leaf_t::rdt_allocation                 , { intel                  , enumerate_rdt_allocation       , print_rdt_allocation                 , { leaf_t::extended_features              , subleaf_t::main, ebx, 0x0000'8000_u32 } } },
-	{ leaf_t::reserved_4                     , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::sgx_info                       , { intel                  , enumerate_sgx_info             , print_sgx_info                       , { leaf_t::extended_features              , subleaf_t::main, ebx, 0x0000'0004_u32 } } },
-	{ leaf_t::reserved_5                     , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::processor_trace                , { intel                  , enumerate_processor_trace      , print_processor_trace                , { leaf_t::extended_features              , subleaf_t::main, ebx, 0x0200'0000_u32 } } },
-	{ leaf_t::time_stamp_counter             , { intel                  , nullptr                        , print_time_stamp_counter             , {} } },
-	{ leaf_t::processor_frequency            , { intel                  , nullptr                        , print_processor_frequency            , {} } },
-	{ leaf_t::system_on_chip_vendor          , { intel                  , enumerate_system_on_chip_vendor, print_system_on_chip_vendor          , {} } },
-	{ leaf_t::deterministic_tlb              , { intel                  , enumerate_deterministic_tlb    , print_deterministic_tlb              , {} } },
-	{ leaf_t::reserved_6                     , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::reserved_7                     , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::pconfig                        , { any                    , enumerate_pconfig              , print_pconfig                        , { leaf_t::extended_features              , subleaf_t::main, edx, 0x0004'0000_u32 } } },
+const std::multimap<leaf_type, leaf_descriptor_t> descriptors = {
+	{ leaf_type::basic_info                     , { any                    , nullptr                        , print_basic_info                     , {} } },
+	{ leaf_type::version_info                   , { any                    , nullptr                        , print_version_info                   , {} } },
+	{ leaf_type::cache_and_tlb                  , { intel                  , nullptr                        , print_cache_tlb_info                 , {} } },
+	{ leaf_type::serial_number                  , { intel       | transmeta, nullptr                        , print_serial_number                  , { leaf_type::version_info                   , subleaf_type::main, edx, 0x0004'0000_u32 } } },
+	{ leaf_type::deterministic_cache            , { intel                  , enumerate_deterministic_cache  , print_deterministic_cache            , {} } },
+	{ leaf_type::monitor_mwait                  , { intel | amd            , nullptr                        , print_mwait_parameters               , { leaf_type::version_info                   , subleaf_type::main, ecx, 0x0000'0008_u32 } } },
+	{ leaf_type::thermal_and_power              , { intel | amd            , nullptr                        , print_thermal_and_power              , {} } },
+	{ leaf_type::extended_features              , { any                    , enumerate_extended_features    , print_extended_features              , {} } },
+	{ leaf_type::reserved_1                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::direct_cache_access            , { intel                  , nullptr                        , print_direct_cache_access            , { leaf_type::version_info                   , subleaf_type::main, ecx, 0x0004'0000_u32 } } },
+	{ leaf_type::performance_monitoring         , { intel                  , nullptr                        , print_performance_monitoring         , { leaf_type::version_info                   , subleaf_type::main, ecx, 0x0000'8000_u32 } } },
+	{ leaf_type::extended_topology              , { intel                  , enumerate_extended_topology    , print_extended_topology              , {} } },
+	{ leaf_type::reserved_2                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_state                 , { intel | amd            , enumerate_extended_state       , print_extended_state                 , { leaf_type::version_info                   , subleaf_type::main, ecx, 0x0400'0000_u32 } } },
+	{ leaf_type::reserved_3                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::rdt_monitoring                 , { intel                  , enumerate_rdt_monitoring       , print_rdt_monitoring                 , { leaf_type::extended_features              , subleaf_type::main, ebx, 0x0000'1000_u32 } } },
+	{ leaf_type::rdt_allocation                 , { intel                  , enumerate_rdt_allocation       , print_rdt_allocation                 , { leaf_type::extended_features              , subleaf_type::main, ebx, 0x0000'8000_u32 } } },
+	{ leaf_type::reserved_4                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::sgx_info                       , { intel                  , enumerate_sgx_info             , print_sgx_info                       , { leaf_type::extended_features              , subleaf_type::main, ebx, 0x0000'0004_u32 } } },
+	{ leaf_type::reserved_5                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::processor_trace                , { intel                  , enumerate_processor_trace      , print_processor_trace                , { leaf_type::extended_features              , subleaf_type::main, ebx, 0x0200'0000_u32 } } },
+	{ leaf_type::time_stamp_counter             , { intel                  , nullptr                        , print_time_stamp_counter             , {} } },
+	{ leaf_type::processor_frequency            , { intel                  , nullptr                        , print_processor_frequency            , {} } },
+	{ leaf_type::system_on_chip_vendor          , { intel                  , enumerate_system_on_chip_vendor, print_system_on_chip_vendor          , {} } },
+	{ leaf_type::deterministic_tlb              , { intel                  , enumerate_deterministic_tlb    , print_deterministic_tlb              , {} } },
+	{ leaf_type::reserved_6                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::reserved_7                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::pconfig                        , { any                    , enumerate_pconfig              , print_pconfig                        , { leaf_type::extended_features              , subleaf_type::main, edx, 0x0004'0000_u32 } } },
 
-	{ leaf_t::hypervisor_limit               , { any                    , nullptr                        , print_hypervisor_limit               , {} } },
-	{ leaf_t::hyper_v_signature              , { hyper_v                , nullptr                        , print_hyper_v_signature              , {} } },
-	{ leaf_t::hyper_v_system_identity        , { hyper_v                , nullptr                        , print_hyper_v_system_identity        , {} } },
-	{ leaf_t::hyper_v_features               , { hyper_v                , nullptr                        , print_hyper_v_features               , {} } },
-	{ leaf_t::hyper_v_enlightenment_recs     , { hyper_v                , nullptr                        , print_hyper_v_enlightenment_recs     , {} } },
-	{ leaf_t::hyper_v_implementation_limits  , { hyper_v                , nullptr                        , print_hyper_v_implementation_limits  , {} } },
-	{ leaf_t::hyper_v_implementation_hardware, { hyper_v                , nullptr                        , print_hyper_v_implementation_hardware, {} } },
-	{ leaf_t::hyper_v_root_cpu_management    , { hyper_v                , nullptr                        , print_hyper_v_root_cpu_management    , {} } },
-	{ leaf_t::hyper_v_shared_virtual_memory  , { hyper_v                , nullptr                        , print_hyper_v_shared_virtual_memory  , {} } },
-	{ leaf_t::hyper_v_nested_hypervisor      , { hyper_v                , nullptr                        , print_hyper_v_nested_hypervisor      , {} } },
-	{ leaf_t::hyper_v_nested_features        , { hyper_v                , nullptr                        , print_hyper_v_nested_features        , {} } },
-	{ leaf_t::xen_limit                      , { xen_hvm                , nullptr                        , print_xen_limit                      , {} } },
-	{ leaf_t::xen_version                    , { xen_hvm                , nullptr                        , print_xen_version                    , {} } },
-	{ leaf_t::xen_features                   , { xen_hvm                , nullptr                        , print_xen_features                   , {} } },
-	{ leaf_t::xen_time                       , { xen_hvm                , enumerate_xen_time             , print_xen_time                       , {} } },
-	{ leaf_t::xen_hvm_features               , { xen_hvm                , nullptr                        , print_xen_hvm_features               , {} } },
-	{ leaf_t::xen_pv_features                , { xen_hvm                , nullptr                        , print_xen_pv_features                , {} } },
-	{ leaf_t::xen_limit_offset               , { xen_hvm                , nullptr                        , print_xen_limit                      , {} } },
-	{ leaf_t::xen_version_offset             , { xen_hvm                , nullptr                        , print_xen_version                    , {} } },
-	{ leaf_t::xen_features_offset            , { xen_hvm                , nullptr                        , print_xen_features                   , {} } },
-	{ leaf_t::xen_time_offset                , { xen_hvm                , enumerate_xen_time             , print_xen_time                       , {} } },
-	{ leaf_t::xen_hvm_features_offset        , { xen_hvm                , nullptr                        , print_xen_hvm_features               , {} } },
-	{ leaf_t::xen_pv_features_offset         , { xen_hvm                , nullptr                        , print_xen_pv_features                , {} } },
-	{ leaf_t::vmware_timing                  , { vmware                 , nullptr                        , print_vmware_timing                  , {} } },
-	{ leaf_t::kvm_features                   , { vmware                 , nullptr                        , print_kvm_features                   , {} } },
+	{ leaf_type::hypervisor_limit               , { any                    , nullptr                        , print_hypervisor_limit               , {} } },
+	{ leaf_type::hyper_v_signature              , { hyper_v                , nullptr                        , print_hyper_v_signature              , {} } },
+	{ leaf_type::hyper_v_system_identity        , { hyper_v                , nullptr                        , print_hyper_v_system_identity        , {} } },
+	{ leaf_type::hyper_v_features               , { hyper_v                , nullptr                        , print_hyper_v_features               , {} } },
+	{ leaf_type::hyper_v_enlightenment_recs     , { hyper_v                , nullptr                        , print_hyper_v_enlightenment_recs     , {} } },
+	{ leaf_type::hyper_v_implementation_limits  , { hyper_v                , nullptr                        , print_hyper_v_implementation_limits  , {} } },
+	{ leaf_type::hyper_v_implementation_hardware, { hyper_v                , nullptr                        , print_hyper_v_implementation_hardware, {} } },
+	{ leaf_type::hyper_v_root_cpu_management    , { hyper_v                , nullptr                        , print_hyper_v_root_cpu_management    , {} } },
+	{ leaf_type::hyper_v_shared_virtual_memory  , { hyper_v                , nullptr                        , print_hyper_v_shared_virtual_memory  , {} } },
+	{ leaf_type::hyper_v_nested_hypervisor      , { hyper_v                , nullptr                        , print_hyper_v_nested_hypervisor      , {} } },
+	{ leaf_type::hyper_v_nested_features        , { hyper_v                , nullptr                        , print_hyper_v_nested_features        , {} } },
+	{ leaf_type::xen_limit                      , { xen_hvm                , nullptr                        , print_xen_limit                      , {} } },
+	{ leaf_type::xen_version                    , { xen_hvm                , nullptr                        , print_xen_version                    , {} } },
+	{ leaf_type::xen_features                   , { xen_hvm                , nullptr                        , print_xen_features                   , {} } },
+	{ leaf_type::xen_time                       , { xen_hvm                , enumerate_xen_time             , print_xen_time                       , {} } },
+	{ leaf_type::xen_hvm_features               , { xen_hvm                , nullptr                        , print_xen_hvm_features               , {} } },
+	{ leaf_type::xen_pv_features                , { xen_hvm                , nullptr                        , print_xen_pv_features                , {} } },
+	{ leaf_type::xen_limit_offset               , { xen_hvm                , nullptr                        , print_xen_limit                      , {} } },
+	{ leaf_type::xen_version_offset             , { xen_hvm                , nullptr                        , print_xen_version                    , {} } },
+	{ leaf_type::xen_features_offset            , { xen_hvm                , nullptr                        , print_xen_features                   , {} } },
+	{ leaf_type::xen_time_offset                , { xen_hvm                , enumerate_xen_time             , print_xen_time                       , {} } },
+	{ leaf_type::xen_hvm_features_offset        , { xen_hvm                , nullptr                        , print_xen_hvm_features               , {} } },
+	{ leaf_type::xen_pv_features_offset         , { xen_hvm                , nullptr                        , print_xen_pv_features                , {} } },
+	{ leaf_type::vmware_timing                  , { vmware                 , nullptr                        , print_vmware_timing                  , {} } },
+	{ leaf_type::kvm_features                   , { vmware                 , nullptr                        , print_kvm_features                   , {} } },
 
-	{ leaf_t::extended_limit                 , { any                    , nullptr                        , print_extended_limit                 , {} } },
-	{ leaf_t::extended_signature_and_features, { any                    , nullptr                        , print_extended_signature_and_features, {} } },
-	{ leaf_t::brand_string_0                 , { any                    , nullptr                        , print_brand_string                   , {} } },
-	{ leaf_t::brand_string_1                 , { any                    , nullptr                        , print_null                           , {} } },
-	{ leaf_t::brand_string_2                 , { any                    , nullptr                        , print_null                           , {} } },
-	{ leaf_t::l1_cache_identifiers           , {         amd            , nullptr                        , print_l1_cache_tlb                   , {} } },
-	{ leaf_t::l2_cache_identifiers           , { intel | amd            , nullptr                        , print_l2_cache_tlb                   , {} } },
-	{ leaf_t::ras_advanced_power_management  , { intel | amd            , nullptr                        , print_ras_advanced_power_management  , {} } },
-	{ leaf_t::address_limits                 , { intel | amd            , nullptr                        , print_address_limits                 , {} } },
-	{ leaf_t::reserved_8                     , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::secure_virtual_machine         , {         amd            , nullptr                        , print_secure_virtual_machine         , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0000'0004_u32 } } },
-	{ leaf_t::extended_reserved_1            , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_2            , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_3            , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_4            , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_5            , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_6            , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_7            , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_8            , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_9            , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_10           , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_11           , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_12           , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_13           , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::extended_reserved_14           , { any                    , enumerate_null                 , print_null                           , {} } },
-	{ leaf_t::tlb_1g_identifiers             , {         amd            , nullptr                        , print_1g_tlb                         , {} } },
-	{ leaf_t::performance_optimization       , {         amd            , nullptr                        , print_performance_optimization       , {} } },
-	{ leaf_t::instruction_based_sampling     , {         amd            , nullptr                        , print_instruction_based_sampling     , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0000'0400_u32 } } },
-	{ leaf_t::lightweight_profiling          , {         amd            , nullptr                        , print_lightweight_profiling          , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0000'8000_u32 } } },
-	{ leaf_t::cache_properties               , {         amd            , enumerate_cache_properties     , print_cache_properties               , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0040'0000_u32 } } },
-	{ leaf_t::extended_apic                  , {         amd            , nullptr                        , print_extended_apic                  , { leaf_t::extended_signature_and_features, subleaf_t::main, ecx, 0x0040'0000_u32 } } },
-	{ leaf_t::encrypted_memory               , {         amd            , nullptr                        , print_encrypted_memory               , {} } }
+	{ leaf_type::extended_limit                 , { any                    , nullptr                        , print_extended_limit                 , {} } },
+	{ leaf_type::extended_signature_and_features, { any                    , nullptr                        , print_extended_signature_and_features, {} } },
+	{ leaf_type::brand_string_0                 , { any                    , nullptr                        , print_brand_string                   , {} } },
+	{ leaf_type::brand_string_1                 , { any                    , nullptr                        , print_null                           , {} } },
+	{ leaf_type::brand_string_2                 , { any                    , nullptr                        , print_null                           , {} } },
+	{ leaf_type::l1_cache_identifiers           , {         amd            , nullptr                        , print_l1_cache_tlb                   , {} } },
+	{ leaf_type::l2_cache_identifiers           , { intel | amd            , nullptr                        , print_l2_cache_tlb                   , {} } },
+	{ leaf_type::ras_advanced_power_management  , { intel | amd            , nullptr                        , print_ras_advanced_power_management  , {} } },
+	{ leaf_type::address_limits                 , { intel | amd            , nullptr                        , print_address_limits                 , {} } },
+	{ leaf_type::reserved_8                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::secure_virtual_machine         , {         amd            , nullptr                        , print_secure_virtual_machine         , { leaf_type::extended_signature_and_features, subleaf_type::main, ecx, 0x0000'0004_u32 } } },
+	{ leaf_type::extended_reserved_1            , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_2            , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_3            , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_4            , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_5            , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_6            , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_7            , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_8            , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_9            , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_10           , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_11           , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_12           , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_13           , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_reserved_14           , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::tlb_1g_identifiers             , {         amd            , nullptr                        , print_1g_tlb                         , {} } },
+	{ leaf_type::performance_optimization       , {         amd            , nullptr                        , print_performance_optimization       , {} } },
+	{ leaf_type::instruction_based_sampling     , {         amd            , nullptr                        , print_instruction_based_sampling     , { leaf_type::extended_signature_and_features, subleaf_type::main, ecx, 0x0000'0400_u32 } } },
+	{ leaf_type::lightweight_profiling          , {         amd            , nullptr                        , print_lightweight_profiling          , { leaf_type::extended_signature_and_features, subleaf_type::main, ecx, 0x0000'8000_u32 } } },
+	{ leaf_type::cache_properties               , {         amd            , enumerate_cache_properties     , print_cache_properties               , { leaf_type::extended_signature_and_features, subleaf_type::main, ecx, 0x0040'0000_u32 } } },
+	{ leaf_type::extended_apic                  , {         amd            , nullptr                        , print_extended_apic                  , { leaf_type::extended_signature_and_features, subleaf_type::main, ecx, 0x0040'0000_u32 } } },
+	{ leaf_type::encrypted_memory               , {         amd            , nullptr                        , print_encrypted_memory               , {} } }
 };
 
-void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf, subleaf_t subleaf) {
+void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf, subleaf_type subleaf) {
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf);
 	format_to(out, "{:#010x} {:#010x} {:#010x}: {:#010x} {:#010x} {:#010x} {:#010x}\n", cpu.apic_id,
 	                                                                                    static_cast<std::uint32_t>(leaf),
@@ -276,7 +276,7 @@ void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf, suble
 
 }
 
-void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf) {
+void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf) {
 	for(const auto& sub : cpu.leaves.at(leaf)) {
 		print_generic(out, cpu, leaf, sub.first);
 	}
@@ -288,10 +288,10 @@ void print_generic(fmt::memory_buffer& out, const cpu_t& cpu) {
 	}
 }
 
-void enumerate_leaf_brute_force(cpu_t& cpu, leaf_t leaf) {
-	register_set_t regs = cpuid(leaf, subleaf_t::main);
-	cpu.leaves[leaf][subleaf_t::main] = regs;
-	for(subleaf_t subleaf = subleaf_t{ 1 }; ; ++subleaf) {
+void enumerate_leaf_brute_force(cpu_t& cpu, leaf_type leaf) {
+	register_set_t regs = cpuid(leaf, subleaf_type::main);
+	cpu.leaves[leaf][subleaf_type::main] = regs;
+	for(subleaf_type subleaf = subleaf_type{ 1 }; ; ++subleaf) {
 		register_set_t previous = regs;
 		regs = cpuid(leaf, subleaf);
 		if(regs[eax] == 0_u32
@@ -310,7 +310,7 @@ void enumerate_leaf_brute_force(cpu_t& cpu, leaf_t leaf) {
 	}
 }
 
-void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool brute_force, bool skip_vendor_check, bool skip_feature_check) {
+void enumerate_leaf(cpu_t& cpu, leaf_type leaf, bool brute_force, bool skip_vendor_check, bool skip_feature_check) {
 	const auto it = descriptors.find(leaf);
 	if(!brute_force
 	&& it != descriptors.end()) {
@@ -323,7 +323,7 @@ void enumerate_leaf(cpu_t& cpu, leaf_t leaf, bool brute_force, bool skip_vendor_
 				if(it->second.enumerator) {
 					it->second.enumerator(cpu);
 				} else {
-					cpu.leaves[leaf][subleaf_t::main] = cpuid(leaf, subleaf_t::main);
+					cpu.leaves[leaf][subleaf_type::main] = cpuid(leaf, subleaf_type::main);
 				}
 			}
 		}
@@ -350,8 +350,8 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					continue;
 				} else if(std::regex_search(line, m, data_line)) {
 					const std::uint32_t apic_id =                        std::stoul(m[1].str(), nullptr, 16) ;
-					const leaf_t        leaf    = static_cast<leaf_t   >(std::stoul(m[2].str(), nullptr, 16));
-					const subleaf_t     subleaf = static_cast<subleaf_t>(std::stoul(m[3].str(), nullptr, 16));
+					const leaf_type        leaf    = static_cast<leaf_type   >(std::stoul(m[2].str(), nullptr, 16));
+					const subleaf_type     subleaf = static_cast<subleaf_type>(std::stoul(m[3].str(), nullptr, 16));
 					const register_set_t regs   = {
 						std::stoul(m[4].str(), nullptr, 16),
 						std::stoul(m[5].str(), nullptr, 16),
@@ -381,8 +381,8 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 				} else if(std::regex_search(line, m, cpu_line)) {
 					current_cpu = std::stoul(m[1].str());
 				} else if(std::regex_search(line, m, data_line)) {
-					const leaf_t         leaf    = static_cast<leaf_t   >(std::stoul(m[1].str(), nullptr, 16));
-					const subleaf_t      subleaf = static_cast<subleaf_t>(std::stoul(m[2].str(), nullptr, 16));
+					const leaf_type         leaf    = static_cast<leaf_type   >(std::stoul(m[1].str(), nullptr, 16));
+					const subleaf_type      subleaf = static_cast<subleaf_type>(std::stoul(m[2].str(), nullptr, 16));
 					const register_set_t regs    = {
 						std::stoul(m[3].str(), nullptr, 16),
 						std::stoul(m[4].str(), nullptr, 16),
@@ -421,30 +421,30 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 						std::stoul(m[5].str(), nullptr, 16),
 						std::stoul(m[6].str(), nullptr, 16)
 					};
-					leaf_t       leaf{ idx };
-					subleaf_t subleaf{ idx };
+					leaf_type       leaf{ idx };
+					subleaf_type subleaf{ idx };
 					if(section == "basic_cpuid") {
-						subleaf = subleaf_t::main;
+						subleaf = subleaf_type::main;
 					} else if(section == "ext_cpuid") {
-						leaf = static_cast<leaf_t>(0x8000'0000_u32 + idx);
-						subleaf = subleaf_t::main;
+						leaf = static_cast<leaf_type>(0x8000'0000_u32 + idx);
+						subleaf = subleaf_type::main;
 					} else if(section == "intel_fn4") {
-						leaf = leaf_t::deterministic_cache;
+						leaf = leaf_type::deterministic_cache;
 						if((regs[eax] & 0x0000'001f_u32) == 0) {
 							continue;
 						}
 					} else if(section == "intel_fn11") {
-						leaf = leaf_t::extended_topology;
+						leaf = leaf_type::extended_topology;
 						if((regs[ecx] & 0x0000'ff00_u32) == 0_u32) {
 							continue;
 						}
 					} else if(section == "intel_fn12h") {
-						leaf = leaf_t::sgx_info;
+						leaf = leaf_type::sgx_info;
 						if((regs[eax] & 0x0000'000f_u32) == 0_u32) {
 							continue;
 						}
 					} else if(section == "intel_fn14h") {
-						leaf = leaf_t::processor_trace;
+						leaf = leaf_type::processor_trace;
 					}
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
 				} else if(std::regex_search(line, m, delimiter_line)) {
@@ -453,19 +453,19 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					std::cerr << "Unrecognized line: " << line << std::endl;
 				}
 			}
-			const leaf_t highest_leaf          = leaf_t{ logical_cpus[current_cpu].leaves[leaf_t::basic_info    ][subleaf_t::main][eax] };
-			const leaf_t highest_extended_leaf = leaf_t{ logical_cpus[current_cpu].leaves[leaf_t::extended_limit][subleaf_t::main][eax] };
+			const leaf_type highest_leaf          = leaf_type{ logical_cpus[current_cpu].leaves[leaf_type::basic_info    ][subleaf_type::main][eax] };
+			const leaf_type highest_extended_leaf = leaf_type{ logical_cpus[current_cpu].leaves[leaf_type::extended_limit][subleaf_type::main][eax] };
 			leaves_t corrected_leaves;
-			for(leaf_t leaf = leaf_t::basic_info; leaf <= highest_leaf; ++leaf) {
+			for(leaf_type leaf = leaf_type::basic_info; leaf <= highest_leaf; ++leaf) {
 				corrected_leaves[leaf] = logical_cpus[current_cpu].leaves[leaf];
 			}
-			for(leaf_t leaf = leaf_t::extended_limit; leaf <= highest_extended_leaf; ++leaf) {
+			for(leaf_type leaf = leaf_type::extended_limit; leaf <= highest_extended_leaf; ++leaf) {
 				corrected_leaves[leaf] = logical_cpus[current_cpu].leaves[leaf];
 			}
-			if(corrected_leaves.find(leaf_t::processor_trace) != corrected_leaves.end()) {
-				subleaves_t subleaves = corrected_leaves.at(leaf_t::processor_trace);
-				const subleaf_t limit = subleaf_t{ subleaves[subleaf_t::main][eax] };
-				for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
+			if(corrected_leaves.find(leaf_type::processor_trace) != corrected_leaves.end()) {
+				subleaves_t subleaves = corrected_leaves.at(leaf_type::processor_trace);
+				const subleaf_type limit = subleaf_type{ subleaves[subleaf_type::main][eax] };
+				for(subleaf_type sub = subleaf_type{ 1 }; sub < limit; ++sub) {
 					if(subleaves.find(sub) != subleaves.end()) {
 						subleaves[sub] = { 0x0_u32, 0x0_u32, 0x0_u32, 0x0_u32 };
 					}
@@ -495,8 +495,8 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 				|| std::regex_search(line, m, registers_line)) {
 					++current_cpu;
 				} else if(std::regex_search(line, m, subleaf_line)) {
-					const leaf_t         leaf    = static_cast<leaf_t   >(std::stoul(m[1].str(), nullptr, 16));
-					const subleaf_t      subleaf = static_cast<subleaf_t>(std::stoul(m[6].str(), nullptr, 10));
+					const leaf_type         leaf    = static_cast<leaf_type   >(std::stoul(m[1].str(), nullptr, 16));
+					const subleaf_type      subleaf = static_cast<subleaf_type>(std::stoul(m[6].str(), nullptr, 10));
 					const register_set_t regs    = {
 						std::stoul(m[2].str(), nullptr, 16),
 						std::stoul(m[3].str(), nullptr, 16),
@@ -506,22 +506,22 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
 				} else if(std::regex_search(line, m, description_line)
 				       || std::regex_search(line, m, simple_line)) {
-					const auto get_subleaf = [&logical_cpus](const std::uint32_t current_cpu, const leaf_t leaf) -> subleaf_t {
+					const auto get_subleaf = [&logical_cpus](const std::uint32_t current_cpu, const leaf_type leaf) -> subleaf_type {
 						if(logical_cpus.find(current_cpu) != logical_cpus.end()
 						&& logical_cpus[current_cpu].leaves.find(leaf) != logical_cpus[current_cpu].leaves.end()
-						&& logical_cpus[current_cpu].leaves[leaf].find(subleaf_t::main) != logical_cpus[current_cpu].leaves[leaf].end()) {
-							return static_cast<subleaf_t>(gsl::narrow_cast<std::uint32_t>(logical_cpus[current_cpu].leaves[leaf].size()) + 1_u32);
+						&& logical_cpus[current_cpu].leaves[leaf].find(subleaf_type::main) != logical_cpus[current_cpu].leaves[leaf].end()) {
+							return static_cast<subleaf_type>(gsl::narrow_cast<std::uint32_t>(logical_cpus[current_cpu].leaves[leaf].size()) + 1_u32);
 						} else {
-							return subleaf_t::main;
+							return subleaf_type::main;
 						}
 					};
-					const leaf_t         leaf    = static_cast<leaf_t   >(std::stoul(m[1].str(), nullptr, 16));
-					if(leaf == leaf_t::basic_info
+					const leaf_type         leaf    = static_cast<leaf_type   >(std::stoul(m[1].str(), nullptr, 16));
+					if(leaf == leaf_type::basic_info
 					&& logical_cpus.find(current_cpu) != logical_cpus.end()
 					&& logical_cpus[current_cpu].leaves.find(leaf) != logical_cpus[current_cpu].leaves.end()) {
 						++current_cpu;
 					}
-					const subleaf_t      subleaf = get_subleaf(current_cpu, leaf);
+					const subleaf_type      subleaf = get_subleaf(current_cpu, leaf);
 					const register_set_t regs    = {
 						std::stoul(m[2].str(), nullptr, 16),
 						std::stoul(m[3].str(), nullptr, 16),
@@ -541,25 +541,25 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 		cpu_t& cpu = c.second;
 		register_set_t regs = {};
 
-		regs = cpu.leaves.at(leaf_t::basic_info).at(subleaf_t::main);
+		regs = cpu.leaves.at(leaf_type::basic_info).at(subleaf_type::main);
 		cpu.vendor = get_vendor_from_name(regs);
 
-		regs = cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main);
+		regs = cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main);
 		cpu.model = get_model(cpu.vendor, regs);
 
-		if(cpu.leaves.find(leaf_t::hypervisor_limit) != cpu.leaves.end()) {
-			regs = cpu.leaves.at(leaf_t::hypervisor_limit).at(subleaf_t::main);
+		if(cpu.leaves.find(leaf_type::hypervisor_limit) != cpu.leaves.end()) {
+			regs = cpu.leaves.at(leaf_type::hypervisor_limit).at(subleaf_type::main);
 			if(regs[eax] != 0_u32) {
-				const vendor_t hypervisor = get_hypervisor_from_name(regs);
+				const vendor_type hypervisor = get_hypervisor_from_name(regs);
 				// something is set, and it looks like a hypervisor
 				if(hypervisor & any_hypervisor) {
 					cpu.vendor = cpu.vendor | hypervisor;
 
 					if(hypervisor & hyper_v) {
 						// xen with viridian extensions masquerades as hyper-v, and puts its own cpuid leaves 0x100 further up
-						if(cpu.leaves.find(leaf_t::xen_limit_offset) != cpu.leaves.end()) {
-							regs = cpu.leaves.at(leaf_t::xen_limit_offset).at(subleaf_t::main);
-							const vendor_t xen_hypervisor = get_hypervisor_from_name(regs);
+						if(cpu.leaves.find(leaf_type::xen_limit_offset) != cpu.leaves.end()) {
+							regs = cpu.leaves.at(leaf_type::xen_limit_offset).at(subleaf_type::main);
+							const vendor_type xen_hypervisor = get_hypervisor_from_name(regs);
 
 							if(xen_hypervisor & xen_hvm) {
 								cpu.vendor = cpu.vendor | xen_hypervisor;
@@ -590,50 +590,50 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_
 	std::map<std::uint32_t, cpu_t> logical_cpus;
 	run_on_every_core([=, &logical_cpus]() {
 		cpu_t cpu = {};
-		register_set_t regs = cpuid(leaf_t::basic_info, subleaf_t::main);
-		const leaf_t highest_leaf = leaf_t{ regs[eax] };
+		register_set_t regs = cpuid(leaf_type::basic_info, subleaf_type::main);
+		const leaf_type highest_leaf = leaf_type{ regs[eax] };
 		cpu.vendor = get_vendor_from_name(regs);
 
-		regs = cpuid(leaf_t::version_info, subleaf_t::main);
+		regs = cpuid(leaf_type::version_info, subleaf_type::main);
 		cpu.model = get_model(cpu.vendor, regs);
 
-		for(leaf_t leaf = leaf_t::basic_info; leaf <= highest_leaf; ++leaf) {
+		for(leaf_type leaf = leaf_type::basic_info; leaf <= highest_leaf; ++leaf) {
 			enumerate_leaf(cpu, leaf, brute_force, skip_vendor_check, skip_feature_check);
 		}
 
-		regs = cpuid(leaf_t::hypervisor_limit, subleaf_t::main);
+		regs = cpuid(leaf_type::hypervisor_limit, subleaf_type::main);
 		if(regs[eax] != 0_u32) {
-			const vendor_t hypervisor = get_hypervisor_from_name(regs);
+			const vendor_type hypervisor = get_hypervisor_from_name(regs);
 			// something is set, and it looks like a hypervisor
 			if(hypervisor & any_hypervisor) {
 				cpu.vendor = cpu.vendor | hypervisor;
-				const leaf_t highest_hypervisor_leaf = leaf_t{ regs[eax] };
+				const leaf_type highest_hypervisor_leaf = leaf_type{ regs[eax] };
 
-				for(leaf_t leaf = leaf_t::hypervisor_limit; leaf <= highest_hypervisor_leaf; ++leaf) {
+				for(leaf_type leaf = leaf_type::hypervisor_limit; leaf <= highest_hypervisor_leaf; ++leaf) {
 					enumerate_leaf(cpu, leaf, brute_force, skip_vendor_check, skip_feature_check);
 				}
 
 				if(hypervisor & hyper_v) {
 					// xen with viridian extensions masquerades as hyper-v, and puts its own cpuid leaves 0x100 further up
-					regs = cpuid(leaf_t::xen_limit_offset, subleaf_t::main);
-					const vendor_t xen_hypervisor = get_hypervisor_from_name(regs);
+					regs = cpuid(leaf_type::xen_limit_offset, subleaf_type::main);
+					const vendor_type xen_hypervisor = get_hypervisor_from_name(regs);
 
 					if(xen_hypervisor & xen_hvm) {
 						cpu.vendor                    = cpu.vendor | xen_hypervisor;
-						const leaf_t xen_base         = leaf_t::xen_limit_offset;
-						const leaf_t highest_xen_leaf = leaf_t{ regs[eax] };
+						const leaf_type xen_base         = leaf_type::xen_limit_offset;
+						const leaf_type highest_xen_leaf = leaf_type{ regs[eax] };
 
-						for(leaf_t leaf = xen_base; leaf <= highest_xen_leaf; ++leaf) {
+						for(leaf_type leaf = xen_base; leaf <= highest_xen_leaf; ++leaf) {
 							enumerate_leaf(cpu, leaf, brute_force, skip_vendor_check, skip_feature_check);
 						}
 					}
 				}
 			}
 		}
-		regs = cpuid(leaf_t::extended_limit, subleaf_t::main);
-		const leaf_t highest_extended_leaf = leaf_t{ regs[eax] };
+		regs = cpuid(leaf_type::extended_limit, subleaf_type::main);
+		const leaf_type highest_extended_leaf = leaf_type{ regs[eax] };
 
-		for(leaf_t leaf = leaf_t::extended_limit; leaf <= highest_extended_leaf; ++leaf) {
+		for(leaf_type leaf = leaf_type::extended_limit; leaf <= highest_extended_leaf; ++leaf) {
 			enumerate_leaf(cpu, leaf, brute_force, skip_vendor_check, skip_feature_check);
 		}
 
@@ -725,7 +725,7 @@ flag_spec_t parse_flag_spec(const std::string& flag_description) {
 	return spec;
 }
 
-std::string to_string(register_t reg) {
+std::string to_string(register_type reg) {
 	switch(reg) {
 	case eax:
 		return "EAX";
@@ -774,8 +774,8 @@ void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const flag_spe
 	const std::string flag_description = to_string(spec);
 	const std::string flag_name_alternative = boost::algorithm::replace_all_copy(spec.flag_name, "_", ".");
 
-	const leaf_t    leaf    = static_cast<leaf_t   >(spec.selector_eax);
-	const subleaf_t subleaf = static_cast<subleaf_t>(spec.selector_ecx);
+	const leaf_type    leaf    = static_cast<leaf_type   >(spec.selector_eax);
+	const subleaf_type subleaf = static_cast<subleaf_type>(spec.selector_ecx);
 	bool handled = false;
 	if(cpu.leaves.find(leaf) != cpu.leaves.end()
 	&& cpu.leaves.at(leaf).find(subleaf) != cpu.leaves.at(leaf).end()) {
@@ -866,8 +866,8 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 				for(const auto& l : c.second.leaves) {
 					for(const auto& s : l.second) {
 						const cpu_t& cpu = c.second;
-						const leaf_t leaf = l.first;
-						const subleaf_t subleaf = s.first;
+						const leaf_type leaf = l.first;
+						const subleaf_type subleaf = s.first;
 						const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf);
 						format_to(out, "   {:#010x} {:#04x}: eax={:#010x} ebx={:#010x} ecx={:#010x} edx={:#010x}\n", static_cast<std::uint32_t>(leaf),
 						                                                                                             static_cast<std::uint32_t>(subleaf),
@@ -888,25 +888,25 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 			const cpu_t& cpu = logical_cpus.begin()->second;
 
 			for(std::uint32_t i = 0_u32; i < 32_u32; ++i) {
-				const leaf_t leaf{ i };
+				const leaf_type leaf{ i };
 				if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
-					const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
+					const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 					format_to(out, "basic_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, regs[eax], regs[ebx], regs[ecx], regs[edx]);
 				} else {
 					format_to(out, "basic_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, 0_u32, 0_u32, 0_u32, 0_u32);
 				}
 			}
 			for(std::uint32_t i = 0_u32; i < 32_u32; ++i) {
-				const leaf_t leaf{ i + 0x8000'0000_u32 };
+				const leaf_type leaf{ i + 0x8000'0000_u32 };
 				if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
-					const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
+					const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 					format_to(out, "ext_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, regs[eax], regs[ebx], regs[ecx], regs[edx]);
 				} else {
 					format_to(out, "ext_cpuid[{:d}]={:08x} {:08x} {:08x} {:08x}\n", i, 0_u32, 0_u32, 0_u32, 0_u32);
 				}
 			}
 
-			const auto print_detailed_leaves = [&out, &cpu](const leaf_t leaf, const std::uint32_t limit, const std::string& label) {
+			const auto print_detailed_leaves = [&out, &cpu](const leaf_type leaf, const std::uint32_t limit, const std::string& label) {
 				if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
 					const subleaves_t& subleaves = cpu.leaves.at(leaf);
 					std::uint32_t i = 0_u32;
@@ -921,10 +921,10 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 				}
 			};
 
-			print_detailed_leaves(leaf_t::deterministic_cache, 8, "intel_fn4");
-			print_detailed_leaves(leaf_t::extended_topology, 4, "intel_fn11");
-			print_detailed_leaves(leaf_t::sgx_info, 4, "intel_fn12h");
-			print_detailed_leaves(leaf_t::processor_trace, 4, "intel_fn14h");
+			print_detailed_leaves(leaf_type::deterministic_cache, 8, "intel_fn4");
+			print_detailed_leaves(leaf_type::extended_topology, 4, "intel_fn11");
+			print_detailed_leaves(leaf_type::sgx_info, 4, "intel_fn12h");
+			print_detailed_leaves(leaf_type::processor_trace, 4, "intel_fn14h");
 		}
 		break;
 	case file_format::instlat:

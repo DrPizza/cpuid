@@ -7,8 +7,8 @@
 #include <vector>
 
 const feature_map_t all_features = {
-	{ leaf_t::version_info, {
-		{ subleaf_t::main, {
+	{ leaf_type::version_info, {
+		{ subleaf_type::main, {
 			{ ecx, {
 				{ intel | amd            , 0x0000'0001_u32, "SSE3"              , "SSE3 Extensions"                               },
 				{ intel | amd            , 0x0000'0002_u32, "PCLMULQDQ"         , "Carryless Multiplication"                      },
@@ -76,15 +76,15 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::monitor_mwait, {
-		{ subleaf_t::main, {
+	{ leaf_type::monitor_mwait, {
+		{ subleaf_type::main, {
 			{ ecx, {
 				{ intel                  , 0x0000'0002_u32, ""                  , "Supports treating interrupts as a break event." },
 			}}
 		}}
 	}},
-	{ leaf_t::thermal_and_power, {
-		{ subleaf_t::main, {
+	{ leaf_type::thermal_and_power, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{ intel                  , 0x0000'0001_u32, "DTS"               , "Digital temperature sensor"                                                     },
 				{ intel                  , 0x0000'0002_u32, "TBT"               , "Intel Turbo Boost Technology"                                                   },
@@ -111,8 +111,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::extended_features, {
-		{ subleaf_t::extended_features_main, {
+	{ leaf_type::extended_features, {
+		{ subleaf_type::extended_features_main, {
 			{ ebx, {
 				{ intel | amd            , 0x0000'0001_u32, "FSGSBASE"          , "FSGSBASE instructions"                               },
 				{ intel                  , 0x0000'0002_u32, "TSC_ADJUST"        , "TSC_ADJUST MSR"                                      },
@@ -182,8 +182,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::extended_state, {
-		{ subleaf_t::extended_state_main, {
+	{ leaf_type::extended_state, {
+		{ subleaf_type::extended_state_main, {
 			{ eax, {
 				{ intel | amd            , 0x0000'0001_u32, "x87"               , "Legacy x87 floating point"     },
 				{ intel | amd            , 0x0000'0002_u32, "SSE"               , "128-bit SSE XMM"               },
@@ -198,7 +198,7 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'1000_u32, "HDC"               , "Hardware Duty Cycling"         },
 			}},
 		}},
-		{ subleaf_t::extended_state_sub, {
+		{ subleaf_type::extended_state_sub, {
 			{ eax, {
 				{ intel | amd            , 0x0000'0001_u32, "XSAVEOPT"          , "XSAVEOPT available"          },
 				{ intel | amd            , 0x0000'0002_u32, "XSAVEC"            , "XSAVEC and compacted XRSTOR" },
@@ -207,8 +207,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::sgx_info, {
-		{ subleaf_t::sgx_capabilities, {
+	{ leaf_type::sgx_info, {
+		{ subleaf_type::sgx_capabilities, {
 			{ eax, {
 				{ intel                  , 0x0000'0001_u32, "SGX1"              , "SGX1 functions available"                      },
 				{ intel                  , 0x0000'0002_u32, "SGX2"              , "SGX2 functions available"                      },
@@ -217,8 +217,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::processor_trace, {
-		{ subleaf_t::main, {
+	{ leaf_type::processor_trace, {
+		{ subleaf_type::main, {
 			{ ebx, {
 				{ intel                  , 0x0000'0001_u32, "CR3Filter"         , "CR3Filter can be set to 1"                },
 				{ intel                  , 0x0000'0002_u32, "PSB"               , "Configurable PSB and Cycle-Accurate Mode" },
@@ -236,8 +236,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::hyper_v_features, {
-		{ subleaf_t::main, {
+	{ leaf_type::hyper_v_features, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{ hyper_v                , 0x0000'0001_u32, "accessVpRunTimeReg"              , "VP_RUNTIME MSR"              },
 				{ hyper_v                , 0x0000'0002_u32, "accessParititonReferenceCounter" , "TIME_REF_COUNT MSR"          },
@@ -296,8 +296,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::hyper_v_enlightenment_recs, {
-		{ subleaf_t::main, {
+	{ leaf_type::hyper_v_enlightenment_recs, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{ hyper_v                , 0x0000'0001_u32, "MOV_CR3"             , "Use hypercall instead of MOV CR3"                    },
 				{ hyper_v                , 0x0000'0002_u32, "INVLPG"              , "Use hypercall instead of INVLPG or MOV CR3"          },
@@ -320,8 +320,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::hyper_v_implementation_hardware, {
-		{ subleaf_t::main, {
+	{ leaf_type::hyper_v_implementation_hardware, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{ hyper_v                , 0x0000'0001_u32, "APIC_OVERLAY"    , "APIC overlay assist"                },
 				{ hyper_v                , 0x0000'0002_u32, "MSR_BITMAPS"     , "MSR bitmaps"                        },
@@ -336,8 +336,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::hyper_v_root_cpu_management, {
-		{ subleaf_t::main, {
+	{ leaf_type::hyper_v_root_cpu_management, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{ hyper_v                , 0x0000'0001_u32, "StartLogicalProcessor" , "Start logical processor"       },
 				{ hyper_v                , 0x0000'0002_u32, "CreateRootVirtProc"    , "Create root virtual processor" },
@@ -350,15 +350,15 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::hyper_v_shared_virtual_memory, {
-		{ subleaf_t::main, {
+	{ leaf_type::hyper_v_shared_virtual_memory, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{ hyper_v                , 0x0000'0001_u32, "SvmSupported"          , "Shared virtual memory supported" },
 			}},
 		}}
 	}},
-	{ leaf_t::hyper_v_nested_hypervisor, {
-		{ subleaf_t::main, {
+	{ leaf_type::hyper_v_nested_hypervisor, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{ hyper_v                , 0x0000'0004_u32, "AccessSynIcRegs"       , "SynIC MSRs"               },
 				{ hyper_v                , 0x0000'0010_u32, "AccessIntrCtrlRegs"    , "Interrupt Control MSRs"   },
@@ -373,8 +373,8 @@ const feature_map_t all_features = {
 			}},
 		}}
 	}},
-	{ leaf_t::hyper_v_nested_features, {
-		{ subleaf_t::main, {
+	{ leaf_type::hyper_v_nested_features, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{ hyper_v                , 0x0002'0000_u32, "DirectVirtualFlush"   , "Direct virtual flush hypercalls"           },
 				{ hyper_v                , 0x0004'0010_u32, "FlushGuestPhysical"   , "HvFlushGuestPhysicalAddressXxx hypercalls" },
@@ -382,8 +382,8 @@ const feature_map_t all_features = {
 			}},
 		}}
 	}},
-	{ leaf_t::xen_time, {
-		{ subleaf_t::xen_time_main, {
+	{ leaf_type::xen_time, {
+		{ subleaf_type::xen_time_main, {
 			{ eax, {
 				{ xen_hvm                , 0x0000'0001_u32, "VTSC"      , "Virtual RDTSC"       },
 				{ xen_hvm                , 0x0000'0002_u32, "SafeRDTSC" , "Host has safe RDTSC" },
@@ -391,8 +391,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::xen_time_offset, {
-		{ subleaf_t::xen_time_main, {
+	{ leaf_type::xen_time_offset, {
+		{ subleaf_type::xen_time_main, {
 			{ eax, {
 				{ xen_hvm                , 0x0000'0001_u32, "VTSC"      , "Virtual RDTSC"       },
 				{ xen_hvm                , 0x0000'0002_u32, "SafeRDTSC" , "Host has safe RDTSC" },
@@ -400,8 +400,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::xen_hvm_features, {
-		{ subleaf_t::xen_time_main, {
+	{ leaf_type::xen_hvm_features, {
+		{ subleaf_type::xen_time_main, {
 			{ eax, {
 				{ xen_hvm                , 0x0000'0001_u32, "VAPIC"   , "Virtualized APIC registers"              },
 				{ xen_hvm                , 0x0000'0002_u32, "Vx2APIC" , "Virtualized x2APIC registers"            },
@@ -410,8 +410,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::xen_hvm_features_offset, {
-		{ subleaf_t::xen_time_main, {
+	{ leaf_type::xen_hvm_features_offset, {
+		{ subleaf_type::xen_time_main, {
 			{ eax, {
 				{ xen_hvm                , 0x0000'0001_u32, "VAPIC"   , "Virtualized APIC registers"              },
 				{ xen_hvm                , 0x0000'0002_u32, "Vx2APIC" , "Virtualized x2APIC registers"            },
@@ -420,8 +420,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::kvm_features, { // https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/virtual/kvm/cpuid.txt
-		{ subleaf_t::main, {
+	{ leaf_type::kvm_features, { // https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/virtual/kvm/cpuid.txt
+		{ subleaf_type::main, {
 			{ eax, {
 				{ kvm                    , 0x0000'0001_u32, "CLOCKSOURCE"        , "kvmclock MSRs available"               },
 				{ kvm                    , 0x0000'0002_u32, "NOP_IO_DELAY"       , "Don't delay PIO operations"            },
@@ -441,8 +441,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::extended_signature_and_features, {
-		{ subleaf_t::main, {
+	{ leaf_type::extended_signature_and_features, {
+		{ subleaf_type::main, {
 			{ ecx, {
 				{ intel | amd            , 0x0000'0001_u32, "LAHF-SAHF"               , "LAHF/SAHF supported in 64-bit mode"   },
 				{         amd            , 0x0000'0002_u32, "CmpLegacy"               , "Core multi-processing legacy mode"    },
@@ -505,8 +505,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::ras_advanced_power_management, {
-		{ subleaf_t::main, {
+	{ leaf_type::ras_advanced_power_management, {
+		{ subleaf_type::main, {
 			{ ebx, {
 				{         amd            , 0x0000'0001_u32, "McaOverflowRecov" , "MCA overflow recovery support"                         },
 				{         amd            , 0x0000'0002_u32, "SUCCOR"           , "Software Uncorrectable Error Containment and Recovery" },
@@ -532,8 +532,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::address_limits, {
-		{ subleaf_t::main, {
+	{ leaf_type::address_limits, {
+		{ subleaf_type::main, {
 			{ ebx, {
 				{         amd            , 0x0000'0001_u32, "CLZERO"       , "CLZERO instruction"                      },
 				{         amd            , 0x0000'0002_u32, "IRPERF"       , "Instructions retired count support"      },
@@ -547,8 +547,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::secure_virtual_machine, {
-		{ subleaf_t::main, {
+	{ leaf_type::secure_virtual_machine, {
+		{ subleaf_type::main, {
 			{ edx, {
 				{         amd            , 0x0000'0001_u32, "NP"                   , "Nested paging"                    },
 				{         amd            , 0x0000'0002_u32, "LBRV"                 , "LBR virtualization"               },
@@ -567,8 +567,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::performance_optimization, {
-		{ subleaf_t::main, {
+	{ leaf_type::performance_optimization, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{         amd            , 0x0000'0001_u32, "FP128" , "Full-width 128-bit SSE instructions" },
 				{         amd            , 0x0000'0002_u32, "MOVU"  , "Prefer MOVU to MOVL/MOVH"            },
@@ -576,8 +576,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::instruction_based_sampling, {
-		{ subleaf_t::main, {
+	{ leaf_type::instruction_based_sampling, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{         amd            , 0x0000'0001_u32, "IBSFFV"          , "IBS feature flags valid"                    },
 				{         amd            , 0x0000'0002_u32, "FetchSam"        , "IBS fetch sampling supported"               },
@@ -593,8 +593,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::lightweight_profiling, {
-		{ subleaf_t::main, {
+	{ leaf_type::lightweight_profiling, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{         amd            , 0x0000'0001_u32, "LwpAvail" , "Lightweight profiling supported"  },
 				{         amd            , 0x0000'0002_u32, "LwpVAL"   , "LWPVAL instruction supported"     },
@@ -616,8 +616,8 @@ const feature_map_t all_features = {
 			}}
 		}}
 	}},
-	{ leaf_t::encrypted_memory, {
-		{ subleaf_t::main, {
+	{ leaf_type::encrypted_memory, {
+		{ subleaf_type::main, {
 			{ eax, {
 				{         amd            , 0x0000'0001_u32, "SME"          , "Secure Memory Encryption supported"        },
 				{         amd            , 0x0000'0002_u32, "SEV"          , "Secure Encrypted Virtualization supported" },
@@ -628,7 +628,7 @@ const feature_map_t all_features = {
 	}}
 };
 
-void print_features(fmt::memory_buffer& out, const cpu_t& cpu, leaf_t leaf, subleaf_t sub, register_t reg) {
+void print_features(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf, subleaf_type sub, register_type reg) {
 	const auto range = all_features.equal_range(leaf);
 	for(auto it = range.first; it != range.second; ++it) {
 		if(it->second.find(sub) == it->second.end()) {

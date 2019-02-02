@@ -10,7 +10,7 @@
 #include "utility.hpp"
 
 void print_hypervisor_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::hypervisor_limit).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::hypervisor_limit).at(subleaf_type::main);
 	format_to(out, "Hypervisor present\n");
 	format_to(out, "\tMaximum hypervisor leaf: {:#010x}\n", regs[eax]);
 
@@ -26,7 +26,7 @@ void print_hypervisor_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_hyper_v_signature(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_signature).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_signature).at(subleaf_type::main);
 	format_to(out, "Hyper-V signature\n");
 	const union
 	{
@@ -48,7 +48,7 @@ void print_hyper_v_signature(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_hyper_v_system_identity(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_system_identity).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_system_identity).at(subleaf_type::main);
 	format_to(out, "Hyper-V system identiy\n");
 
 	const union
@@ -80,7 +80,7 @@ void print_hyper_v_system_identity(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_hyper_v_features(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_features).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_features).at(subleaf_type::main);
 	const union
 	{
 		std::uint32_t full;
@@ -93,23 +93,23 @@ void print_hyper_v_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 	} c = { regs[ecx] };
 
 	format_to(out, "Hyper-V features\n");
-	print_features(out, cpu, leaf_t::hyper_v_features, subleaf_t::main, eax);
+	print_features(out, cpu, leaf_type::hyper_v_features, subleaf_type::main, eax);
 	format_to(out, "\n");
-	print_features(out, cpu, leaf_t::hyper_v_features, subleaf_t::main, ebx);
+	print_features(out, cpu, leaf_type::hyper_v_features, subleaf_type::main, ebx);
 	format_to(out, "\n");
 	format_to(out, "\tMaximum power state: C{:d}\n", c.split.maximum_power_state);
 	if(c.split.hpet_needed_for_c3) {
 		format_to(out, "\tHPET needed for C3\n");
 	}
 	format_to(out, "\n");
-	print_features(out, cpu, leaf_t::hyper_v_features, subleaf_t::main, edx);
+	print_features(out, cpu, leaf_type::hyper_v_features, subleaf_type::main, edx);
 	format_to(out, "\n");
 }
 
 void print_hyper_v_enlightenment_recs(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_enlightenment_recs).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_enlightenment_recs).at(subleaf_type::main);
 	format_to(out, "Hyper-V recommendations\n");
-	print_features(out, cpu, leaf_t::hyper_v_enlightenment_recs, subleaf_t::main, eax);
+	print_features(out, cpu, leaf_type::hyper_v_enlightenment_recs, subleaf_type::main, eax);
 	format_to(out, "\n");
 	if(regs[ebx] != 0xffff'ffff_u32) {
 		format_to(out, "\tTimes to retry spinlocks before notifying hypervisor: {:d}\n", regs[ebx]);
@@ -120,7 +120,7 @@ void print_hyper_v_enlightenment_recs(fmt::memory_buffer& out, const cpu_t& cpu)
 }
 
 void print_hyper_v_implementation_limits(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_implementation_limits).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_implementation_limits).at(subleaf_type::main);
 	format_to(out, "Hyper-V implementation limits\n");
 	format_to(out, "\tMaximum virtual processors supported: {:d}\n", regs[eax]);
 	format_to(out, "\tMaximum logical processors supported: {:d}\n", regs[ebx]);
@@ -130,19 +130,19 @@ void print_hyper_v_implementation_limits(fmt::memory_buffer& out, const cpu_t& c
 
 void print_hyper_v_implementation_hardware(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "Hyper-V implementation hardware\n");
-	print_features(out, cpu, leaf_t::hyper_v_implementation_hardware, subleaf_t::main, eax);
+	print_features(out, cpu, leaf_type::hyper_v_implementation_hardware, subleaf_type::main, eax);
 	format_to(out, "\n");
 }
 
 void print_hyper_v_root_cpu_management(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "Hyper-V root CPU management\n");
-	print_features(out, cpu, leaf_t::hyper_v_root_cpu_management, subleaf_t::main, eax);
-	print_features(out, cpu, leaf_t::hyper_v_root_cpu_management, subleaf_t::main, ebx);
+	print_features(out, cpu, leaf_type::hyper_v_root_cpu_management, subleaf_type::main, eax);
+	print_features(out, cpu, leaf_type::hyper_v_root_cpu_management, subleaf_type::main, ebx);
 	format_to(out, "\n");
 }
 
 void print_hyper_v_shared_virtual_memory(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_shared_virtual_memory).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_shared_virtual_memory).at(subleaf_type::main);
 
 	const union
 	{
@@ -156,7 +156,7 @@ void print_hyper_v_shared_virtual_memory(fmt::memory_buffer& out, const cpu_t& c
 	} a = { regs[eax] };
 
 	format_to(out, "Hyper-V shared virtual memory features\n");
-	print_features(out, cpu, leaf_t::hyper_v_shared_virtual_memory, subleaf_t::main, eax);
+	print_features(out, cpu, leaf_type::hyper_v_shared_virtual_memory, subleaf_type::main, eax);
 	format_to(out, "\n");
 	format_to(out, "\tMaximum PASID space count: {:d}\n", a.split.max_pasid_space_count);
 	format_to(out, "\n");
@@ -164,13 +164,13 @@ void print_hyper_v_shared_virtual_memory(fmt::memory_buffer& out, const cpu_t& c
 
 void print_hyper_v_nested_hypervisor(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "Nested hypervisor features\n");
-	print_features(out, cpu, leaf_t::hyper_v_nested_hypervisor, subleaf_t::main, eax);
-	print_features(out, cpu, leaf_t::hyper_v_nested_hypervisor, subleaf_t::main, edx);
+	print_features(out, cpu, leaf_type::hyper_v_nested_hypervisor, subleaf_type::main, eax);
+	print_features(out, cpu, leaf_type::hyper_v_nested_hypervisor, subleaf_type::main, edx);
 	format_to(out, "\n");
 }
 
 void print_hyper_v_nested_features(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::hyper_v_nested_features).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_nested_features).at(subleaf_type::main);
 	const union
 	{
 		std::uint32_t full;
@@ -188,13 +188,13 @@ void print_hyper_v_nested_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 
 	format_to(out, "Nested hypervisor virtualization features\n");
 	format_to(out, "\tEnlightened VMCS version: {:d}.{:d}\n", a.split.high_version, a.split.low_version);
-	print_features(out, cpu, leaf_t::hyper_v_nested_features, subleaf_t::main, eax);
+	print_features(out, cpu, leaf_type::hyper_v_nested_features, subleaf_type::main, eax);
 	format_to(out, "\n");
 }
 
 void print_xen_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_limit : leaf_t::xen_limit_offset;
-	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
+	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_limit : leaf_type::xen_limit_offset;
+	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 	format_to(out, "Xen{:s} signature\n", (cpu.vendor & hyper_v) ? " with viridian extensions" : "");
 	format_to(out, "\tMaximum Xen leaf: {:#010x}\n", regs[eax]);
 
@@ -210,8 +210,8 @@ void print_xen_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_xen_version(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_version : leaf_t::xen_version_offset;
-	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
+	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_version : leaf_type::xen_version_offset;
+	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 
 	const union
 	{
@@ -229,8 +229,8 @@ void print_xen_version(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_xen_features(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_features : leaf_t::xen_features_offset;
-	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
+	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_features : leaf_type::xen_features_offset;
+	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 
 	format_to(out, "Xen features\n");
 	format_to(out, "\tHypercall transfer pages: {:d}\n", regs[eax]);
@@ -239,27 +239,27 @@ void print_xen_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_xen_time(cpu_t& cpu) {
-	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_time : leaf_t::xen_time_offset;
-	cpu.leaves[leaf][subleaf_t::xen_time_main      ] = cpuid(leaf, subleaf_t::xen_time_main      );
-	cpu.leaves[leaf][subleaf_t::xen_time_tsc_offset] = cpuid(leaf, subleaf_t::xen_time_tsc_offset);
-	cpu.leaves[leaf][subleaf_t::xen_time_host      ] = cpuid(leaf, subleaf_t::xen_time_host      );
+	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_time : leaf_type::xen_time_offset;
+	cpu.leaves[leaf][subleaf_type::xen_time_main      ] = cpuid(leaf, subleaf_type::xen_time_main      );
+	cpu.leaves[leaf][subleaf_type::xen_time_tsc_offset] = cpuid(leaf, subleaf_type::xen_time_tsc_offset);
+	cpu.leaves[leaf][subleaf_type::xen_time_host      ] = cpuid(leaf, subleaf_type::xen_time_host      );
 }
 
 void print_xen_time(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_time : leaf_t::xen_time_offset;
+	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_time : leaf_type::xen_time_offset;
 	for(const auto& sub : cpu.leaves.at(leaf)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
-		case subleaf_t::xen_time_main:
+		case subleaf_type::xen_time_main:
 			format_to(out, "Xen time features\n");
-			print_features(out, cpu, leaf, subleaf_t::xen_time_main, eax);
+			print_features(out, cpu, leaf, subleaf_type::xen_time_main, eax);
 			format_to(out, "\n");
 			format_to(out, "\tTSC mode: {:#010x}\n", regs[ebx]);
 			format_to(out, "\tTSC/kHz: {:d}\n", regs[ecx]);
 			format_to(out, "\tTSC restarts: {:d}\n", regs[ecx]);
 			format_to(out, "\n");
 			break;
-		case subleaf_t::xen_time_tsc_offset:
+		case subleaf_type::xen_time_tsc_offset:
 			{
 				const std::uint64_t tsc_offset = (gsl::narrow_cast<std::uint64_t>(regs[ebx]) << 32ui64) | gsl::narrow_cast<std::uint64_t>(regs[eax]);
 				format_to(out, "Xen TSC scaling and offset\n");
@@ -269,7 +269,7 @@ void print_xen_time(fmt::memory_buffer& out, const cpu_t& cpu) {
 				format_to(out, "\n");
 			}
 			break;
-		case subleaf_t::xen_time_host:
+		case subleaf_type::xen_time_host:
 			format_to(out, "Xen host CPU\n");
 			format_to(out, "\tHost CPU speed/kHz: {:d}\n", regs[eax]);
 			format_to(out, "\n");
@@ -283,19 +283,19 @@ void print_xen_time(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_xen_hvm_features(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_hvm_features : leaf_t::xen_hvm_features_offset;
-	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
+	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_hvm_features : leaf_type::xen_hvm_features_offset;
+	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 	format_to(out, "Xen HVM features\n");
-	print_features(out, cpu, leaf, subleaf_t::main, eax);
-	if(0x0000'0008_u32 & cpu.leaves.at(leaf).at(subleaf_t::main).at(eax)) {
+	print_features(out, cpu, leaf, subleaf_type::main, eax);
+	if(0x0000'0008_u32 & cpu.leaves.at(leaf).at(subleaf_type::main).at(eax)) {
 		format_to(out, "\tVCPU ID: {:#010x}\n", regs[ebx]);
 	}
 	format_to(out, "\n");
 }
 
 void print_xen_pv_features(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_t leaf = (cpu.vendor & hyper_v) ? leaf_t::xen_pv_features : leaf_t::xen_pv_features_offset;
-	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_t::main);
+	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_pv_features : leaf_type::xen_pv_features_offset;
+	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 
 	const union
 	{
@@ -313,7 +313,7 @@ void print_xen_pv_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_vmware_timing(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::vmware_timing).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::vmware_timing).at(subleaf_type::main);
 	format_to(out, "VMware timing\n");
 	format_to(out, "\tVirtual TSC frequency/kHz: {:d}\n", regs[eax]);
 	format_to(out, "\tVirtual bus/APIC frequency/kHz: {:d}\n", regs[ebx]);
@@ -322,6 +322,6 @@ void print_vmware_timing(fmt::memory_buffer& out, const cpu_t& cpu) {
 
 void print_kvm_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "KVM features\n");
-	print_features(out, cpu, leaf_t::kvm_features, subleaf_t::main, eax);
+	print_features(out, cpu, leaf_type::kvm_features, subleaf_type::main, eax);
 	format_to(out, "\n");
 }

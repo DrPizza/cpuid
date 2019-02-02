@@ -11,7 +11,7 @@
 #include "utility.hpp"
 
 void print_basic_info(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::basic_info).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::basic_info).at(subleaf_type::main);
 	format_to(out, "Basic Information\n");
 	format_to(out, "\tMaximum basic cpuid leaf: {:#010x}\n", regs[eax]);
 
@@ -27,7 +27,7 @@ void print_basic_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_version_info(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main);
 	format_to(out, "Version Information\n");
 
 	const union
@@ -112,27 +112,27 @@ void print_version_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 		}
 	}
 	format_to(out, "\tcache line size/bytes: {:d}\n", b.split.cache_line_size * 8);
-	if(0 != (cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main).at(edx) & 0x1000'0000_u32)) {
+	if(0 != (cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main).at(edx) & 0x1000'0000_u32)) {
 		format_to(out, "\tlogical processors per package: {:d}\n", gsl::narrow_cast<std::uint32_t>(b.split.maximum_addressable_ids));
 	}
 	format_to(out, "\tlocal APIC ID: {:#04x}\n", gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id));
 	format_to(out, "\n");
 
 	format_to(out, "\tFeature identifiers\n");
-	print_features(out, cpu, leaf_t::version_info, subleaf_t::main, edx);
+	print_features(out, cpu, leaf_type::version_info, subleaf_type::main, edx);
 	format_to(out, "\n");
-	print_features(out, cpu, leaf_t::version_info, subleaf_t::main, ecx);
+	print_features(out, cpu, leaf_type::version_info, subleaf_type::main, ecx);
 	format_to(out, "\n");
 }
 
 void print_serial_number(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "Processor serial number\n");
 	format_to(out, "\t");
-	const register_set_t& regs = cpu.leaves.at(leaf_t::serial_number).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::serial_number).at(subleaf_type::main);
 	switch(cpu.vendor & any_silicon) {
 	case intel:
 		{
-			const std::uint32_t top = cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main)[eax];
+			const std::uint32_t top = cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main)[eax];
 			const std::uint32_t middle = regs[edx];
 			const std::uint32_t bottom = regs[ecx];
 			format_to(out, "Serial number: {:04x}-{:04x}-{:04x}-{:04x}-{:04x}-{:04x}\n", top    >> 16_u32, top    & 0xffff_u32,
@@ -144,14 +144,14 @@ void print_serial_number(fmt::memory_buffer& out, const cpu_t& cpu) {
 		format_to(out, "{:08x}-{:08x}-{:08x}-{:08x}\n", regs[eax], regs[ebx], regs[ecx], regs[edx]);
 		break;
 	default:
-		print_generic(out, cpu, leaf_t::serial_number, subleaf_t::main);
+		print_generic(out, cpu, leaf_type::serial_number, subleaf_type::main);
 		break;
 	}
 	format_to(out, "\n");
 }
 
 void print_mwait_parameters(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::monitor_mwait).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::monitor_mwait).at(subleaf_type::main);
 
 	const union
 	{
@@ -188,7 +188,7 @@ void print_mwait_parameters(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "\tSmallest monitor-line size: {:d} bytes\n", (a.split.smallest_monitor_line + 0_u32));
 	format_to(out, "\tLargest monitor-line size: {:d} bytes\n", (b.split.largest_monitor_line  + 0_u32));
 	if(c.split.enumerable) {
-		print_features(out, cpu, leaf_t::monitor_mwait, subleaf_t::main, ecx);
+		print_features(out, cpu, leaf_type::monitor_mwait, subleaf_type::main, ecx);
 		if(cpu.vendor & intel) {
 			const std::uint32_t mask = 0b1111;
 			for(std::size_t i = 0; i < 8; ++i) {
@@ -201,9 +201,9 @@ void print_mwait_parameters(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_thermal_and_power(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::thermal_and_power).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::thermal_and_power).at(subleaf_type::main);
 	format_to(out, "Thermal and Power Management\n");
-	print_features(out, cpu, leaf_t::thermal_and_power, subleaf_t::main, eax);
+	print_features(out, cpu, leaf_type::thermal_and_power, subleaf_type::main, eax);
 	format_to(out, "\n");
 
 	if(cpu.vendor & intel) {
@@ -220,29 +220,29 @@ void print_thermal_and_power(fmt::memory_buffer& out, const cpu_t& cpu) {
 		if(b.split.interrupt_thresholds) {
 			format_to(out, "\t{:d} interrupt thresholds in Digital Thermal Sensor\n", b.split.interrupt_thresholds);
 		}
-		print_features(out, cpu, leaf_t::thermal_and_power, subleaf_t::main, ecx);
+		print_features(out, cpu, leaf_type::thermal_and_power, subleaf_type::main, ecx);
 		format_to(out, "\n");
 	}
 }
 
 void enumerate_extended_features(cpu_t& cpu) {
-	register_set_t regs = cpuid(leaf_t::extended_features, subleaf_t::main);
-	cpu.leaves[leaf_t::extended_features][subleaf_t::main] = regs;
+	register_set_t regs = cpuid(leaf_type::extended_features, subleaf_type::main);
+	cpu.leaves[leaf_type::extended_features][subleaf_type::main] = regs;
 
-	const subleaf_t limit = subleaf_t{ regs[eax] };
-	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
-		cpu.leaves[leaf_t::extended_features][sub] = cpuid(leaf_t::extended_features, sub);
+	const subleaf_type limit = subleaf_type{ regs[eax] };
+	for(subleaf_type sub = subleaf_type{ 1 }; sub < limit; ++sub) {
+		cpu.leaves[leaf_type::extended_features][sub] = cpuid(leaf_type::extended_features, sub);
 	}
 }
 
 void print_extended_features(fmt::memory_buffer& out, const cpu_t& cpu) {
-	for(const auto& sub : cpu.leaves.at(leaf_t::extended_features)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::extended_features)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
-		case subleaf_t::extended_state_main:
+		case subleaf_type::extended_state_main:
 			{
 				format_to(out, "Extended features\n");
-				print_features(out, cpu, leaf_t::extended_features, subleaf_t::extended_features_main, ebx);
+				print_features(out, cpu, leaf_type::extended_features, subleaf_type::extended_features_main, ebx);
 				format_to(out, "\n");
 				if(cpu.vendor & intel) {
 					const union
@@ -277,15 +277,15 @@ void print_extended_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 					} c = { regs[ecx] };
 					format_to(out, "\tMPX Address-width adjust: {:d}\n", c.split.mawau_value);
 					format_to(out, "\n");
-					print_features(out, cpu, leaf_t::extended_features, subleaf_t::extended_features_main, ecx);
+					print_features(out, cpu, leaf_type::extended_features, subleaf_type::extended_features_main, ecx);
 					format_to(out, "\n");
 				}
-				print_features(out, cpu, leaf_t::extended_features, subleaf_t::extended_features_main, edx);
+				print_features(out, cpu, leaf_type::extended_features, subleaf_type::extended_features_main, edx);
 				format_to(out, "\n");
 			}
 			break;
 		default:
-			print_generic(out, cpu, leaf_t::extended_features, sub.first);
+			print_generic(out, cpu, leaf_type::extended_features, sub.first);
 			format_to(out, "\n");
 			break;
 		}
@@ -293,14 +293,14 @@ void print_extended_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_direct_cache_access(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::direct_cache_access).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::direct_cache_access).at(subleaf_type::main);
 	format_to(out, "Direct Cache Access\n");
 	format_to(out, "\tDCA CAP MSR: {:#010x}\n", regs[eax]);
 	format_to(out, "\n");
 }
 
 void print_performance_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::performance_monitoring).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::performance_monitoring).at(subleaf_type::main);
 	const union
 	{
 		std::uint32_t full;
@@ -380,41 +380,41 @@ void print_performance_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_extended_state(cpu_t& cpu) {
-	register_set_t regs = cpuid(leaf_t::extended_state, subleaf_t::extended_state_main);
-	cpu.leaves[leaf_t::extended_state][subleaf_t::extended_state_main] = regs;
+	register_set_t regs = cpuid(leaf_type::extended_state, subleaf_type::extended_state_main);
+	cpu.leaves[leaf_type::extended_state][subleaf_type::extended_state_main] = regs;
 	const std::uint64_t valid_bits = regs[eax] | (gsl::narrow_cast<std::uint64_t>(regs[edx]) << 32ui64);
 
-	cpu.leaves[leaf_t::extended_state][subleaf_t::extended_state_sub] = cpuid(leaf_t::extended_state, subleaf_t::extended_state_sub);
+	cpu.leaves[leaf_type::extended_state][subleaf_type::extended_state_sub] = cpuid(leaf_type::extended_state, subleaf_type::extended_state_sub);
 
 	std::uint64_t mask = 0x1ui64 << 2_u32;
-	for(subleaf_t i = subleaf_t{ 2_u32 }; i < subleaf_t{ 63_u32 }; ++i, mask <<= 1ui64) {
+	for(subleaf_type i = subleaf_type{ 2_u32 }; i < subleaf_type{ 63_u32 }; ++i, mask <<= 1ui64) {
 		if(valid_bits & mask) {
-			regs = cpuid(leaf_t::extended_state, i);
+			regs = cpuid(leaf_type::extended_state, i);
 			if(regs[eax] != 0_u32
 			|| regs[ebx] != 0_u32
 			|| regs[ecx] != 0_u32
 			|| regs[edx] != 0_u32) {
-				cpu.leaves[leaf_t::extended_state][i] = regs;
+				cpu.leaves[leaf_type::extended_state][i] = regs;
 			}
 		}
 	}
 	if(cpu.vendor & amd) {
-		regs = cpuid(leaf_t::extended_state, subleaf_t{ 0x3e });
+		regs = cpuid(leaf_type::extended_state, subleaf_type{ 0x3e });
 		if(regs[ebx] != 0_u32) {
-			cpu.leaves[leaf_t::extended_state][subleaf_t{ 0x3e }] = regs;
+			cpu.leaves[leaf_type::extended_state][subleaf_type{ 0x3e }] = regs;
 		}
 	}
 }
 
 void print_extended_state(fmt::memory_buffer& out, const cpu_t& cpu) {
-	for(const auto& sub : cpu.leaves.at(leaf_t::extended_state)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::extended_state)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
-		case subleaf_t::extended_state_main:
+		case subleaf_type::extended_state_main:
 			{
 				format_to(out, "Extended states\n");
 				format_to(out, "\tFeatures supported by XSAVE: \n");
-				print_features(out, cpu, leaf_t::extended_state, subleaf_t::extended_state_main, eax);
+				print_features(out, cpu, leaf_type::extended_state, subleaf_type::extended_state_main, eax);
 				format_to(out, "\n");
 
 				format_to(out, "\tMaximum size for all enabled features/bytes  : {:d}\n", regs[ebx]);
@@ -422,10 +422,10 @@ void print_extended_state(fmt::memory_buffer& out, const cpu_t& cpu) {
 				format_to(out, "\n");
 			}
 			break;
-		case subleaf_t::extended_state_sub:
+		case subleaf_type::extended_state_sub:
 			{
 				format_to(out, "\tXSAVE extended features:\n");
-				print_features(out, cpu, leaf_t::extended_state, subleaf_t::extended_state_sub, eax);
+				print_features(out, cpu, leaf_type::extended_state, subleaf_type::extended_state_sub, eax);
 				format_to(out, "\n");
 
 				format_to(out, "\tSize for enabled features/bytes: {:d}\n", regs[ebx]);
@@ -446,7 +446,7 @@ void print_extended_state(fmt::memory_buffer& out, const cpu_t& cpu) {
 				} c = { regs[ecx] };
 
 				const std::uint32_t idx = static_cast<std::uint32_t>(sub.first);
-				const auto& saveables = all_features.equal_range(leaf_t::extended_state).first->second.at(subleaf_t::extended_state_main).at(eax);
+				const auto& saveables = all_features.equal_range(leaf_type::extended_state).first->second.at(subleaf_type::extended_state_main).at(eax);
 				const std::string& description = idx < saveables.size() ? saveables[idx].description
 				                               : idx == 0xe3_u32        ? "Lightweight Profiling"
 				                               :                          "(unknown)";
@@ -470,14 +470,14 @@ void print_extended_state(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_rdt_monitoring(cpu_t& cpu) {
-	register_set_t regs = cpuid(leaf_t::rdt_monitoring, subleaf_t::rdt_monitoring_main);
-	cpu.leaves[leaf_t::rdt_monitoring][subleaf_t::rdt_monitoring_main] = regs;
+	register_set_t regs = cpuid(leaf_type::rdt_monitoring, subleaf_type::rdt_monitoring_main);
+	cpu.leaves[leaf_type::rdt_monitoring][subleaf_type::rdt_monitoring_main] = regs;
 
 	const std::uint32_t valid_bits = regs[edx];
 	std::uint32_t mask = 0x1_u32 << 1_u32;
-	for(subleaf_t i = subleaf_t::rdt_monitoring_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1_u32) {
+	for(subleaf_type i = subleaf_type::rdt_monitoring_l3; i < subleaf_type{ 32 }; ++i, mask <<= 1_u32) {
 		if(valid_bits & mask) {
-			cpu.leaves[leaf_t::rdt_monitoring][i] = cpuid(leaf_t::rdt_monitoring, i);
+			cpu.leaves[leaf_type::rdt_monitoring][i] = cpuid(leaf_type::rdt_monitoring, i);
 		}
 	}
 }
@@ -488,15 +488,15 @@ void print_rdt_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
 		{ intel , 0x0000'0002_u32, "T", "Total Bandwidth" },
 		{ intel , 0x0000'0004_u32, "L", "Local Bandwidth" }
 	};
-	for(const auto& sub : cpu.leaves.at(leaf_t::rdt_monitoring)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::rdt_monitoring)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
-		case subleaf_t::rdt_monitoring_main:
+		case subleaf_type::rdt_monitoring_main:
 			format_to(out, "Intel Resource Director Technology monitoring\n");
 			format_to(out, "\tMaximum Resource Monitoring ID of all types: {:#010x}\n", regs[ebx]);
 			format_to(out, "\n");
 			break;
-		case subleaf_t::rdt_monitoring_l3:
+		case subleaf_type::rdt_monitoring_l3:
 			format_to(out, "\tL3 cache monitoring\n");
 			format_to(out, "\t\tConversion factor: {:d}\n", regs[ebx]);
 			for(const feature_t& mon : monitorables) {
@@ -521,14 +521,14 @@ void print_rdt_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_rdt_allocation(cpu_t& cpu) {
-	register_set_t regs = cpuid(leaf_t::rdt_allocation, subleaf_t::rdt_allocation_main);
-	cpu.leaves[leaf_t::rdt_allocation][subleaf_t::rdt_allocation_main] = regs;
+	register_set_t regs = cpuid(leaf_type::rdt_allocation, subleaf_type::rdt_allocation_main);
+	cpu.leaves[leaf_type::rdt_allocation][subleaf_type::rdt_allocation_main] = regs;
 
 	const std::uint32_t valid_bits = regs[edx];
 	std::uint32_t mask = 0x1_u32 << 1_u32;
-	for(subleaf_t i = subleaf_t::rdt_cat_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1_u32) {
+	for(subleaf_type i = subleaf_type::rdt_cat_l3; i < subleaf_type{ 32 }; ++i, mask <<= 1_u32) {
 		if(valid_bits & mask) {
-			cpu.leaves[leaf_t::rdt_allocation][i] = cpuid(leaf_t::rdt_allocation, i);
+			cpu.leaves[leaf_type::rdt_allocation][i] = cpuid(leaf_type::rdt_allocation, i);
 		}
 	}
 }
@@ -540,7 +540,7 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 		{ intel , 0x0000'0008_u32, "MEM", "Memory Bandwidth Allocation" }
 	};
 
-	for(const auto& sub : cpu.leaves.at(leaf_t::rdt_allocation)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::rdt_allocation)) {
 		const register_set_t& regs = sub.second;
 
 		const union
@@ -554,7 +554,7 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 		} d = { regs[edx] };
 
 		switch(sub.first) {
-		case subleaf_t::rdt_allocation_main:
+		case subleaf_type::rdt_allocation_main:
 			format_to(out, "Intel Resource Director Technology allocation\n");
 			for(const feature_t& all : allocatables) {
 				if(regs[edx] & all.mask) {
@@ -563,7 +563,7 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 			}
 			format_to(out, "\n");
 			break;
-		case subleaf_t::rdt_cat_l3:
+		case subleaf_type::rdt_cat_l3:
 			{
 				const union
 				{
@@ -585,7 +585,7 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 				format_to(out, "\n");
 			}
 			break;
-		case subleaf_t::rdt_cat_l2:
+		case subleaf_type::rdt_cat_l2:
 			{
 				const union
 				{
@@ -604,7 +604,7 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 				format_to(out, "\n");
 			}
 			break;
-		case subleaf_t::rdt_mba:
+		case subleaf_type::rdt_mba:
 			{
 				const union
 				{
@@ -635,24 +635,24 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_sgx_info(cpu_t& cpu) {
-	cpu.leaves[leaf_t::sgx_info][subleaf_t::sgx_capabilities] = cpuid(leaf_t::sgx_info, subleaf_t::sgx_capabilities);
-	cpu.leaves[leaf_t::sgx_info][subleaf_t::sgx_attributes  ] = cpuid(leaf_t::sgx_info, subleaf_t::sgx_attributes  );
+	cpu.leaves[leaf_type::sgx_info][subleaf_type::sgx_capabilities] = cpuid(leaf_type::sgx_info, subleaf_type::sgx_capabilities);
+	cpu.leaves[leaf_type::sgx_info][subleaf_type::sgx_attributes  ] = cpuid(leaf_type::sgx_info, subleaf_type::sgx_attributes  );
 
-	for(subleaf_t i = subleaf_t{ 2 }; ; ++i) {
-		register_set_t regs = cpuid(leaf_t::sgx_info, i);
+	for(subleaf_type i = subleaf_type{ 2 }; ; ++i) {
+		register_set_t regs = cpuid(leaf_type::sgx_info, i);
 		if((regs[eax] & 0x0000'000f_u32) == 0_u32) {
 			break;
 		}
-		cpu.leaves[leaf_t::sgx_info][i] = regs;
+		cpu.leaves[leaf_type::sgx_info][i] = regs;
 	}
 }
 
 void print_sgx_info(fmt::memory_buffer& out, const cpu_t& cpu) {
-	for(const auto& sub : cpu.leaves.at(leaf_t::sgx_info)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::sgx_info)) {
 		const register_set_t& regs = sub.second;
 
 		switch(sub.first) {
-		case subleaf_t::sgx_capabilities:
+		case subleaf_type::sgx_capabilities:
 			{
 				const union
 				{
@@ -667,7 +667,7 @@ void print_sgx_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 
 				format_to(out, "Intel SGX\n");
 				format_to(out, "\tFeatures:\n");
-				print_features(out, cpu, leaf_t::sgx_info, subleaf_t::sgx_capabilities, eax);
+				print_features(out, cpu, leaf_type::sgx_info, subleaf_type::sgx_capabilities, eax);
 				format_to(out, "\n");
 				format_to(out, "\tMISCSELECT extended features: {:#010x}\n", regs[ebx]);
 				format_to(out, "\tMaximum enclave size in 32-bit mode/bytes: {:d}\n", (1ui64 << d.split.max_enclave_32_bit));
@@ -675,7 +675,7 @@ void print_sgx_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 				format_to(out, "\n");
 			}
 			break;
-		case subleaf_t::sgx_attributes:
+		case subleaf_type::sgx_attributes:
 			{
 				format_to(out, "\tSECS.ATTRIBUTES valid bits: {:08x}:{:08x}:{:08x}:{:08x}\n", regs[edx], regs[ecx], regs[ebx], regs[eax]);
 				format_to(out, "\n");
@@ -746,24 +746,24 @@ void print_sgx_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_processor_trace(cpu_t& cpu) {
-	register_set_t regs = cpuid(leaf_t::processor_trace, subleaf_t::main);
-	cpu.leaves[leaf_t::processor_trace][subleaf_t::main] = regs;
+	register_set_t regs = cpuid(leaf_type::processor_trace, subleaf_type::main);
+	cpu.leaves[leaf_type::processor_trace][subleaf_type::main] = regs;
 
-	const subleaf_t limit = subleaf_t{ regs[eax] };
-	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
-		cpu.leaves[leaf_t::processor_trace][sub] = cpuid(leaf_t::processor_trace, sub);
+	const subleaf_type limit = subleaf_type{ regs[eax] };
+	for(subleaf_type sub = subleaf_type{ 1 }; sub < limit; ++sub) {
+		cpu.leaves[leaf_type::processor_trace][sub] = cpuid(leaf_type::processor_trace, sub);
 	}
 }
 
 void print_processor_trace(fmt::memory_buffer& out, const cpu_t& cpu) {
-	for(const auto& sub : cpu.leaves.at(leaf_t::processor_trace)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::processor_trace)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
-		case subleaf_t::main:
+		case subleaf_type::main:
 			format_to(out, "Processor Trace\n");
-			print_features(out, cpu, leaf_t::processor_trace, subleaf_t::main, ebx);
+			print_features(out, cpu, leaf_type::processor_trace, subleaf_type::main, ebx);
 			format_to(out, "\n");
-			print_features(out, cpu, leaf_t::processor_trace, subleaf_t::main, ecx);
+			print_features(out, cpu, leaf_type::processor_trace, subleaf_type::main, ecx);
 			format_to(out, "\n");
 			break;
 		default:
@@ -800,7 +800,7 @@ void print_processor_trace(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_time_stamp_counter(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::time_stamp_counter).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::time_stamp_counter).at(subleaf_type::main);
 	format_to(out, "Time Stamp Counter and Nominal Core Crystal Clock\n");
 	format_to(out, "\tTSC:core crystal clock ratio: {:d}:{:d}\n", regs[ebx], regs[eax]);
 	format_to(out, "\tNominal core crystal clock/Hz: {:d}\n", regs[ecx]);
@@ -809,7 +809,7 @@ void print_time_stamp_counter(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_processor_frequency(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::processor_frequency).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::processor_frequency).at(subleaf_type::main);
 
 	struct frequency_t
 	{
@@ -843,20 +843,20 @@ void print_processor_frequency(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_system_on_chip_vendor(cpu_t& cpu) {
-	register_set_t regs = cpuid(leaf_t::system_on_chip_vendor, subleaf_t::main);
-	cpu.leaves[leaf_t::system_on_chip_vendor][subleaf_t::main] = regs;
+	register_set_t regs = cpuid(leaf_type::system_on_chip_vendor, subleaf_type::main);
+	cpu.leaves[leaf_type::system_on_chip_vendor][subleaf_type::main] = regs;
 
-	const subleaf_t limit = subleaf_t{ regs[eax] };
-	for(subleaf_t sub = subleaf_t{ 1 }; sub < limit; ++sub) {
-		cpu.leaves[leaf_t::system_on_chip_vendor][sub] = cpuid(leaf_t::system_on_chip_vendor, sub);
+	const subleaf_type limit = subleaf_type{ regs[eax] };
+	for(subleaf_type sub = subleaf_type{ 1 }; sub < limit; ++sub) {
+		cpu.leaves[leaf_type::system_on_chip_vendor][sub] = cpuid(leaf_type::system_on_chip_vendor, sub);
 	}
 }
 
 void print_system_on_chip_vendor(fmt::memory_buffer& out, const cpu_t& cpu) {
-	for(const auto& sub : cpu.leaves.at(leaf_t::system_on_chip_vendor)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::system_on_chip_vendor)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
-		case subleaf_t::main:
+		case subleaf_type::main:
 			{
 				const union
 				{
@@ -881,23 +881,23 @@ void print_system_on_chip_vendor(fmt::memory_buffer& out, const cpu_t& cpu) {
 				format_to(out, "\n");
 			}
 			break;
-		case subleaf_t{ 1 }:
+		case subleaf_type{ 1 }:
 			{
 				const union
 				{
 					std::array<register_set_t, 3> split;
 					std::array<char, 48> full;
 				} brand = {
-					cpu.leaves.at(leaf_t::system_on_chip_vendor).at(subleaf_t{ 1 }),
-					cpu.leaves.at(leaf_t::system_on_chip_vendor).at(subleaf_t{ 2 }),
-					cpu.leaves.at(leaf_t::system_on_chip_vendor).at(subleaf_t{ 3 })
+					cpu.leaves.at(leaf_type::system_on_chip_vendor).at(subleaf_type{ 1 }),
+					cpu.leaves.at(leaf_type::system_on_chip_vendor).at(subleaf_type{ 2 }),
+					cpu.leaves.at(leaf_type::system_on_chip_vendor).at(subleaf_type{ 3 })
 				};
 				format_to(out, "\tSoC brand: {}\n", brand.full);
 				format_to(out, "\n");
 			}
 			break;
-		case subleaf_t{ 2 }:
-		case subleaf_t{ 3 }:
+		case subleaf_type{ 2 }:
+		case subleaf_type{ 3 }:
 			break;
 		default:
 			format_to(out, "\tVendor data:\n");
@@ -912,22 +912,22 @@ void print_system_on_chip_vendor(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_pconfig(cpu_t& cpu) {
-	cpu.leaves[leaf_t::pconfig][subleaf_t::main] = cpuid(leaf_t::pconfig, subleaf_t::main);
+	cpu.leaves[leaf_type::pconfig][subleaf_type::main] = cpuid(leaf_type::pconfig, subleaf_type::main);
 
-	for(subleaf_t sub = subleaf_t{ 0x1_u32 }; ; ++sub) {
-		register_set_t regs = cpuid(leaf_t::pconfig, sub);
+	for(subleaf_type sub = subleaf_type{ 0x1_u32 }; ; ++sub) {
+		register_set_t regs = cpuid(leaf_type::pconfig, sub);
 		if(0 == (regs[eax] & 0x0000'0001_u32)) {
 			break;
 		}
-		cpu.leaves[leaf_t::pconfig][sub] = regs;
+		cpu.leaves[leaf_type::pconfig][sub] = regs;
 	}
 }
 
 void print_pconfig(fmt::memory_buffer& out, const cpu_t& cpu) {
-	for(const auto& sub : cpu.leaves.at(leaf_t::pconfig)) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::pconfig)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
-		case subleaf_t::main:
+		case subleaf_type::main:
 		default:
 			{
 				const union
@@ -960,14 +960,14 @@ void print_pconfig(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_extended_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_limit).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::extended_limit).at(subleaf_type::main);
 	format_to(out, "Extended limit\n");
 	format_to(out, "\tMaximum extended cpuid leaf: {:#010x}\n", regs[eax]);
 	format_to(out, "\n");
 }
 
 void print_extended_signature_and_features(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::extended_signature_and_features).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::extended_signature_and_features).at(subleaf_type::main);
 	format_to(out, "Extended signature and features\n");
 	
 	if(cpu.vendor & amd) {
@@ -1009,9 +1009,9 @@ void print_extended_signature_and_features(fmt::memory_buffer& out, const cpu_t&
 		format_to(out, "\n");
 	}
 	format_to(out, "\tFeature identifiers\n");
-	print_features(out, cpu, leaf_t::extended_signature_and_features, subleaf_t::main, ecx);
+	print_features(out, cpu, leaf_type::extended_signature_and_features, subleaf_type::main, ecx);
 	format_to(out, "\n");
-	print_features(out, cpu, leaf_t::extended_signature_and_features, subleaf_t::main, edx);
+	print_features(out, cpu, leaf_type::extended_signature_and_features, subleaf_type::main, edx);
 	format_to(out, "\n");
 }
 
@@ -1022,9 +1022,9 @@ void print_brand_string(fmt::memory_buffer& out, const cpu_t& cpu) {
 		std::array<register_set_t, 3> split;
 		std::array<char, 48> full;
 	} brand = {
-		cpu.leaves.at(leaf_t::brand_string_0).at(subleaf_t::main),
-		cpu.leaves.at(leaf_t::brand_string_1).at(subleaf_t::main),
-		cpu.leaves.at(leaf_t::brand_string_2).at(subleaf_t::main)
+		cpu.leaves.at(leaf_type::brand_string_0).at(subleaf_type::main),
+		cpu.leaves.at(leaf_type::brand_string_1).at(subleaf_type::main),
+		cpu.leaves.at(leaf_type::brand_string_2).at(subleaf_type::main)
 	};
 
 	format_to(out, "\tBrand: {}\n", brand.full);
@@ -1032,7 +1032,7 @@ void print_brand_string(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_ras_advanced_power_management(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::ras_advanced_power_management).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::ras_advanced_power_management).at(subleaf_type::main);
 
 	const union
 	{
@@ -1053,26 +1053,26 @@ void print_ras_advanced_power_management(fmt::memory_buffer& out, const cpu_t& c
 		format_to(out, "\tMaximum seconds between readings to avoid wraps: {:d}\n", a.split.max_wrap_time);
 		format_to(out, "\n");
 		format_to(out, "RAS capabilities\n");
-		print_features(out, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, ebx);
+		print_features(out, cpu, leaf_type::ras_advanced_power_management, subleaf_type::main, ebx);
 		format_to(out, "\n");
 		format_to(out, "Advanced Power Management information\n");
 		format_to(out, "\tCompute unit power sample time period: {:d}\n", regs[ecx]);
-		print_features(out, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, edx);
+		print_features(out, cpu, leaf_type::ras_advanced_power_management, subleaf_type::main, edx);
 		break;
 	case intel:
 		format_to(out, "Advanced Power Management information\n");
-		print_features(out, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main, edx);
+		print_features(out, cpu, leaf_type::ras_advanced_power_management, subleaf_type::main, edx);
 		break;
 	default:
 		format_to(out, "Advanced Power Management information\n");
-		print_generic(out, cpu, leaf_t::ras_advanced_power_management, subleaf_t::main);
+		print_generic(out, cpu, leaf_type::ras_advanced_power_management, subleaf_type::main);
 		break;
 	}
 	format_to(out, "\n");
 }
 
 void print_address_limits(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::address_limits).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::address_limits).at(subleaf_type::main);
 
 	const union
 	{
@@ -1110,14 +1110,14 @@ void print_address_limits(fmt::memory_buffer& out, const cpu_t& cpu) {
 		format_to(out, "\n");
 
 		format_to(out, "\tExtended features\n");
-		print_features(out, cpu, leaf_t::address_limits, subleaf_t::main, ebx);
+		print_features(out, cpu, leaf_type::address_limits, subleaf_type::main, ebx);
 		format_to(out, "\n");
 
 		format_to(out, "\tSize identifiers\n");
 		format_to(out, "\t\tThreads in package: {:d}\n", c.split.package_threads + 1_u32);
 		format_to(out, "\t\t{:d} bits of APIC ID denote threads within a package\n", c.split.apic_id_size);
 
-		if(0 != (cpu.leaves.at(leaf_t::extended_signature_and_features).at(subleaf_t::main).at(ecx) & 0x0400'0000_u32)) {
+		if(0 != (cpu.leaves.at(leaf_type::extended_signature_and_features).at(subleaf_type::main).at(ecx) & 0x0400'0000_u32)) {
 			format_to(out, "\t\tPerformance time-stamp counter size/bits: ");
 			switch(c.split.perf_tsc_size) {
 			case 0b00_u32:
@@ -1142,18 +1142,18 @@ void print_address_limits(fmt::memory_buffer& out, const cpu_t& cpu) {
 		format_to(out, "\tVirtual address size/bits: {:d}\n", a.split.virtual_address_size);
 		format_to(out, "\n");
 		format_to(out, "\tExtended features\n");
-		print_features(out, cpu, leaf_t::address_limits, subleaf_t::main, ebx);
+		print_features(out, cpu, leaf_type::address_limits, subleaf_type::main, ebx);
 		break;
 	default:
 		format_to(out, "Address size limits\n");
-		print_generic(out, cpu, leaf_t::address_limits, subleaf_t::main);
+		print_generic(out, cpu, leaf_type::address_limits, subleaf_type::main);
 		break;
 	}
 	format_to(out, "\n");
 }
 
 void print_secure_virtual_machine(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::secure_virtual_machine).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::secure_virtual_machine).at(subleaf_type::main);
 
 	const union
 	{
@@ -1169,24 +1169,24 @@ void print_secure_virtual_machine(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "\tSVM revision: {:d}\n", a.split.svm_revision);
 	format_to(out, "\tNumber of address space identifiers: {:d}\n", regs[ebx]);
 	format_to(out, "\n");
-	print_features(out, cpu, leaf_t::secure_virtual_machine, subleaf_t::main, edx);
+	print_features(out, cpu, leaf_type::secure_virtual_machine, subleaf_type::main, edx);
 	format_to(out, "\n");
 }
 
 void print_performance_optimization(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "Performance Optimization\n");
-	print_features(out, cpu, leaf_t::performance_optimization, subleaf_t::main, eax);
+	print_features(out, cpu, leaf_type::performance_optimization, subleaf_type::main, eax);
 	format_to(out, "\n");
 }
 
 void print_instruction_based_sampling(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "Instruction Based Sampling\n");
-	print_features(out, cpu, leaf_t::instruction_based_sampling, subleaf_t::main, eax);
+	print_features(out, cpu, leaf_type::instruction_based_sampling, subleaf_type::main, eax);
 	format_to(out, "\n");
 }
 
 void print_lightweight_profiling(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::lightweight_profiling).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::lightweight_profiling).at(subleaf_type::main);
 
 	const union
 	{
@@ -1220,8 +1220,8 @@ void print_lightweight_profiling(fmt::memory_buffer& out, const cpu_t& cpu) {
 
 	format_to(out, "Lightweight profiling\n");
 	format_to(out, "\tLWP version: {:d}\n", c.split.version);
-	print_features(out, cpu, leaf_t::lightweight_profiling, subleaf_t::main, eax);
-	print_features(out, cpu, leaf_t::lightweight_profiling, subleaf_t::main, ecx);
+	print_features(out, cpu, leaf_type::lightweight_profiling, subleaf_type::main, eax);
+	print_features(out, cpu, leaf_type::lightweight_profiling, subleaf_type::main, ecx);
 	format_to(out, "\n");
 	format_to(out, "\tControl block size/bytes: {:d}\n", (b.split.lwpcp_size * 4_u32));
 	format_to(out, "\tEvent record size/bytes: {:d}\n", b.split.event_size);
@@ -1234,7 +1234,7 @@ void print_lightweight_profiling(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_encrypted_memory(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const register_set_t& regs = cpu.leaves.at(leaf_t::encrypted_memory).at(subleaf_t::main);
+	const register_set_t& regs = cpu.leaves.at(leaf_type::encrypted_memory).at(subleaf_type::main);
 
 	const union
 	{
@@ -1247,7 +1247,7 @@ void print_encrypted_memory(fmt::memory_buffer& out, const cpu_t& cpu) {
 	} b = { regs[ebx] };
 
 	format_to(out, "Encrypted memory\n");
-	print_features(out, cpu, leaf_t::encrypted_memory, subleaf_t::main, eax);
+	print_features(out, cpu, leaf_type::encrypted_memory, subleaf_type::main, eax);
 	format_to(out, "\n");
 	format_to(out, "\tC-bit position in PTE: {:d}\n", b.split.cbit_position);
 	format_to(out, "\tPhysical address bit reduction: {:d}\n", b.split.physical_address_reduction);
