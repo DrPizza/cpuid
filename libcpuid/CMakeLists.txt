@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.10)
 
 project(libcpuid)
 
-add_library(libcpuid STATIC src/cache-and-topology.cpp src/cpuid.cpp src/features.cpp src/hypervisors.cpp src/standard.cpp)
+add_library(libcpuid STATIC src/cache-and-topology.cpp src/cpuid.cpp src/features.cpp src/hypervisors.cpp src/standard.cpp src/utility.cpp)
 target_include_directories(libcpuid PUBLIC .)
 target_include_directories(libcpuid PRIVATE include)
 target_include_directories(libcpuid PRIVATE cpuid)
