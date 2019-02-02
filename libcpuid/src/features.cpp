@@ -6,6 +6,11 @@
 #include <map>
 #include <vector>
 
+#if !defined(_MSC_VER)
+#include <x86intrin.h>
+#define __popcnt _popcnt32
+#endif
+
 const feature_map_t all_features = {
 	{ leaf_type::version_info, {
 		{ subleaf_type::main, {
