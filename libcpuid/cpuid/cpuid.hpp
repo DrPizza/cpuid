@@ -10,145 +10,123 @@
 #include <fmt/format.h>
 
 
-#if !defined(__cpp_lib_integer_literals)
-
-namespace std
-{
-	inline namespace literals
-	{
-		inline namespace integer_literals
-		{
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable: 4455) // warning 4455: literal suffix identifiers that do not start with an underscore are reserved
-#endif
-			constexpr uint_least64_t operator "" u64(unsigned long long arg) {
-				return static_cast<uint_least64_t>(arg);
-			}
-			constexpr uint_least32_t operator "" u32(unsigned long long arg) {
-				return static_cast<uint_least32_t>(arg);
-			}
-			constexpr uint_least16_t operator "" u16(unsigned long long arg) {
-				return static_cast<uint_least16_t>(arg);
-			}
-			constexpr uint_least8_t operator "" u8(unsigned long long arg) {
-				return static_cast<uint_least8_t>(arg);
-			}
-
-			constexpr int_least64_t operator "" i64(unsigned long long arg) {
-				return static_cast<int_least64_t>(arg);
-			}
-			constexpr int_least32_t operator "" i32(unsigned long long arg) {
-				return static_cast<int_least32_t>(arg);
-			}
-			constexpr int_least16_t operator "" i16(unsigned long long arg) {
-				return static_cast<int_least16_t>(arg);
-			}
-			constexpr int_least8_t operator "" i8(unsigned long long arg) {
-				return static_cast<int_least8_t>(arg);
-			}
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-		}
-	}
+constexpr std::uint_least64_t operator "" _u64(unsigned long long arg) {
+	return static_cast<std::uint_least64_t>(arg);
+}
+constexpr std::uint_least32_t operator "" _u32(unsigned long long arg) {
+	return static_cast<std::uint_least32_t>(arg);
+}
+constexpr std::uint_least16_t operator "" _u16(unsigned long long arg) {
+	return static_cast<std::uint_least16_t>(arg);
+}
+constexpr std::uint_least8_t operator "" _u8(unsigned long long arg) {
+	return static_cast<std::uint_least8_t>(arg);
 }
 
-#endif
-
-using namespace std::integer_literals;
+constexpr std::int_least64_t operator "" _i64(unsigned long long arg) {
+	return static_cast<std::int_least64_t>(arg);
+}
+constexpr std::int_least32_t operator "" _i32(unsigned long long arg) {
+	return static_cast<std::int_least32_t>(arg);
+}
+constexpr std::int_least16_t operator "" _i16(unsigned long long arg) {
+	return static_cast<std::int_least16_t>(arg);
+}
+constexpr std::int_least8_t operator "" _i8(unsigned long long arg) {
+	return static_cast<std::int_least8_t>(arg);
+}
 
 enum struct leaf_t : std::uint32_t
 {
-	basic_info                        = 0x0000'0000u32,
-	version_info                      = 0x0000'0001u32,
-	cache_and_tlb                     = 0x0000'0002u32,
-	serial_number                     = 0x0000'0003u32,
-	deterministic_cache               = 0x0000'0004u32,
-	monitor_mwait                     = 0x0000'0005u32,
-	thermal_and_power                 = 0x0000'0006u32,
-	extended_features                 = 0x0000'0007u32,
-	reserved_1                        = 0x0000'0008u32,
-	direct_cache_access               = 0x0000'0009u32,
-	performance_monitoring            = 0x0000'000au32,
-	extended_topology                 = 0x0000'000bu32,
-	reserved_2                        = 0x0000'000cu32,
-	extended_state                    = 0x0000'000du32,
-	reserved_3                        = 0x0000'000eu32,
-	rdt_monitoring                    = 0x0000'000fu32,
-	rdt_allocation                    = 0x0000'0010u32,
-	reserved_4                        = 0x0000'0011u32,
-	sgx_info                          = 0x0000'0012u32,
-	reserved_5                        = 0x0000'0013u32,
-	processor_trace                   = 0x0000'0014u32,
-	time_stamp_counter                = 0x0000'0015u32,
-	processor_frequency               = 0x0000'0016u32,
-	system_on_chip_vendor             = 0x0000'0017u32,
-	deterministic_tlb                 = 0x0000'0018u32,
-	reserved_6                        = 0x0000'0019u32,
-	reserved_7                        = 0x0000'001au32,
-	pconfig                           = 0x0000'001bu32,
+	basic_info                        = 0x0000'0000_u32,
+	version_info                      = 0x0000'0001_u32,
+	cache_and_tlb                     = 0x0000'0002_u32,
+	serial_number                     = 0x0000'0003_u32,
+	deterministic_cache               = 0x0000'0004_u32,
+	monitor_mwait                     = 0x0000'0005_u32,
+	thermal_and_power                 = 0x0000'0006_u32,
+	extended_features                 = 0x0000'0007_u32,
+	reserved_1                        = 0x0000'0008_u32,
+	direct_cache_access               = 0x0000'0009_u32,
+	performance_monitoring            = 0x0000'000a_u32,
+	extended_topology                 = 0x0000'000b_u32,
+	reserved_2                        = 0x0000'000c_u32,
+	extended_state                    = 0x0000'000d_u32,
+	reserved_3                        = 0x0000'000e_u32,
+	rdt_monitoring                    = 0x0000'000f_u32,
+	rdt_allocation                    = 0x0000'0010_u32,
+	reserved_4                        = 0x0000'0011_u32,
+	sgx_info                          = 0x0000'0012_u32,
+	reserved_5                        = 0x0000'0013_u32,
+	processor_trace                   = 0x0000'0014_u32,
+	time_stamp_counter                = 0x0000'0015_u32,
+	processor_frequency               = 0x0000'0016_u32,
+	system_on_chip_vendor             = 0x0000'0017_u32,
+	deterministic_tlb                 = 0x0000'0018_u32,
+	reserved_6                        = 0x0000'0019_u32,
+	reserved_7                        = 0x0000'001a_u32,
+	pconfig                           = 0x0000'001b_u32,
 
-	hypervisor_limit                  = 0x4000'0000u32,
+	hypervisor_limit                  = 0x4000'0000_u32,
 
-	hyper_v_signature                 = 0x4000'0001u32,
-	hyper_v_system_identity           = 0x4000'0002u32,
-	hyper_v_features                  = 0x4000'0003u32,
-	hyper_v_enlightenment_recs        = 0x4000'0004u32,
-	hyper_v_implementation_limits     = 0x4000'0005u32,
-	hyper_v_implementation_hardware   = 0x4000'0006u32,
-	hyper_v_root_cpu_management       = 0x4000'0007u32,
-	hyper_v_shared_virtual_memory     = 0x4000'0008u32,
-	hyper_v_nested_hypervisor         = 0x4000'0009u32,
-	hyper_v_nested_features           = 0x4000'000au32,
+	hyper_v_signature                 = 0x4000'0001_u32,
+	hyper_v_system_identity           = 0x4000'0002_u32,
+	hyper_v_features                  = 0x4000'0003_u32,
+	hyper_v_enlightenment_recs        = 0x4000'0004_u32,
+	hyper_v_implementation_limits     = 0x4000'0005_u32,
+	hyper_v_implementation_hardware   = 0x4000'0006_u32,
+	hyper_v_root_cpu_management       = 0x4000'0007_u32,
+	hyper_v_shared_virtual_memory     = 0x4000'0008_u32,
+	hyper_v_nested_hypervisor         = 0x4000'0009_u32,
+	hyper_v_nested_features           = 0x4000'000a_u32,
 
-	xen_limit                         = 0x4000'0000u32, xen_limit_offset                  = 0x4000'0100u32,
-	xen_version                       = 0x4000'0001u32, xen_version_offset                = 0x4000'0101u32,
-	xen_features                      = 0x4000'0002u32, xen_features_offset               = 0x4000'0102u32,
-	xen_time                          = 0x4000'0003u32, xen_time_offset                   = 0x4000'0103u32,
-	xen_hvm_features                  = 0x4000'0004u32, xen_hvm_features_offset           = 0x4000'0104u32,
-	xen_pv_features                   = 0x4000'0005u32, xen_pv_features_offset            = 0x4000'0105u32,
+	xen_limit                         = 0x4000'0000_u32, xen_limit_offset                  = 0x4000'0100_u32,
+	xen_version                       = 0x4000'0001_u32, xen_version_offset                = 0x4000'0101_u32,
+	xen_features                      = 0x4000'0002_u32, xen_features_offset               = 0x4000'0102_u32,
+	xen_time                          = 0x4000'0003_u32, xen_time_offset                   = 0x4000'0103_u32,
+	xen_hvm_features                  = 0x4000'0004_u32, xen_hvm_features_offset           = 0x4000'0104_u32,
+	xen_pv_features                   = 0x4000'0005_u32, xen_pv_features_offset            = 0x4000'0105_u32,
 
-	vmware_timing                     = 0x4000'0010u32,
+	vmware_timing                     = 0x4000'0010_u32,
 
-	kvm_features                      = 0x4000'0001u32,
+	kvm_features                      = 0x4000'0001_u32,
 
-	extended_limit                    = 0x8000'0000u32,
-	extended_signature_and_features   = 0x8000'0001u32,
-	brand_string_0                    = 0x8000'0002u32,
-	brand_string_1                    = 0x8000'0003u32,
-	brand_string_2                    = 0x8000'0004u32,
-	l1_cache_identifiers              = 0x8000'0005u32,
-	l2_cache_identifiers              = 0x8000'0006u32,
-	ras_advanced_power_management     = 0x8000'0007u32,
-	address_limits                    = 0x8000'0008u32,
-	reserved_8                        = 0x8000'0009u32,
-	secure_virtual_machine            = 0x8000'000au32,
+	extended_limit                    = 0x8000'0000_u32,
+	extended_signature_and_features   = 0x8000'0001_u32,
+	brand_string_0                    = 0x8000'0002_u32,
+	brand_string_1                    = 0x8000'0003_u32,
+	brand_string_2                    = 0x8000'0004_u32,
+	l1_cache_identifiers              = 0x8000'0005_u32,
+	l2_cache_identifiers              = 0x8000'0006_u32,
+	ras_advanced_power_management     = 0x8000'0007_u32,
+	address_limits                    = 0x8000'0008_u32,
+	reserved_8                        = 0x8000'0009_u32,
+	secure_virtual_machine            = 0x8000'000a_u32,
 
-	extended_reserved_1               = 0x8000'000bu32,
-	extended_reserved_2               = 0x8000'000cu32,
-	extended_reserved_3               = 0x8000'000du32,
-	extended_reserved_4               = 0x8000'000eu32,
-	extended_reserved_5               = 0x8000'000fu32,
-	extended_reserved_6               = 0x8000'0010u32,
-	extended_reserved_7               = 0x8000'0011u32,
-	extended_reserved_8               = 0x8000'0012u32,
-	extended_reserved_9               = 0x8000'0013u32,
-	extended_reserved_10              = 0x8000'0014u32,
-	extended_reserved_11              = 0x8000'0015u32,
-	extended_reserved_12              = 0x8000'0016u32,
-	extended_reserved_13              = 0x8000'0017u32,
-	extended_reserved_14              = 0x8000'0018u32,
+	extended_reserved_1               = 0x8000'000b_u32,
+	extended_reserved_2               = 0x8000'000c_u32,
+	extended_reserved_3               = 0x8000'000d_u32,
+	extended_reserved_4               = 0x8000'000e_u32,
+	extended_reserved_5               = 0x8000'000f_u32,
+	extended_reserved_6               = 0x8000'0010_u32,
+	extended_reserved_7               = 0x8000'0011_u32,
+	extended_reserved_8               = 0x8000'0012_u32,
+	extended_reserved_9               = 0x8000'0013_u32,
+	extended_reserved_10              = 0x8000'0014_u32,
+	extended_reserved_11              = 0x8000'0015_u32,
+	extended_reserved_12              = 0x8000'0016_u32,
+	extended_reserved_13              = 0x8000'0017_u32,
+	extended_reserved_14              = 0x8000'0018_u32,
 	
-	tlb_1g_identifiers                = 0x8000'0019u32,
-	performance_optimization          = 0x8000'001au32,
-	instruction_based_sampling        = 0x8000'001bu32,
-	lightweight_profiling             = 0x8000'001cu32,
-	cache_properties                  = 0x8000'001du32,
-	extended_apic                     = 0x8000'001eu32,
-	encrypted_memory                  = 0x8000'001fu32,
+	tlb_1g_identifiers                = 0x8000'0019_u32,
+	performance_optimization          = 0x8000'001a_u32,
+	instruction_based_sampling        = 0x8000'001b_u32,
+	lightweight_profiling             = 0x8000'001c_u32,
+	cache_properties                  = 0x8000'001d_u32,
+	extended_apic                     = 0x8000'001e_u32,
+	encrypted_memory                  = 0x8000'001f_u32,
 
-	none                              = 0x0000'0000u32,
+	none                              = 0x0000'0000_u32,
 };
 
 constexpr inline leaf_t operator++(leaf_t& lhs) {
@@ -167,28 +145,28 @@ constexpr inline leaf_t operator+(const leaf_t& lhs, std::uint32_t rhs) {
 
 enum struct subleaf_t : std::uint32_t
 {
-	main                                   = 0x0000'0000u32,
-	extended_features_main                 = 0x0000'0000u32,
-	extended_state_main                    = 0x0000'0000u32,
-	extended_state_sub                     = 0x0000'0001u32,
-	rdt_monitoring_main                    = 0x0000'0000u32,
-	rdt_monitoring_l3                      = 0x0000'0001u32,
-	rdt_allocation_main                    = 0x0000'0000u32,
-	rdt_cat_l3                             = 0x0000'0001u32,
-	rdt_cat_l2                             = 0x0000'0002u32,
-	rdt_mba                                = 0x0000'0003u32,
-	sgx_capabilities                       = 0x0000'0000u32,
-	sgx_attributes                         = 0x0000'0001u32,
-	processor_trace_main                   = 0x0000'0000u32,
-	processor_trace_sub                    = 0x0000'0001u32,
-	system_on_chip_vendor_main             = 0x0000'0000u32,
-	system_on_chip_vendor_sub              = 0x0000'0001u32,
-	deterministic_address_translation_main = 0x0000'0000u32,
-	deterministic_address_translation_sub  = 0x0000'0001u32,
-	xen_time_main                          = 0x0000'0000u32,
-	xen_time_tsc_offset                    = 0x0000'0001u32,
-	xen_time_host                          = 0x0000'0002u32,
-	none                                   = 0x0000'0000u32,
+	main                                   = 0x0000'0000_u32,
+	extended_features_main                 = 0x0000'0000_u32,
+	extended_state_main                    = 0x0000'0000_u32,
+	extended_state_sub                     = 0x0000'0001_u32,
+	rdt_monitoring_main                    = 0x0000'0000_u32,
+	rdt_monitoring_l3                      = 0x0000'0001_u32,
+	rdt_allocation_main                    = 0x0000'0000_u32,
+	rdt_cat_l3                             = 0x0000'0001_u32,
+	rdt_cat_l2                             = 0x0000'0002_u32,
+	rdt_mba                                = 0x0000'0003_u32,
+	sgx_capabilities                       = 0x0000'0000_u32,
+	sgx_attributes                         = 0x0000'0001_u32,
+	processor_trace_main                   = 0x0000'0000_u32,
+	processor_trace_sub                    = 0x0000'0001_u32,
+	system_on_chip_vendor_main             = 0x0000'0000_u32,
+	system_on_chip_vendor_sub              = 0x0000'0001_u32,
+	deterministic_address_translation_main = 0x0000'0000_u32,
+	deterministic_address_translation_sub  = 0x0000'0001_u32,
+	xen_time_main                          = 0x0000'0000_u32,
+	xen_time_tsc_offset                    = 0x0000'0001_u32,
+	xen_time_host                          = 0x0000'0002_u32,
+	none                                   = 0x0000'0000_u32,
 };
 
 constexpr inline subleaf_t operator++(subleaf_t& lhs) {
@@ -218,32 +196,32 @@ constexpr inline register_t operator++(register_t& lhs) {
 
 enum vendor_t : std::uint32_t
 {
-	unknown        = 0x0000'0000u32,
+	unknown        = 0x0000'0000_u32,
 	// silicon
-	amd            = 0x0000'0001u32,
-	centaur        = 0x0000'0002u32,
-	cyrix          = 0x0000'0004u32,
-	intel          = 0x0000'0008u32,
-	transmeta      = 0x0000'0010u32,
-	nat_semi       = 0x0000'0020u32,
-	nexgen         = 0x0000'0040u32,
-	rise           = 0x0000'0080u32,
-	sis            = 0x0000'0100u32,
-	umc            = 0x0000'0200u32,
-	via            = 0x0000'0400u32,
-	vortex         = 0x0000'0800u32,
+	amd            = 0x0000'0001_u32,
+	centaur        = 0x0000'0002_u32,
+	cyrix          = 0x0000'0004_u32,
+	intel          = 0x0000'0008_u32,
+	transmeta      = 0x0000'0010_u32,
+	nat_semi       = 0x0000'0020_u32,
+	nexgen         = 0x0000'0040_u32,
+	rise           = 0x0000'0080_u32,
+	sis            = 0x0000'0100_u32,
+	umc            = 0x0000'0200_u32,
+	via            = 0x0000'0400_u32,
+	vortex         = 0x0000'0800_u32,
 	// hypervisors
-	bhyve          = 0x0001'0000u32,
-	kvm            = 0x0002'0000u32,
-	hyper_v        = 0x0004'0000u32,
-	parallels      = 0x0008'0000u32,
-	vmware         = 0x0010'0000u32,
-	xen_hvm        = 0x0020'0000u32,
-	qemu           = 0x0040'0000u32,
+	bhyve          = 0x0001'0000_u32,
+	kvm            = 0x0002'0000_u32,
+	hyper_v        = 0x0004'0000_u32,
+	parallels      = 0x0008'0000_u32,
+	vmware         = 0x0010'0000_u32,
+	xen_hvm        = 0x0020'0000_u32,
+	qemu           = 0x0040'0000_u32,
 	// for filtering
-	any_silicon    = 0x0000'0fffu32,
-	any_hypervisor = 0x007f'0000u32,
-	any            = 0xffff'ffffu32,
+	any_silicon    = 0x0000'0fff_u32,
+	any_hypervisor = 0x007f'0000_u32,
+	any            = 0xffff'ffff_u32,
 };
 
 constexpr inline vendor_t operator|(const vendor_t& lhs, const vendor_t& rhs) {
@@ -411,12 +389,12 @@ void print_leaves(fmt::memory_buffer& out, const cpu_t& cpu, bool skip_vendor_ch
 
 struct flag_spec_t
 {
-	std::uint32_t selector_eax  = 0u32;
-	std::uint32_t selector_ecx  = 0u32;
+	std::uint32_t selector_eax  = 0_u32;
+	std::uint32_t selector_ecx  = 0_u32;
 	register_t    flag_register = eax;
 	std::string   flag_name     = "";
-	std::uint32_t flag_start    = 0xffff'ffffu32;
-	std::uint32_t flag_end      = 0xffff'ffffu32;
+	std::uint32_t flag_start    = 0xffff'ffff_u32;
+	std::uint32_t flag_end      = 0xffff'ffff_u32;
 };
 
 void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const flag_spec_t& flag_description);

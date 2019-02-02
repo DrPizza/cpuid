@@ -66,14 +66,14 @@ void print_version_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 		}
 		format_to(out, "\n");
 
-		if(b.split.brand_id != 0u32) {
+		if(b.split.brand_id != 0_u32) {
 			format_to(out, "\tbrand ID: ");
 			switch(b.split.brand_id) {
 			case 0x00: break;
 			case 0x01: format_to(out, "Intel(R) Celeron(R) processor"); break;
 			case 0x02: format_to(out, "Intel(R) Pentium(R) III processor"); break;
 			case 0x03:
-				if(regs[eax] == 0x000006b1u32) {
+				if(regs[eax] == 0x000006b1_u32) {
 					format_to(out, "Intel(R) Celeron(R) processor");
 				} else {
 					format_to(out, "Intel(R) Pentium(R) III Xeon(R) processor");
@@ -85,14 +85,14 @@ void print_version_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 			case 0x09: format_to(out, "Intel(R) Pentium(R) 4 processor"); break;
 			case 0x0a: format_to(out, "Intel(R) Celeron(R) processor"); break;
 			case 0x0b:
-				if(regs[eax] == 0x00000f13u32) {
+				if(regs[eax] == 0x00000f13_u32) {
 					format_to(out, "Intel(R) Xeon(R) processor MP");
 				} else {
 					format_to(out, "Intel(R) Xeon(R) processor");
 				}
 			case 0x0c: format_to(out, "Intel(R) Xeon(R) processor MP"); break;
 			case 0x0e:
-				if(regs[eax] == 0x00000f13u32) {
+				if(regs[eax] == 0x00000f13_u32) {
 					format_to(out, "Intel(R) Xeon(R) processor");
 				} else {
 					format_to(out, "Mobile Intel(R) Pentium(R) 4 processor - M");
@@ -112,7 +112,7 @@ void print_version_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 		}
 	}
 	format_to(out, "\tcache line size/bytes: {:d}\n", b.split.cache_line_size * 8);
-	if(0 != (cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main).at(edx) & 0x1000'0000u32)) {
+	if(0 != (cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main).at(edx) & 0x1000'0000_u32)) {
 		format_to(out, "\tlogical processors per package: {:d}\n", gsl::narrow_cast<std::uint32_t>(b.split.maximum_addressable_ids));
 	}
 	format_to(out, "\tlocal APIC ID: {:#04x}\n", gsl::narrow_cast<std::uint32_t>(b.split.local_apic_id));
@@ -135,9 +135,9 @@ void print_serial_number(fmt::memory_buffer& out, const cpu_t& cpu) {
 			const std::uint32_t top = cpu.leaves.at(leaf_t::version_info).at(subleaf_t::main)[eax];
 			const std::uint32_t middle = regs[edx];
 			const std::uint32_t bottom = regs[ecx];
-			format_to(out, "Serial number: {:04x}-{:04x}-{:04x}-{:04x}-{:04x}-{:04x}\n", top    >> 16u32, top    & 0xffffu32,
-			                                                                      middle >> 16u32, middle & 0xffffu32,
-			                                                                      bottom >> 16u32, bottom & 0xffffu32);
+			format_to(out, "Serial number: {:04x}-{:04x}-{:04x}-{:04x}-{:04x}-{:04x}\n", top    >> 16_u32, top    & 0xffff_u32,
+			                                                                      middle >> 16_u32, middle & 0xffff_u32,
+			                                                                      bottom >> 16_u32, bottom & 0xffff_u32);
 		}
 		break;
 	case transmeta:
@@ -185,8 +185,8 @@ void print_mwait_parameters(fmt::memory_buffer& out, const cpu_t& cpu) {
 	} c = { regs[ecx] };
 
 	format_to(out, "MONITOR/MWAIT leaf\n");
-	format_to(out, "\tSmallest monitor-line size: {:d} bytes\n", (a.split.smallest_monitor_line + 0u32));
-	format_to(out, "\tLargest monitor-line size: {:d} bytes\n", (b.split.largest_monitor_line  + 0u32));
+	format_to(out, "\tSmallest monitor-line size: {:d} bytes\n", (a.split.smallest_monitor_line + 0_u32));
+	format_to(out, "\tLargest monitor-line size: {:d} bytes\n", (b.split.largest_monitor_line  + 0_u32));
 	if(c.split.enumerable) {
 		print_features(out, cpu, leaf_t::monitor_mwait, subleaf_t::main, ecx);
 		if(cpu.vendor & intel) {
@@ -386,21 +386,21 @@ void enumerate_extended_state(cpu_t& cpu) {
 
 	cpu.leaves[leaf_t::extended_state][subleaf_t::extended_state_sub] = cpuid(leaf_t::extended_state, subleaf_t::extended_state_sub);
 
-	std::uint64_t mask = 0x1ui64 << 2u32;
-	for(subleaf_t i = subleaf_t{ 2u32 }; i < subleaf_t{ 63u32 }; ++i, mask <<= 1ui64) {
+	std::uint64_t mask = 0x1ui64 << 2_u32;
+	for(subleaf_t i = subleaf_t{ 2_u32 }; i < subleaf_t{ 63_u32 }; ++i, mask <<= 1ui64) {
 		if(valid_bits & mask) {
 			regs = cpuid(leaf_t::extended_state, i);
-			if(regs[eax] != 0u32
-			|| regs[ebx] != 0u32
-			|| regs[ecx] != 0u32
-			|| regs[edx] != 0u32) {
+			if(regs[eax] != 0_u32
+			|| regs[ebx] != 0_u32
+			|| regs[ecx] != 0_u32
+			|| regs[edx] != 0_u32) {
 				cpu.leaves[leaf_t::extended_state][i] = regs;
 			}
 		}
 	}
 	if(cpu.vendor & amd) {
 		regs = cpuid(leaf_t::extended_state, subleaf_t{ 0x3e });
-		if(regs[ebx] != 0u32) {
+		if(regs[ebx] != 0_u32) {
 			cpu.leaves[leaf_t::extended_state][subleaf_t{ 0x3e }] = regs;
 		}
 	}
@@ -448,7 +448,7 @@ void print_extended_state(fmt::memory_buffer& out, const cpu_t& cpu) {
 				const std::uint32_t idx = static_cast<std::uint32_t>(sub.first);
 				const auto& saveables = all_features.equal_range(leaf_t::extended_state).first->second.at(subleaf_t::extended_state_main).at(eax);
 				const std::string& description = idx < saveables.size() ? saveables[idx].description
-				                               : idx == 0xe3u32        ? "Lightweight Profiling"
+				                               : idx == 0xe3_u32        ? "Lightweight Profiling"
 				                               :                          "(unknown)";
 
 				format_to(out, "\tExtended state for {:s} ({:#04x}) uses {:d} bytes at offset {:#010x}\n", description, static_cast<std::uint32_t>(sub.first), regs[eax], regs[ebx]);
@@ -474,8 +474,8 @@ void enumerate_rdt_monitoring(cpu_t& cpu) {
 	cpu.leaves[leaf_t::rdt_monitoring][subleaf_t::rdt_monitoring_main] = regs;
 
 	const std::uint32_t valid_bits = regs[edx];
-	std::uint32_t mask = 0x1u32 << 1u32;
-	for(subleaf_t i = subleaf_t::rdt_monitoring_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1u32) {
+	std::uint32_t mask = 0x1_u32 << 1_u32;
+	for(subleaf_t i = subleaf_t::rdt_monitoring_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1_u32) {
 		if(valid_bits & mask) {
 			cpu.leaves[leaf_t::rdt_monitoring][i] = cpuid(leaf_t::rdt_monitoring, i);
 		}
@@ -484,9 +484,9 @@ void enumerate_rdt_monitoring(cpu_t& cpu) {
 
 void print_rdt_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
 	static const std::vector<feature_t> monitorables = {
-		{ intel , 0x0000'0001u32, "O", "Occupancy"       },
-		{ intel , 0x0000'0002u32, "T", "Total Bandwidth" },
-		{ intel , 0x0000'0004u32, "L", "Local Bandwidth" }
+		{ intel , 0x0000'0001_u32, "O", "Occupancy"       },
+		{ intel , 0x0000'0002_u32, "T", "Total Bandwidth" },
+		{ intel , 0x0000'0004_u32, "L", "Local Bandwidth" }
 	};
 	for(const auto& sub : cpu.leaves.at(leaf_t::rdt_monitoring)) {
 		const register_set_t& regs = sub.second;
@@ -525,8 +525,8 @@ void enumerate_rdt_allocation(cpu_t& cpu) {
 	cpu.leaves[leaf_t::rdt_allocation][subleaf_t::rdt_allocation_main] = regs;
 
 	const std::uint32_t valid_bits = regs[edx];
-	std::uint32_t mask = 0x1u32 << 1u32;
-	for(subleaf_t i = subleaf_t::rdt_cat_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1u32) {
+	std::uint32_t mask = 0x1_u32 << 1_u32;
+	for(subleaf_t i = subleaf_t::rdt_cat_l3; i < subleaf_t{ 32 }; ++i, mask <<= 1_u32) {
 		if(valid_bits & mask) {
 			cpu.leaves[leaf_t::rdt_allocation][i] = cpuid(leaf_t::rdt_allocation, i);
 		}
@@ -535,9 +535,9 @@ void enumerate_rdt_allocation(cpu_t& cpu) {
 
 void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 	static const std::vector<feature_t> allocatables = {
-		{ intel , 0x0000'0002u32, "L3" , "L3 Cache Allocation"},
-		{ intel , 0x0000'0004u32, "L2" , "L2 Cache Allocation"},
-		{ intel , 0x0000'0008u32, "MEM", "Memory Bandwidth Allocation" }
+		{ intel , 0x0000'0002_u32, "L3" , "L3 Cache Allocation"},
+		{ intel , 0x0000'0004_u32, "L2" , "L2 Cache Allocation"},
+		{ intel , 0x0000'0008_u32, "MEM", "Memory Bandwidth Allocation" }
 	};
 
 	for(const auto& sub : cpu.leaves.at(leaf_t::rdt_allocation)) {
@@ -576,9 +576,9 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 				} a = { regs[eax] };
 
 				format_to(out, "\tL3 Cache Allocation Technology\n");
-				format_to(out, "\tLength of capacity bitmask: {:d}\n", (a.split.bit_mask_length + 1u32));
+				format_to(out, "\tLength of capacity bitmask: {:d}\n", (a.split.bit_mask_length + 1_u32));
 				format_to(out, "\tBitmap of isolation/contention: {:#010x}\n", regs[ebx]);
-				if(regs[ecx] & 0x0000'0004u32) {
+				if(regs[ecx] & 0x0000'0004_u32) {
 					format_to(out, "\tCode and Data Prioritization supported\n");
 				}
 				format_to(out, "\tHighest COS number for this resource: {:d}\n", d.split.highest_cos_number);
@@ -598,7 +598,7 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 				} a = { regs[eax] };
 
 				format_to(out, "\tL2 Cache Allocation Technology\n");
-				format_to(out, "\tLength of capacity bitmask: {:d}\n", (a.split.bit_mask_length + 1u32));
+				format_to(out, "\tLength of capacity bitmask: {:d}\n", (a.split.bit_mask_length + 1_u32));
 				format_to(out, "\tBitmap of isolation/contention: {:#010x}\n", regs[ebx]);
 				format_to(out, "\tHighest COS number for this resource: {:d}\n", d.split.highest_cos_number);
 				format_to(out, "\n");
@@ -617,8 +617,8 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 				} a = { regs[eax] };
 
 				format_to(out, "\tMemory Bandwidth Allocation\n");
-				format_to(out, "\tMaximum MBA throttling value: {:d}\n", (a.split.max_throttle + 1u32));
-				if(regs[ecx] & 0x0000'0004u32) {
+				format_to(out, "\tMaximum MBA throttling value: {:d}\n", (a.split.max_throttle + 1_u32));
+				if(regs[ecx] & 0x0000'0004_u32) {
 					format_to(out, "\tResponse of delay values is linear\n");
 				}
 				format_to(out, "\tHighest COS number for this resource: {:d}\n", d.split.highest_cos_number);
@@ -640,7 +640,7 @@ void enumerate_sgx_info(cpu_t& cpu) {
 
 	for(subleaf_t i = subleaf_t{ 2 }; ; ++i) {
 		register_set_t regs = cpuid(leaf_t::sgx_info, i);
-		if((regs[eax] & 0x0000'000fu32) == 0u32) {
+		if((regs[eax] & 0x0000'000f_u32) == 0_u32) {
 			break;
 		}
 		cpu.leaves[leaf_t::sgx_info][i] = regs;
@@ -734,7 +734,7 @@ void print_sgx_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 					const std::uint64_t epc_size = (gsl::narrow_cast<std::uint64_t>(d.split.epc_section_size_hi_bits ) << 32ui64)
 					                             | (gsl::narrow_cast<std::uint64_t>(c.split.epc_section_size_low_bits) << 12ui64);
 					format_to(out, "\tEnclave Page Cache section\n");
-					format_to(out, "\t\tSection {:s} confidentiality and integrity protection\n", c.split.epc_section_properties == 0b0001u32 ? "has" : "does not have");
+					format_to(out, "\t\tSection {:s} confidentiality and integrity protection\n", c.split.epc_section_properties == 0b0001_u32 ? "has" : "does not have");
 					format_to(out, "\t\tEPC physical address: {:0#18x}\n", physical_address);
 					format_to(out, "\t\tEPC size: {:#018x}\n"            , epc_size);
 					format_to(out, "\n");
@@ -914,9 +914,9 @@ void print_system_on_chip_vendor(fmt::memory_buffer& out, const cpu_t& cpu) {
 void enumerate_pconfig(cpu_t& cpu) {
 	cpu.leaves[leaf_t::pconfig][subleaf_t::main] = cpuid(leaf_t::pconfig, subleaf_t::main);
 
-	for(subleaf_t sub = subleaf_t{ 0x1u32 }; ; ++sub) {
+	for(subleaf_t sub = subleaf_t{ 0x1_u32 }; ; ++sub) {
 		register_set_t regs = cpuid(leaf_t::pconfig, sub);
-		if(0 == (regs[eax] & 0x0000'0001u32)) {
+		if(0 == (regs[eax] & 0x0000'0001_u32)) {
 			break;
 		}
 		cpu.leaves[leaf_t::pconfig][sub] = regs;
@@ -1114,22 +1114,22 @@ void print_address_limits(fmt::memory_buffer& out, const cpu_t& cpu) {
 		format_to(out, "\n");
 
 		format_to(out, "\tSize identifiers\n");
-		format_to(out, "\t\tThreads in package: {:d}\n", c.split.package_threads + 1u32);
+		format_to(out, "\t\tThreads in package: {:d}\n", c.split.package_threads + 1_u32);
 		format_to(out, "\t\t{:d} bits of APIC ID denote threads within a package\n", c.split.apic_id_size);
 
-		if(0 != (cpu.leaves.at(leaf_t::extended_signature_and_features).at(subleaf_t::main).at(ecx) & 0x0400'0000u32)) {
+		if(0 != (cpu.leaves.at(leaf_t::extended_signature_and_features).at(subleaf_t::main).at(ecx) & 0x0400'0000_u32)) {
 			format_to(out, "\t\tPerformance time-stamp counter size/bits: ");
 			switch(c.split.perf_tsc_size) {
-			case 0b00u32:
+			case 0b00_u32:
 				format_to(out, "40");
 				break;
-			case 0b01u32:
+			case 0b01_u32:
 				format_to(out, "48");
 				break;
-			case 0b10u32:
+			case 0b10_u32:
 				format_to(out, "56");
 				break;
-			case 0b11u32:
+			case 0b11_u32:
 				format_to(out, "64");
 				break;
 			}
@@ -1223,7 +1223,7 @@ void print_lightweight_profiling(fmt::memory_buffer& out, const cpu_t& cpu) {
 	print_features(out, cpu, leaf_t::lightweight_profiling, subleaf_t::main, eax);
 	print_features(out, cpu, leaf_t::lightweight_profiling, subleaf_t::main, ecx);
 	format_to(out, "\n");
-	format_to(out, "\tControl block size/bytes: {:d}\n", (b.split.lwpcp_size * 4u32));
+	format_to(out, "\tControl block size/bytes: {:d}\n", (b.split.lwpcp_size * 4_u32));
 	format_to(out, "\tEvent record size/bytes: {:d}\n", b.split.event_size);
 	format_to(out, "\tMaximum EventID: {:d}\n", b.split.max_event_id);
 	format_to(out, "\tOffset to first interval/bytes: {:d}\n", b.split.event_offset);
