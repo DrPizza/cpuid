@@ -1183,13 +1183,24 @@ constexpr full_apic_id_t split_apic_id(std::uint32_t id, std::uint32_t logical_m
 	return { logical_id, physical_id, package_id };
 }
 
+#if !defined(_MSC_VER)
+unsigned char inline _BitScanReverse(unsigned long* index, unsigned int mask) {
+	if(mask) {
+		*index = 31 - __builtin_clz(mask);
+		return 1;
+	} else {
+		return 0;
+	}
+}
+#endif
+
 std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noexcept {
 	if(entries > 0x7fff'ffff_u32) {
 		return std::make_pair(0xffff'ffff_u32, 32_u32);
 	}
 	entries *= 2;
 	entries -= 1;
-	DWORD idx = 0;
+	unsigned long idx = 0;
 	_BitScanReverse(&idx, entries);
 	idx += 1;
 	return std::make_pair((1_u32 << idx) - 1_u32, idx);
