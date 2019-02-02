@@ -27,7 +27,7 @@ void run_on_every_core(Fn&& f) {
 		for(WORD group_id = 0; group_id < total_processor_groups; ++group_id) {
 			const DWORD processors_in_group = ::GetMaximumProcessorCount(group_id);
 			for(DWORD proc = 0; proc < processors_in_group; ++proc) {
-				const GROUP_AFFINITY aff = { 1ui64 << proc, group_id };
+				const GROUP_AFFINITY aff = { 1_u64 << proc, group_id };
 				::SetThreadGroupAffinity(::GetCurrentThread(), &aff, nullptr);
 				f();
 			}

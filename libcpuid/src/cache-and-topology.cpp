@@ -497,10 +497,10 @@ void print_deterministic_cache(fmt::memory_buffer& out, const cpu_t& cpu) {
 		} d = { regs[edx] };
 		
 		const std::size_t sets = regs[ecx];
-		const std::size_t cache_size = (b.split.associativity_ways       + 1ui64)
-		                             * (b.split.physical_line_partitions + 1ui64)
-		                             * (b.split.coherency_line_size      + 1ui64)
-		                             * (sets                             + 1ui64);
+		const std::size_t cache_size = (b.split.associativity_ways       + 1_u64)
+		                             * (b.split.physical_line_partitions + 1_u64)
+		                             * (b.split.coherency_line_size      + 1_u64)
+		                             * (sets                             + 1_u64);
 
 		format_to(out, "\t{:s} L{:d} ", print_size(cache_size), a.split.level);
 		switch(a.split.type) {
@@ -911,11 +911,11 @@ void print_l2_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 	} d = { regs[edx] };
 
 	const auto print_l2_size = [](std::uint32_t cache_size) {
-		return print_size(cache_size * 1024ui64);
+		return print_size(cache_size * 1024_u64);
 	};
 
 	const auto print_l3_size = [](std::uint32_t cache_size) {
-		return print_size(cache_size * 1024ui64 * 512ui64);
+		return print_size(cache_size * 1024_u64 * 512_u64);
 	};
 	
 	switch(cpu.vendor & any_silicon) {
@@ -1035,10 +1035,10 @@ void print_cache_properties(fmt::memory_buffer& out, const cpu_t& cpu) {
 		} d = { regs[edx] };
 
 		const std::size_t sets = regs[ecx];
-		const std::size_t cache_size = (b.split.associativity_ways       + 1ui64)
-		                             * (b.split.coherency_line_size      + 1ui64)
-		                             * (b.split.physical_line_partitions + 1ui64)
-		                             * (sets                             + 1ui64);
+		const std::size_t cache_size = (b.split.associativity_ways       + 1_u64)
+		                             * (b.split.coherency_line_size      + 1_u64)
+		                             * (b.split.physical_line_partitions + 1_u64)
+		                             * (sets                             + 1_u64);
 
 		format_to(out, "\t{:s} L{:d} ", print_size(cache_size), a.split.level);
 		switch(a.split.type) {

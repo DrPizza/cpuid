@@ -382,12 +382,12 @@ void print_performance_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
 void enumerate_extended_state(cpu_t& cpu) {
 	register_set_t regs = cpuid(leaf_type::extended_state, subleaf_type::extended_state_main);
 	cpu.leaves[leaf_type::extended_state][subleaf_type::extended_state_main] = regs;
-	const std::uint64_t valid_bits = regs[eax] | (gsl::narrow_cast<std::uint64_t>(regs[edx]) << 32ui64);
+	const std::uint64_t valid_bits = regs[eax] | (gsl::narrow_cast<std::uint64_t>(regs[edx]) << 32_u64);
 
 	cpu.leaves[leaf_type::extended_state][subleaf_type::extended_state_sub] = cpuid(leaf_type::extended_state, subleaf_type::extended_state_sub);
 
-	std::uint64_t mask = 0x1ui64 << 2_u32;
-	for(subleaf_type i = subleaf_type{ 2_u32 }; i < subleaf_type{ 63_u32 }; ++i, mask <<= 1ui64) {
+	std::uint64_t mask = 0x1_u64 << 2_u32;
+	for(subleaf_type i = subleaf_type{ 2_u32 }; i < subleaf_type{ 63_u32 }; ++i, mask <<= 1_u64) {
 		if(valid_bits & mask) {
 			regs = cpuid(leaf_type::extended_state, i);
 			if(regs[eax] != 0_u32
@@ -670,8 +670,8 @@ void print_sgx_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 				print_features(out, cpu, leaf_type::sgx_info, subleaf_type::sgx_capabilities, eax);
 				format_to(out, "\n");
 				format_to(out, "\tMISCSELECT extended features: {:#010x}\n", regs[ebx]);
-				format_to(out, "\tMaximum enclave size in 32-bit mode/bytes: {:d}\n", (1ui64 << d.split.max_enclave_32_bit));
-				format_to(out, "\tMaximum enclave size in 64-bit mode/bytes: {:d}\n", (1ui64 << d.split.max_enclave_64_bit));
+				format_to(out, "\tMaximum enclave size in 32-bit mode/bytes: {:d}\n", (1_u64 << d.split.max_enclave_32_bit));
+				format_to(out, "\tMaximum enclave size in 64-bit mode/bytes: {:d}\n", (1_u64 << d.split.max_enclave_64_bit));
 				format_to(out, "\n");
 			}
 			break;
@@ -729,10 +729,10 @@ void print_sgx_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 				case 0b0000:
 					break;
 				case 0b0001:
-					const std::uint64_t physical_address = (gsl::narrow_cast<std::uint64_t>(b.split.epc_physical_address_hi_bits ) << 32ui64)
-					                                     | (gsl::narrow_cast<std::uint64_t>(a.split.epc_physical_address_low_bits) << 12ui64);
-					const std::uint64_t epc_size = (gsl::narrow_cast<std::uint64_t>(d.split.epc_section_size_hi_bits ) << 32ui64)
-					                             | (gsl::narrow_cast<std::uint64_t>(c.split.epc_section_size_low_bits) << 12ui64);
+					const std::uint64_t physical_address = (gsl::narrow_cast<std::uint64_t>(b.split.epc_physical_address_hi_bits ) << 32_u64)
+					                                     | (gsl::narrow_cast<std::uint64_t>(a.split.epc_physical_address_low_bits) << 12_u64);
+					const std::uint64_t epc_size = (gsl::narrow_cast<std::uint64_t>(d.split.epc_section_size_hi_bits ) << 32_u64)
+					                             | (gsl::narrow_cast<std::uint64_t>(c.split.epc_section_size_low_bits) << 12_u64);
 					format_to(out, "\tEnclave Page Cache section\n");
 					format_to(out, "\t\tSection {:s} confidentiality and integrity protection\n", c.split.epc_section_properties == 0b0001_u32 ? "has" : "does not have");
 					format_to(out, "\t\tEPC physical address: {:0#18x}\n", physical_address);

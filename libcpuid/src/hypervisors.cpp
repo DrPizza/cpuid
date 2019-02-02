@@ -261,7 +261,7 @@ void print_xen_time(fmt::memory_buffer& out, const cpu_t& cpu) {
 			break;
 		case subleaf_type::xen_time_tsc_offset:
 			{
-				const std::uint64_t tsc_offset = (gsl::narrow_cast<std::uint64_t>(regs[ebx]) << 32ui64) | gsl::narrow_cast<std::uint64_t>(regs[eax]);
+				const std::uint64_t tsc_offset = (gsl::narrow_cast<std::uint64_t>(regs[ebx]) << 32_u64) | gsl::narrow_cast<std::uint64_t>(regs[eax]);
 				format_to(out, "Xen TSC scaling and offset\n");
 				format_to(out, "\tTSC offset: {:d}\n", tsc_offset);
 				format_to(out, "\tTSC to nanoseconds factor: {:d}\n", regs[ecx]);
