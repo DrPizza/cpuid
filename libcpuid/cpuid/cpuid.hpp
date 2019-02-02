@@ -22,29 +22,29 @@ namespace std
 #pragma warning(push)
 #pragma warning(disable: 4455) // warning 4455: literal suffix identifiers that do not start with an underscore are reserved
 #endif
-			constexpr uint_least64_t operator ""u64(unsigned long long arg) {
+			constexpr uint_least64_t operator "" u64(unsigned long long arg) {
 				return static_cast<uint_least64_t>(arg);
 			}
-			constexpr uint_least32_t operator ""u32(unsigned long long arg) {
+			constexpr uint_least32_t operator "" u32(unsigned long long arg) {
 				return static_cast<uint_least32_t>(arg);
 			}
-			constexpr uint_least16_t operator ""u16(unsigned long long arg) {
+			constexpr uint_least16_t operator "" u16(unsigned long long arg) {
 				return static_cast<uint_least16_t>(arg);
 			}
-			constexpr uint_least8_t operator ""u8(unsigned long long arg) {
+			constexpr uint_least8_t operator "" u8(unsigned long long arg) {
 				return static_cast<uint_least8_t>(arg);
 			}
 
-			constexpr int_least64_t operator ""i64(unsigned long long arg) {
+			constexpr int_least64_t operator "" i64(unsigned long long arg) {
 				return static_cast<int_least64_t>(arg);
 			}
-			constexpr int_least32_t operator ""i32(unsigned long long arg) {
+			constexpr int_least32_t operator "" i32(unsigned long long arg) {
 				return static_cast<int_least32_t>(arg);
 			}
-			constexpr int_least16_t operator ""i16(unsigned long long arg) {
+			constexpr int_least16_t operator "" i16(unsigned long long arg) {
 				return static_cast<int_least16_t>(arg);
 			}
-			constexpr int_least8_t operator ""i8(unsigned long long arg) {
+			constexpr int_least8_t operator "" i8(unsigned long long arg) {
 				return static_cast<int_least8_t>(arg);
 			}
 #if defined(_MSC_VER)
