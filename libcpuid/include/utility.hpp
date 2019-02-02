@@ -38,14 +38,14 @@ void run_on_every_core(Fn&& f) {
 #else
 		long int total_cores = sysconf(_SC_NPROCESSORS_CONF);
 		cpu_set_t* cpus = CPU_ALLOC(total_cores);
-		std::size_t cpu_size = CPU_SIZE(total_cores);
+		std::size_t cpu_size = CPU_ALLOC_SIZE(total_cores);
 
 		CPU_ZERO_S(cpu_size, cpus);
 		for(long int i = 0; i < total_cores; ++i) {
 			CPU_SET_S(i, cpu_size, cpus);
 			pthread_setaffinity_np(pthread_self(), cpu_size, cpus);
 			f();
-			CPU_CLEAR_S(i, cpu_size, cpus);
+			CPU_CLR_S(i, cpu_size, cpus);
 		}
 #endif
 	});
