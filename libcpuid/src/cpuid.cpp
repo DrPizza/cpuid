@@ -498,10 +498,10 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					const leaf_type         leaf    = static_cast<leaf_type   >(std::stoul(m[1].str(), nullptr, 16));
 					const subleaf_type      subleaf = static_cast<subleaf_type>(std::stoul(m[6].str(), nullptr, 10));
 					const register_set_t regs    = {
-						std::stoul(m[2].str(), nullptr, 16),
-						std::stoul(m[3].str(), nullptr, 16),
-						std::stoul(m[4].str(), nullptr, 16),
-						std::stoul(m[5].str(), nullptr, 16)
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[2].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[3].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[4].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[5].str(), nullptr, 16))
 					};
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
 				} else if(std::regex_search(line, m, description_line)
@@ -523,10 +523,10 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					}
 					const subleaf_type      subleaf = get_subleaf(current_cpu, leaf);
 					const register_set_t regs    = {
-						std::stoul(m[2].str(), nullptr, 16),
-						std::stoul(m[3].str(), nullptr, 16),
-						std::stoul(m[4].str(), nullptr, 16),
-						std::stoul(m[5].str(), nullptr, 16)
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[2].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[3].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[4].str(), nullptr, 16)),
+						gsl::narrow_cast<std::uint32_t>(std::stoul(m[5].str(), nullptr, 16))
 					};
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
 				} else {
