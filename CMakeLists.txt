@@ -81,6 +81,7 @@ if(MSVC)
     endforeach()
     configure_msvc_runtime()
 else()
+    find_package(Threads REQUIRED)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
