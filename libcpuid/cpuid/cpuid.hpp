@@ -391,24 +391,6 @@ inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
 	return regs;
 }
 
-unsigned char inline _BitScanReverse(unsigned long* index, unsigned int mask) {
-	if(mask) {
-		*index = 31 - __builtin_clz(mask);
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
-unsigned char inline _BitScanForward(unsigned long* index, unsigned int mask) {
-	if(mask) {
-		*index = __builtin_ctz(mask);
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
 #endif
 
 void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf, subleaf_type subleaf);

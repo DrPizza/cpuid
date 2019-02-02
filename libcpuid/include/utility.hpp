@@ -53,6 +53,29 @@ void run_on_every_core(Fn&& f) {
 	bouncer.join();
 }
 
+#if !defined(_MSC_VER)
+
+#include <cpuid.h>
+
+unsigned char inline _BitScanReverse(unsigned long* index, unsigned int mask) {
+	if(mask) {
+		*index = 31 - __builtin_clz(mask);
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+unsigned char inline _BitScanForward(unsigned long* index, unsigned int mask) {
+	if(mask) {
+		*index = __builtin_ctz(mask);
+		return 1;
+	} else {
+		return 0;
+	}
+}
+#endif
+
 inline std::uint32_t simple_mask(const std::uint32_t length) noexcept {
 	if(length == 32_u32) {
 		return 0xffff'ffff_u32;

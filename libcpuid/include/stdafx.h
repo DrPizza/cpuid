@@ -150,7 +150,6 @@
 #endif
 
 #include <boost/algorithm/string.hpp>
-#include <boost/regex.hpp>
 
 #include <gsl/gsl>
 
