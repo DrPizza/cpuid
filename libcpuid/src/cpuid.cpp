@@ -800,7 +800,7 @@ void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const flag_spe
 					const std::string lower_mnemonic = boost::algorithm::to_lower_copy(feature.mnemonic);
 					if(lower_mnemonic == spec.flag_name
 					|| lower_mnemonic == flag_name_alternative) {
-						DWORD shift_amount = 0;
+						unsigned long shift_amount = 0;
 						_BitScanForward(&shift_amount, feature.mask);
 						const std::uint32_t result = (value & feature.mask) >> shift_amount;
 
@@ -813,7 +813,7 @@ void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const flag_spe
 		}
 		if(!handled && spec.flag_start != 0xffff'ffff_u32 && spec.flag_end != 0xffff'ffff_u32) {
 			const std::uint32_t mask = range_mask(spec.flag_start, spec.flag_end);
-			DWORD shift_amount = 0;
+			unsigned long shift_amount = 0;
 			_BitScanForward(&shift_amount, mask);
 			const std::uint32_t result = (value & mask) >> shift_amount;
 			format_to(out, "cpu {:#04x} {:s}: {:#010x}\n", cpu.apic_id, flag_description, result);
