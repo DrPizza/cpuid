@@ -47,6 +47,7 @@ void run_on_every_core(Fn&& f) {
 			f();
 			CPU_CLR_S(i, cpu_size, cpus);
 		}
+		CPU_FREE(cpus);
 #endif
 	});
 	bouncer.join();
