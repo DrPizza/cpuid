@@ -9,6 +9,11 @@
 #include <gsl/gsl>
 #include <fmt/format.h>
 
+#if defined(_MSC_VER)
+#define UNREACHABLE() __assume(0)
+#else
+#define UNREACHABLE() __builtin_unreachable()
+#endif
 
 constexpr std::uint_least64_t operator "" _u64(unsigned long long arg) {
 	return static_cast<std::uint_least64_t>(arg);

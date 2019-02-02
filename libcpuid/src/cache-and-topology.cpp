@@ -50,7 +50,7 @@ std::string to_string(cache_type_t type) {
 	case trace:
 		return "Trace cache";
 	default:
-		__assume(0);
+		UNREACHABLE();
 	}
 }
 
@@ -76,7 +76,7 @@ std::string to_string(cache_level_t level) {
 	case level_3:
 		return "3rd-level";
 	default:
-		__assume(0);
+		UNREACHABLE();
 	}
 }
 

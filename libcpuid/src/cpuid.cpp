@@ -735,6 +735,8 @@ std::string to_string(register_type reg) {
 		return "ECX";
 	case edx:
 		return "EDX";
+	default:
+		UNREACHABLE();
 	}
 }
 
