@@ -11,3 +11,6 @@ target_include_directories(libcpuid PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(libcpuid ${Boost_LIBRARIES})
 target_link_libraries(libcpuid gsl)
 target_link_libraries(libcpuid fmt::fmt)
+
+find_package(Threads REQUIRED)
+target_link_libraries(libcpuid Threads::Threads)
