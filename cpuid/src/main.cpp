@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) try {
 	::SetConsoleOutputCP(CP_UTF8);
 #endif
 
-	std::cout.rdbuf()->pubsetbuf(nullptr, 1024);
+	std::cout.rdbuf()->pubsetbuf(nullptr, 10240);
 
 	const std::map<std::string, docopt::value> args = docopt::docopt_parse(usage_message, { argv + 1, argv + argc }, true, true);
 	const bool skip_vendor_check  = std::get<bool>(args.at("--ignore-vendor"));
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) try {
 		for(const auto& p : logical_cpus) {
 			format_to(out, "{:#04x}\n", p.first);
 		}
-		std::cout << out.data() << std::flush;
+		std::cout << to_string(out) << std::flush;
 		return 0;
 	}
 
@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) try {
 				throw std::runtime_error(fmt::format("Could not open {:s} for output", filename));
 			}
 		}
-		(filename != "-" ? fout : std::cout) << out.data() << std::flush;
+		(filename != "-" ? fout : std::cout) << to_string(out) << std::flush;
 		return 0;
 	}
 
@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) try {
 			} else {
 				print_leaves(out, cpu, skip_vendor_check, skip_feature_check);
 			}
-			std::cout << out.data() << std::flush;
+			std::cout << to_string(out) << std::flush;
 		}
 	}
 
@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) try {
 		fmt::memory_buffer out;
 		system_t machine = build_topology(logical_cpus);
 		print_topology(out, machine);
-		std::cout << out.data() << std::flush;
+		std::cout << to_string(out) << std::flush;
 	}
 
 	return EXIT_SUCCESS;

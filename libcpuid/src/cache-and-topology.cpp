@@ -136,7 +136,7 @@ std::string to_string(cache_attributes_t attrs) {
 		}
 		mask <<= 1_u8;
 	} while(mask & all_page_sizes);
-	return out.data();
+	return to_string(out);
 }
 
 enum cache_associativity_t : std::uint8_t 
@@ -329,7 +329,7 @@ std::string to_string(cache_descriptor_t desc) {
 	} else if(desc.type & all_tlb) {
 		format_to(out, ", {} entries", desc.entries);
 	}
-	return out.data();
+	return to_string(out);
 }
 
 struct decomposed_cache_t
@@ -708,7 +708,7 @@ void print_deterministic_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 						}
 						format_to(out, "1G");
 					}
-					return std::string(out.data());
+					return to_string(out);
 				};
 
 				format_to(out, "\t{:d}-entry {:s} associative L{:d} {:s} TLB for {:s}, shared by {:d} threads\n", entries,
@@ -1147,7 +1147,7 @@ std::string to_string(const cache_t& cache) {
 	format_to(out, "\t\tCache is {:s}direct mapped.\n", cache.direct_mapped ? "not " : "");
 	format_to(out, "\t\tCache is shared by up to {:d} threads.\n", cache.sharing_mask);
 	format_to(out, "\n");
-	return out.data();
+	return to_string(out);
 }
 
 std::string to_short_string(const cache_t& cache) {
@@ -1170,7 +1170,7 @@ std::string to_short_string(const cache_t& cache) {
 		format_to(out, " {:>2d}-way set associative", cache.ways);
 	}
 	format_to(out, " with {:>5d} sets, {:d} bytes per line", cache.sets, cache.line_size);
-	return out.data();
+	return to_string(out);
 }
 
 constexpr full_apic_id_t split_apic_id(std::uint32_t id, std::uint32_t logical_mask_width, std::uint32_t physical_mask_width) noexcept {
