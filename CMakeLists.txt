@@ -64,7 +64,7 @@ endmacro()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(cpuid VERSION 1.0.0 LANGUAGES CXX)
+project(cpuid VERSION 1.0.0 LANGUAGES C CXX)
 
 if(MSVC)
     set(MSVC_RUNTIME "static")
@@ -82,6 +82,7 @@ if(MSVC)
     configure_msvc_runtime()
 else()
     find_package(Threads REQUIRED)
+	target_link_libraries(cpuid Threads::Threads)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
