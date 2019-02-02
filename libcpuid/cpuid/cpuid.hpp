@@ -363,6 +363,8 @@ inline bool operator==(const cpu_t& lhs, const cpu_t& rhs) noexcept {
 	    && lhs.leaves                  == rhs.leaves;
 }
 
+#if defined(_MSC_VER)
+
 inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
 	register_set_t regs = {};
 	std::array<int, 4> raw_regs;
@@ -373,6 +375,23 @@ inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
 	regs[edx] = gsl::narrow_cast<std::uint32_t>(raw_regs[edx]);
 	return regs;
 }
+
+#else
+
+#include <cpuid.h>
+
+inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
+	register_set_t regs = {};
+	std::array<unsigned int, 4> raw_regs;
+	__get_cpuid_count(gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf), &raw_regs[eax], &raw_regs[ebx], &raw_regs[ecx], &raw_regs[edx])
+	regs[eax] = gsl::narrow_cast<std::uint32_t>(raw_regs[eax]);
+	regs[ebx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ebx]);
+	regs[ecx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ecx]);
+	regs[edx] = gsl::narrow_cast<std::uint32_t>(raw_regs[edx]);
+	return regs;
+}
+
+#endif
 
 void print_generic(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf, subleaf_type subleaf);
 
