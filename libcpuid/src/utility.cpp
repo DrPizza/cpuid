@@ -12,7 +12,7 @@ unsigned char bit_scan_forward(unsigned long* index, unsigned int mask) {
 	return _BitScanForward(index, mask);
 }
 #else
-unsigned char inline bit_scan_reverse(unsigned long* index, unsigned int mask) {
+unsigned char bit_scan_reverse(unsigned long* index, unsigned int mask) {
 	if(mask) {
 		*index = 31 - __builtin_clz(mask);
 		return 1;
@@ -21,7 +21,7 @@ unsigned char inline bit_scan_reverse(unsigned long* index, unsigned int mask) {
 	}
 }
 
-unsigned char inline bit_scan_forward(unsigned long* index, unsigned int mask) {
+unsigned char bit_scan_forward(unsigned long* index, unsigned int mask) {
 	if(mask) {
 		*index = __builtin_ctz(mask);
 		return 1;
