@@ -383,7 +383,7 @@ inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
 inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
 	register_set_t regs = {};
 	std::array<unsigned int, 4> raw_regs;
-	__get_cpuid_count(gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf), &raw_regs[eax], &raw_regs[ebx], &raw_regs[ecx], &raw_regs[edx])
+	__get_cpuid_count(gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf), &raw_regs[eax], &raw_regs[ebx], &raw_regs[ecx], &raw_regs[edx]);
 	regs[eax] = gsl::narrow_cast<std::uint32_t>(raw_regs[eax]);
 	regs[ebx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ebx]);
 	regs[ecx] = gsl::narrow_cast<std::uint32_t>(raw_regs[ecx]);

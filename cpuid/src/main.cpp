@@ -41,6 +41,7 @@ Other options:
 static const char version[] = "cpuid 0.1";
 
 int main(int argc, char* argv[]) try {
+#if defined(_WIN32)
 	HANDLE output = ::GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD mode = 0;
 	::GetConsoleMode(output, &mode);
@@ -48,6 +49,7 @@ int main(int argc, char* argv[]) try {
 	::SetConsoleMode(output, mode);
 	::SetConsoleCP(CP_UTF8);
 	::SetConsoleOutputCP(CP_UTF8);
+#endif
 
 	std::cout.rdbuf()->pubsetbuf(nullptr, 1024);
 

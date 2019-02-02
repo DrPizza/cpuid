@@ -8,6 +8,7 @@
 #define NOMINMAX
 #include <Windows.h>
 #else
+#define _GNU_SOURCE
 #include <unistd.h>
 #include <sched.h>
 #include <pthread.h>
