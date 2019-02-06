@@ -24,6 +24,30 @@
 
 #include "suffixes.hpp"
 
+#if !defined(_WIN32)
+
+cpu_set_t* alloc_cpu_set(std::size_t* size) {
+	// the CPU set macros don't handle cases like my Azure VM, where there are 2 cores, but 128 possible cores (why???)
+	// hence requiring an oversized 16 byte cpu_set_t rather than the 8 bytes that the macros assume to be sufficient.
+	// this is the only way (even documented as such!) to figure out how to make a buffer big enough
+	unsigned long* buffer = nullptr;
+	int len = 0;
+	do {
+		++len;
+		delete [] buffer;
+		buffer = new unsigned long[len];
+	} while(pthread_getaffinity_np(pthread_self(), len * sizeof(unsigned long), reinterpret_cast<cpu_set_t*>(buffer)) == EINVAL);
+
+	*size = len * sizeof(unsigned long);
+	return reinterpret_cast<cpu_set_t*>(buffer);
+}
+
+void free_cpu_set(cpu_set_t* s) {
+	delete [] reinterpret_cast<unsigned long*>(s);
+}
+
+#endif
+
 template<typename Fn>
 void run_on_every_core(Fn&& f) {
 	std::thread bouncer = std::thread([&]() {
@@ -39,8 +63,8 @@ void run_on_every_core(Fn&& f) {
 		}
 #else
 		long int total_cores = sysconf(_SC_NPROCESSORS_CONF);
-		cpu_set_t* cpus = CPU_ALLOC(total_cores);
-		std::size_t cpu_size = CPU_ALLOC_SIZE(total_cores);
+		std::size_t cpu_size = 0;
+		cpu_set_t* cpus = alloc_cpu_set(&cpu_size);
 
 		CPU_ZERO_S(cpu_size, cpus);
 		for(long int i = 0; i < total_cores; ++i) {
@@ -49,7 +73,7 @@ void run_on_every_core(Fn&& f) {
 			f();
 			CPU_CLR_S(i, cpu_size, cpus);
 		}
-		CPU_FREE(cpus);
+		free_cpu_set(cpus);
 #endif
 	});
 	bouncer.join();
