@@ -26,7 +26,7 @@
 
 #if !defined(_WIN32)
 
-cpu_set_t* alloc_cpu_set(std::size_t* size) {
+inline cpu_set_t* alloc_cpu_set(std::size_t* size) {
 	// the CPU set macros don't handle cases like my Azure VM, where there are 2 cores, but 128 possible cores (why???)
 	// hence requiring an oversized 16 byte cpu_set_t rather than the 8 bytes that the macros assume to be sufficient.
 	// this is the only way (even documented as such!) to figure out how to make a buffer big enough
@@ -42,7 +42,7 @@ cpu_set_t* alloc_cpu_set(std::size_t* size) {
 	return reinterpret_cast<cpu_set_t*>(buffer);
 }
 
-void free_cpu_set(cpu_set_t* s) {
+inline void free_cpu_set(cpu_set_t* s) {
 	delete [] reinterpret_cast<unsigned long*>(s);
 }
 
