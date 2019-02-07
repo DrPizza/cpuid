@@ -7,7 +7,7 @@ if(WIN32)
     set(VCPKG_ROOT "C:/Code/Projects/vcpkg")
 else()
     set(VCPKG_TARGET_TRIPLET x64-linux CACHE STRING "")
-    set(VCPKG_ROOT "~/vcpkg")
+    set(VCPKG_ROOT "~/src/vcpkg")
 endif()
 set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 
