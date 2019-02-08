@@ -78,13 +78,15 @@ vendor_type get_vendor_from_name(const register_set_t& regs) {
 		{ to_array("Vortex86 SoC"), vortex },
 	};
 
-	const union
-	{
-		std::array<std::uint32_t, 3> registers;
-		std::array<char, 12> vndr;
-	} data = { regs[ebx], regs[edx], regs[ecx] };
+	const std::array<char, 12> vndr = bit_cast<decltype(vndr)>(
+		std::array<std::uint32_t, 3> {
+			regs[ebx],
+			regs[edx],
+			regs[ecx]
+		}
+	);
 
-	const auto it = vendors.find(data.vndr);
+	const auto it = vendors.find(vndr);
 	return it != vendors.end() ? it->second : unknown;
 }
 
@@ -98,42 +100,40 @@ vendor_type get_hypervisor_from_name(const register_set_t& regs) {
 		{ to_array("XenVMMXenVMM"), xen_hvm }
 	};
 
-	const union
-	{
-		std::array<std::uint32_t, 3> registers;
-		std::array<char, 12> vndr;
-	} data = { regs[ebx], regs[ecx], regs[edx] };
+	const std::array<char, 12> vndr = bit_cast<decltype(vndr)>(
+		std::array<std::uint32_t, 3> {
+			regs[ebx],
+			regs[ecx],
+			regs[edx]
+		}
+	);
 
-	const auto it = vendors.find(data.vndr);
+	const auto it = vendors.find(vndr);
 	return it != vendors.end() ? it->second : unknown;
 }
 
 model_t get_model(vendor_type vendor, const register_set_t& regs) noexcept {
-	const union
-	{
-		std::uint32_t full;
-		split_model_t split;
-	} a = { regs[eax] };
+	const split_model_t a = bit_cast<decltype(a)>(regs[eax]);
 
 	model_t model = {};
-	model.family = a.split.family;
-	model.model = a.split.model;
-	model.stepping = a.split.stepping;
+	model.family = a.family;
+	model.model = a.model;
+	model.stepping = a.stepping;
 	switch(vendor) {
 	case intel:
 		{
-			if(a.split.family == 0xf) {
-				model.family += a.split.extended_family;
+			if(a.family == 0xf) {
+				model.family += a.extended_family;
 			}
-			if(a.split.family == 0x6 || a.split.family == 0xf) {
-				model.model += (a.split.extended_model << 4_u32);
+			if(a.family == 0x6 || a.family == 0xf) {
+				model.model += (a.extended_model << 4_u32);
 			}
 		}
 		break;
 	case amd:
 		{
-			model.family += a.split.extended_family;
-			model.model += a.split.extended_model << 4_u32;
+			model.family += a.extended_family;
+			model.model += a.extended_model << 4_u32;
 		}
 		break;
 	default:
@@ -143,12 +143,8 @@ model_t get_model(vendor_type vendor, const register_set_t& regs) noexcept {
 }
 
 uint8_t get_local_apic_id(const register_set_t& regs) noexcept {
-	const union
-	{
-		std::uint32_t full;
-		id_info_t split;
-	} b = { regs[ebx] };
-	return b.split.local_apic_id;
+	const id_info_t b = bit_cast<decltype(b)>(regs[ebx]);
+	return b.local_apic_id;
 }
 
 uint32_t get_apic_id(const cpu_t& cpu) {

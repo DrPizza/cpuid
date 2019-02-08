@@ -458,52 +458,40 @@ void print_deterministic_cache(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_type::deterministic_cache)) {
 		const register_set_t& regs = sub.second;
 
-		const union
+		const struct
 		{
-			std::uint32_t full;
-			struct
-			{
-				std::uint32_t type                           : 5;
-				std::uint32_t level                          : 3;
-				std::uint32_t self_initializing              : 1;
-				std::uint32_t fully_associative              : 1;
-				std::uint32_t reserved_1                     : 4;
-				std::uint32_t maximum_addressable_thread_ids : 12;
-				std::uint32_t maximum_addressable_core_ids   : 6;
-			} split;
-		} a = { regs[eax] };
+			std::uint32_t type                           : 5;
+			std::uint32_t level                          : 3;
+			std::uint32_t self_initializing              : 1;
+			std::uint32_t fully_associative              : 1;
+			std::uint32_t reserved_1                     : 4;
+			std::uint32_t maximum_addressable_thread_ids : 12;
+			std::uint32_t maximum_addressable_core_ids   : 6;
+		} a = bit_cast<decltype(a)>(regs[eax]);
 
-		const union
+		const struct
 		{
-			std::uint32_t full;
-			struct
-			{
-				std::uint32_t coherency_line_size      : 12;
-				std::uint32_t physical_line_partitions : 10;
-				std::uint32_t associativity_ways       : 10;
-			} split;
-		} b = { regs[ebx] };
+			std::uint32_t coherency_line_size      : 12;
+			std::uint32_t physical_line_partitions : 10;
+			std::uint32_t associativity_ways       : 10;
+		} b = bit_cast<decltype(b)>(regs[ebx]);
 
-		const union
+		const struct
 		{
-			std::uint32_t full;
-			struct
-			{
-				std::uint32_t writeback_invalidates : 1;
-				std::uint32_t cache_inclusive       : 1;
-				std::uint32_t complex_indexing      : 1;
-				std::uint32_t reserved_1            : 29;
-			} split;
-		} d = { regs[edx] };
+			std::uint32_t writeback_invalidates : 1;
+			std::uint32_t cache_inclusive       : 1;
+			std::uint32_t complex_indexing      : 1;
+			std::uint32_t reserved_1            : 29;
+		} d = bit_cast<decltype(d)>(regs[edx]);
 		
 		const std::size_t sets = regs[ecx];
-		const std::size_t cache_size = (b.split.associativity_ways       + 1_u64)
-		                             * (b.split.physical_line_partitions + 1_u64)
-		                             * (b.split.coherency_line_size      + 1_u64)
-		                             * (sets                             + 1_u64);
+		const std::size_t cache_size = (b.associativity_ways       + 1_u64)
+		                             * (b.physical_line_partitions + 1_u64)
+		                             * (b.coherency_line_size      + 1_u64)
+		                             * (sets                       + 1_u64);
 
-		format_to(out, "\t{:s} L{:d} ", print_size(cache_size), a.split.level);
-		switch(a.split.type) {
+		format_to(out, "\t{:s} L{:d} ", print_size(cache_size), a.level);
+		switch(a.type) {
 		case 1:
 			format_to(out, "data");
 			break;
@@ -515,27 +503,27 @@ void print_deterministic_cache(fmt::memory_buffer& out, const cpu_t& cpu) {
 			break;
 		}
 		format_to(out, "\n");
-		format_to(out, "\t\t{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:s}.\n", b.split.coherency_line_size      + 1_u32,
-		                                                                                                             b.split.associativity_ways       + 1_u32,
-		                                                                                                             b.split.physical_line_partitions + 1_u32,
-		                                                                                                             sets                             + 1_u32,
+		format_to(out, "\t\t{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} partitions \u00d7 {:d} sets = {:s}.\n", b.coherency_line_size      + 1_u32,
+		                                                                                                             b.associativity_ways       + 1_u32,
+		                                                                                                             b.physical_line_partitions + 1_u32,
+		                                                                                                             sets                       + 1_u32,
 		                                                                                                             print_size(cache_size));
-		if(a.split.self_initializing) {
+		if(a.self_initializing) {
 			format_to(out, "\t\tSelf-initializing.\n");
 		}
-		if(a.split.fully_associative) {
+		if(a.fully_associative) {
 			format_to(out, "\t\tFully associative.\n");
 		} else {
-			format_to(out, "\t\t{:d}-way set associative.\n", b.split.associativity_ways + 1_u32);
+			format_to(out, "\t\t{:d}-way set associative.\n", b.associativity_ways + 1_u32);
 		}
-		if(d.split.writeback_invalidates) {
+		if(d.writeback_invalidates) {
 			format_to(out, "\t\tWBINVD/INVD does not invalidate lower level caches for other threads.\n");
 		} else {
 			format_to(out, "\t\tWBINVD/INVD invalidates lower level caches for all threads.\n");
 		}
-		format_to(out, "\t\tCache is {:s}inclusive of lower cache levels.\n", d.split.cache_inclusive != 0 ? "" : "not ");
-		format_to(out, "\t\tCache is {:s}complex mapped.\n", d.split.complex_indexing != 0 ? "" : "not ");
-		format_to(out, "\t\tCache is shared by up to {:d} threads, with up to {:d} cores in the package.\n", a.split.maximum_addressable_thread_ids + 1, a.split.maximum_addressable_core_ids + 1);
+		format_to(out, "\t\tCache is {:s}inclusive of lower cache levels.\n", d.cache_inclusive != 0 ? "" : "not ");
+		format_to(out, "\t\tCache is {:s}complex mapped.\n", d.complex_indexing != 0 ? "" : "not ");
+		format_to(out, "\t\tCache is shared by up to {:d} threads, with up to {:d} cores in the package.\n", a.maximum_addressable_thread_ids + 1, a.maximum_addressable_core_ids + 1);
 		format_to(out, "\n");
 	}
 }
@@ -560,41 +548,29 @@ void print_extended_topology(fmt::memory_buffer& out, const cpu_t& cpu) {
 			format_to(out, "\tx2 APIC id: {:#010x}\n", regs[edx]);
 			[[fallthrough]];
 		default:
-			const union
+			const struct
 			{
-				std::uint32_t full;
-				struct
-				{
-					std::uint32_t shift_distance : 5;
-					std::uint32_t reserved_1     : 27;
-				} split;
-			} a = { regs[eax] };
+				std::uint32_t shift_distance : 5;
+				std::uint32_t reserved_1     : 27;
+			} a = bit_cast<decltype(a)>(regs[eax]);
 
-			const union
+			const struct
 			{
-				std::uint32_t full;
-				struct
-				{
-					std::uint32_t logical_procesors_at_level_type : 16;
-					std::uint32_t reserved_1                      : 16;
-				} split;
-			} b = { regs[ebx] };
+				std::uint32_t logical_procesors_at_level_type : 16;
+				std::uint32_t reserved_1                      : 16;
+			} b = bit_cast<decltype(b)>(regs[ebx]);
 
-			const union
+			const struct
 			{
-				std::uint32_t full;
-				struct
-				{
-					std::uint32_t level_number : 8;
-					std::uint32_t level_type   : 8;
-					std::uint32_t reserved_1   : 16;
-				} split;
-			} c = { regs[ecx] };
+				std::uint32_t level_number : 8;
+				std::uint32_t level_type   : 8;
+				std::uint32_t reserved_1   : 16;
+			} c = bit_cast<decltype(c)>(regs[ecx]);
 
-			format_to(out, "\t\tbits to shift: {:d}\n", a.split.shift_distance);
-			format_to(out, "\t\tlogical processors at level type: {:d}\n", b.split.logical_procesors_at_level_type);
-			format_to(out, "\t\tlevel number: {:d}\n", c.split.level_number);
-			switch(c.split.level_type) {
+			format_to(out, "\t\tbits to shift: {:d}\n", a.shift_distance);
+			format_to(out, "\t\tlogical processors at level type: {:d}\n", b.logical_procesors_at_level_type);
+			format_to(out, "\t\tlevel number: {:d}\n", c.level_number);
+			switch(c.level_type) {
 			case 0:
 				format_to(out, "\t\tLevel type: invalid\n");
 				break;
@@ -605,7 +581,7 @@ void print_extended_topology(fmt::memory_buffer& out, const cpu_t& cpu) {
 				format_to(out, "\t\tlevel type: Core\n");
 				break;
 			default:
-				format_to(out, "\t\tlevel type: reserved {:#04x}\n", c.split.level_type);
+				format_to(out, "\t\tlevel type: reserved {:#04x}\n", c.level_type);
 				break;
 			}
 			format_to(out, "\n");
@@ -632,41 +608,33 @@ void print_deterministic_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 			[[fallthrough]];
 		default:
 			{
-				const union
+				const struct
 				{
-					std::uint32_t full;
-					struct
-					{
-						std::uint32_t page_4k               : 1;
-						std::uint32_t page_2m               : 1;
-						std::uint32_t page_4m               : 1;
-						std::uint32_t page_1g               : 1;
-						std::uint32_t reserved_1            : 4;
-						std::uint32_t partitioning          : 3;
-						std::uint32_t reserved_2            : 5;
-						std::uint32_t ways_of_associativity : 16;
-					} split;
-				} b = { regs[ebx] };
+					std::uint32_t page_4k               : 1;
+					std::uint32_t page_2m               : 1;
+					std::uint32_t page_4m               : 1;
+					std::uint32_t page_1g               : 1;
+					std::uint32_t reserved_1            : 4;
+					std::uint32_t partitioning          : 3;
+					std::uint32_t reserved_2            : 5;
+					std::uint32_t ways_of_associativity : 16;
+				} b = bit_cast<decltype(b)>(regs[ebx]);
 
-				const union
+				const struct
 				{
-					std::uint32_t full;
-					struct
-					{
-						std::uint32_t type                           : 5;
-						std::uint32_t level                          : 3;
-						std::uint32_t fully_associative              : 1;
-						std::uint32_t reserved_1                     : 5;
-						std::uint32_t maximum_addressable_thread_ids : 12;
-						std::uint32_t reserved_2                     : 6;
-					} split;
-				} d = { regs[edx] };
+					std::uint32_t type                           : 5;
+					std::uint32_t level                          : 3;
+					std::uint32_t fully_associative              : 1;
+					std::uint32_t reserved_1                     : 5;
+					std::uint32_t maximum_addressable_thread_ids : 12;
+					std::uint32_t reserved_2                     : 6;
+				} d = bit_cast<decltype(d)>(regs[edx]);
 
-				if(d.split.type == 0_u32) {
+				if(d.type == 0_u32) {
 					break;
 				}
 
-				const std::uint32_t entries = b.split.ways_of_associativity * regs[ecx];
+				const std::uint32_t entries = b.ways_of_associativity * regs[ecx];
 
 				auto print_associativity = [](std::uint32_t fully_associative, std::uint32_t ways) {
 					using namespace fmt::literals;
@@ -712,11 +680,11 @@ void print_deterministic_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 				};
 
 				format_to(out, "\t{:d}-entry {:s} associative L{:d} {:s} TLB for {:s}, shared by {:d} threads\n", entries,
-				                                                                                                  print_associativity(d.split.fully_associative, b.split.ways_of_associativity),
-				                                                                                                  d.split.level,
-				                                                                                                  print_type(d.split.type),
-				                                                                                                  print_pages(b.split.page_4k, b.split.page_2m, b.split.page_4m, b.split.page_1g),
-				                                                                                                  d.split.maximum_addressable_thread_ids + 1_u32);
+				                                                                                                  print_associativity(d.fully_associative, b.ways_of_associativity),
+				                                                                                                  d.level,
+				                                                                                                  print_type(d.type),
+				                                                                                                  print_pages(b.page_4k, b.page_2m, b.page_4m, b.page_1g),
+				                                                                                                  d.maximum_addressable_thread_ids + 1_u32);
 
 				format_to(out, "\n");
 			}
@@ -747,30 +715,10 @@ void print_l1_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 		std::uint32_t size_kb       : 8;
 	};
 
-	const union
-	{
-		std::uint32_t full;
-		tlb_info split; // 2M page
-	} a = { regs[eax] };
-
-	const union
-	{
-		std::uint32_t full;
-		tlb_info split; // 4K page
-
-	} b = { regs[ebx] };
-
-	const union
-	{
-		std::uint32_t full;
-		cache_info split; // L1d
-	} c = { regs[ecx] };
-
-	const union
-	{
-		std::uint32_t full;
-		cache_info split; // L1i
-	} d = { regs[edx] };
+	const tlb_info a = bit_cast<decltype(a)>(regs[eax]); // 2M page
+	const tlb_info b = bit_cast<decltype(b)>(regs[ebx]); // 4K page
+	const cache_info c = bit_cast<decltype(c)>(regs[ecx]); // L1d
+	const cache_info d = bit_cast<decltype(d)>(regs[edx]); // L1i
 
 	auto print_associativity = [](std::uint8_t assoc) -> std::string {
 		switch(assoc) {
@@ -800,15 +748,15 @@ void print_l1_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 	};
 
 	format_to(out, "Level 1 TLB\n");
-	format_to(out, "\t{:s}\n", print_tlb(a.split.d, "data", "2M"));
-	format_to(out, "\t{:s}\n", print_tlb(a.split.i, "instruction", "2M"));
-	format_to(out, "\t{:s}\n", print_tlb(b.split.d, "data", "4K"));
-	format_to(out, "\t{:s}\n", print_tlb(b.split.i, "instruction", "4K"));
+	format_to(out, "\t{:s}\n", print_tlb(a.d, "data", "2M"));
+	format_to(out, "\t{:s}\n", print_tlb(a.i, "instruction", "2M"));
+	format_to(out, "\t{:s}\n", print_tlb(b.d, "data", "4K"));
+	format_to(out, "\t{:s}\n", print_tlb(b.i, "instruction", "4K"));
 	format_to(out, "\n");
 
 	format_to(out, "Level 1 cache\n");
-	format_to(out, "\t{:s}\n", print_cache(c.split, "data"));
-	format_to(out, "\t{:s}\n", print_cache(d.split, "instruction"));
+	format_to(out, "\t{:s}\n", print_cache(c, "data"));
+	format_to(out, "\t{:s}\n", print_cache(d, "instruction"));
 
 	format_to(out, "\n");
 }
@@ -885,30 +833,10 @@ void print_l2_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 		std::uint32_t size          : 14;
 	};
 
-	const union
-	{
-		std::uint32_t full;
-		tlb_info split; // 2M page
-	} a = { regs[eax] };
-
-	const union
-	{
-		std::uint32_t full;
-		tlb_info split; // 4K page
-
-	} b = { regs[ebx] };
-
-	const union
-	{
-		std::uint32_t full;
-		l2_cache_info split;
-	} c = { regs[ecx] };
-
-	const union
-	{
-		std::uint32_t full;
-		l3_cache_info split;
-	} d = { regs[edx] };
+	const tlb_info a = bit_cast<decltype(a)>(regs[eax]); // 2M page
+	const tlb_info b = bit_cast<decltype(b)>(regs[ebx]); // 4K page
+	const l2_cache_info c = bit_cast<decltype(c)>(regs[ecx]);
+	const l3_cache_info d = bit_cast<decltype(d)>(regs[edx]);
 
 	const auto print_l2_size = [](std::uint32_t cache_size) {
 		return print_size(cache_size * 1024_u64);
@@ -921,31 +849,31 @@ void print_l2_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 	switch(cpu.vendor & any_silicon) {
 	case amd:
 		format_to(out, "Level 2 TLB\n");
-		format_to(out, "\t{:s}\n", print_tlb(a.split.d, "data", "2M"));
-		format_to(out, "\t{:s}\n", print_tlb(a.split.i, "instruction", "2M"));
-		format_to(out, "\t{:s}\n", print_tlb(b.split.d, "data", "4K"));
-		format_to(out, "\t{:s}\n", print_tlb(b.split.i, "instruction", "4K"));
+		format_to(out, "\t{:s}\n", print_tlb(a.d, "data", "2M"));
+		format_to(out, "\t{:s}\n", print_tlb(a.i, "instruction", "2M"));
+		format_to(out, "\t{:s}\n", print_tlb(b.d, "data", "4K"));
+		format_to(out, "\t{:s}\n", print_tlb(b.i, "instruction", "4K"));
 		format_to(out, "\n");
 
 		format_to(out, "Level 2 cache\n");
-		format_to(out, "\t{:s} {:s} L2 cache with {:d} bytes per line and {:d} lines per tag\n", print_l2_size(c.split.size),
-		                                                                                         print_associativity(c.split.associativity),
-		                                                                                         c.split.line_size,
-		                                                                                         c.split.lines_per_tag);
+		format_to(out, "\t{:s} {:s} L2 cache with {:d} bytes per line and {:d} lines per tag\n", print_l2_size(c.size),
+		                                                                                         print_associativity(c.associativity),
+		                                                                                         c.line_size,
+		                                                                                         c.lines_per_tag);
 
 		format_to(out, "\n");
 
 		format_to(out, "Level 3 cache\n");
-		format_to(out, "\t{:s} {:s} L3 cache with {:d} bytes per line and {:d} lines per tag\n", print_l3_size(d.split.size),
-		                                                                                         print_associativity(d.split.associativity),
-		                                                                                         d.split.line_size,
-		                                                                                         d.split.lines_per_tag);
+		format_to(out, "\t{:s} {:s} L3 cache with {:d} bytes per line and {:d} lines per tag\n", print_l3_size(d.size),
+		                                                                                         print_associativity(d.associativity),
+		                                                                                         d.line_size,
+		                                                                                         d.lines_per_tag);
 		break;
 	case intel:
 		format_to(out, "Level 2 cache\n");
-		format_to(out, "\t{:s} {:s} L2 cache with {:d} bytes per line\n", print_l2_size(c.split.size),
-		                                                                  print_associativity(c.split.associativity),
-		                                                                  c.split.line_size);
+		format_to(out, "\t{:s} {:s} L2 cache with {:d} bytes per line\n", print_l2_size(c.size),
+		                                                                  print_associativity(c.associativity),
+		                                                                  c.line_size);
 		break;
 	default:
 		print_generic(out, cpu, leaf_type::l2_cache_identifiers, subleaf_type::main);
@@ -957,25 +885,16 @@ void print_l2_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 void print_1g_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_type::tlb_1g_identifiers).at(subleaf_type::main);
 	
-	const union
-	{
-		std::uint32_t full;
-		tlb_info split; // l1
-	} a = { regs[eax] };
-
-	const union
-	{
-		std::uint32_t full;
-		tlb_info split; // l2
-	} b = { regs[eax] };
+	const tlb_info a = bit_cast<decltype(a)>(regs[eax]); // l1
+	const tlb_info b = bit_cast<decltype(b)>(regs[ebx]); // l2
 
 	format_to(out, "1GB page TLB\n");
 	format_to(out, "\tLevel 1\n");
-	format_to(out, "\t\t{:s}\n", print_tlb(a.split.d, "data", "1G"));
-	format_to(out, "\t\t{:s}\n", print_tlb(a.split.i, "instruction", "1G"));
+	format_to(out, "\t\t{:s}\n", print_tlb(a.d, "data", "1G"));
+	format_to(out, "\t\t{:s}\n", print_tlb(a.i, "instruction", "1G"));
 	format_to(out, "\tLevel 2\n");
-	format_to(out, "\t\t{:s}\n", print_tlb(b.split.d, "data", "1G"));
-	format_to(out, "\t\t{:s}\n", print_tlb(b.split.i, "instruction", "1G"));
+	format_to(out, "\t\t{:s}\n", print_tlb(b.d, "data", "1G"));
+	format_to(out, "\t\t{:s}\n", print_tlb(b.i, "instruction", "1G"));
 	format_to(out, "\n");
 }
 
@@ -997,51 +916,39 @@ void print_cache_properties(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_type::cache_properties)) {
 		const register_set_t& regs = sub.second;
 
-		const union
+		const struct
 		{
-			std::uint32_t full;
-			struct
-			{
-				std::uint32_t type                           : 5;
-				std::uint32_t level                          : 3;
-				std::uint32_t self_initializing              : 1;
-				std::uint32_t fully_associative              : 1;
-				std::uint32_t reserved_1                     : 4;
-				std::uint32_t maximum_addressable_thread_ids : 12;
-				std::uint32_t reserved_2                     : 6;
-			} split;
-		} a = { regs[eax] };
+			std::uint32_t type                           : 5;
+			std::uint32_t level                          : 3;
+			std::uint32_t self_initializing              : 1;
+			std::uint32_t fully_associative              : 1;
+			std::uint32_t reserved_1                     : 4;
+			std::uint32_t maximum_addressable_thread_ids : 12;
+			std::uint32_t reserved_2                     : 6;
+		} a = bit_cast<decltype(a)>(regs[eax]);
 
-		const union
+		const struct
 		{
-			std::uint32_t full;
-			struct
-			{
-				std::uint32_t coherency_line_size      : 12;
-				std::uint32_t physical_line_partitions : 10;
-				std::uint32_t associativity_ways       : 10;
-			} split;
-		} b = { regs[ebx] };
+			std::uint32_t coherency_line_size      : 12;
+			std::uint32_t physical_line_partitions : 10;
+			std::uint32_t associativity_ways       : 10;
+		} b = bit_cast<decltype(b)>(regs[ebx]);
 
-		const union
+		const struct
 		{
-			std::uint32_t full;
-			struct
-			{
-				std::uint32_t writeback_invalidates : 1;
-				std::uint32_t cache_inclusive       : 1;
-				std::uint32_t reserved_1            : 30;
-			} split;
-		} d = { regs[edx] };
+			std::uint32_t writeback_invalidates : 1;
+			std::uint32_t cache_inclusive       : 1;
+			std::uint32_t reserved_1            : 30;
+		} d = bit_cast<decltype(d)>(regs[edx]);
 
 		const std::size_t sets = regs[ecx];
-		const std::size_t cache_size = (b.split.associativity_ways       + 1_u64)
-		                             * (b.split.coherency_line_size      + 1_u64)
-		                             * (b.split.physical_line_partitions + 1_u64)
-		                             * (sets                             + 1_u64);
+		const std::size_t cache_size = (b.associativity_ways       + 1_u64)
+		                             * (b.coherency_line_size      + 1_u64)
+		                             * (b.physical_line_partitions + 1_u64)
+		                             * (sets                       + 1_u64);
 
-		format_to(out, "\t{:s} L{:d} ", print_size(cache_size), a.split.level);
-		switch(a.split.type) {
+		format_to(out, "\t{:s} L{:d} ", print_size(cache_size), a.level);
+		switch(a.type) {
 		case 1:
 			format_to(out, "data");
 			break;
@@ -1053,25 +960,25 @@ void print_cache_properties(fmt::memory_buffer& out, const cpu_t& cpu) {
 			break;
 		}
 		format_to(out, "\n");
-		format_to(out, "\t\t{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} sets = {:s}.\n", b.split.coherency_line_size + 1_u32,
-		                                                                                      b.split.associativity_ways  + 1_u32,
+		format_to(out, "\t\t{:d} bytes per line \u00d7 {:d} ways \u00d7 {:d} sets = {:s}.\n", b.coherency_line_size + 1_u32,
+		                                                                                      b.associativity_ways  + 1_u32,
 		                                                                                      sets                        + 1_u32,
 		                                                                                      print_size(cache_size));
-		if(a.split.self_initializing) {
+		if(a.self_initializing) {
 			format_to(out, "\t\tSelf-initializing.\n");
 		}
-		if(a.split.fully_associative) {
+		if(a.fully_associative) {
 			format_to(out, "\t\tFully associative.\n");
 		} else {
-			format_to(out, "\t\t{:d}-way set associative.\n", b.split.associativity_ways + 1_u32);
+			format_to(out, "\t\t{:d}-way set associative.\n", b.associativity_ways + 1_u32);
 		}
-		if(d.split.writeback_invalidates) {
+		if(d.writeback_invalidates) {
 			format_to(out, "\t\tWBINVD/INVD does not invalidate lower level caches for other threads.\n");
 		} else {
 			format_to(out, "\t\tWBINVD/INVD invalidate lower level caches for all threads.\n");
 		}
-		format_to(out, "\t\tCache is {:s}inclusive of lower cache levels.\n", d.split.cache_inclusive != 0 ? "" : "not ");
-		format_to(out, "\t\tCache is shared by up to {:d} threads in the package.\n", a.split.maximum_addressable_thread_ids + 1);
+		format_to(out, "\t\tCache is {:s}inclusive of lower cache levels.\n", d.cache_inclusive != 0 ? "" : "not ");
+		format_to(out, "\t\tCache is shared by up to {:d} threads in the package.\n", a.maximum_addressable_thread_ids + 1);
 		format_to(out, "\n");
 	}
 }
@@ -1079,34 +986,26 @@ void print_cache_properties(fmt::memory_buffer& out, const cpu_t& cpu) {
 void print_extended_apic(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_type::extended_apic).at(subleaf_type::main);
 
-	const union
+	const struct
 	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t core_id          : 8;
-			std::uint32_t threads_per_core : 8;
-			std::uint32_t reserved_1       : 16;
-		} split;
-	} b = { regs[ebx] };
+		std::uint32_t core_id          : 8;
+		std::uint32_t threads_per_core : 8;
+		std::uint32_t reserved_1       : 16;
+	} b = bit_cast<decltype(b)>(regs[ebx]);
 
-	const union
+	const struct
 	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t node_id             : 8;
-			std::uint32_t nodes_per_processor : 3;
-			std::uint32_t reserved_1          : 21;
-		} split;
-	} c = { regs[ecx] };
+		std::uint32_t node_id             : 8;
+		std::uint32_t nodes_per_processor : 3;
+		std::uint32_t reserved_1          : 21;
+	} c = bit_cast<decltype(c)>(regs[ecx]);
 
 	format_to(out, "Extended APIC\n");
 	format_to(out, "\tExtended APIC ID: {:#010x}\n", regs[eax]);
-	format_to(out, "\tCore ID: {:#04x}\n", b.split.core_id);
-	format_to(out, "\tThreads per core: {:d}\n", (b.split.threads_per_core + 1_u32));
-	format_to(out, "\tNode ID: {:#04x}\n", c.split.node_id);
-	format_to(out, "\tNodes per processor: {:d}\n", (c.split.nodes_per_processor + 1_u32));
+	format_to(out, "\tCore ID: {:#04x}\n", b.core_id);
+	format_to(out, "\tThreads per core: {:d}\n", (b.threads_per_core + 1_u32));
+	format_to(out, "\tNode ID: {:#04x}\n", c.node_id);
+	format_to(out, "\tNodes per processor: {:d}\n", (c.nodes_per_processor + 1_u32));
 	format_to(out, "\n");
 }
 
@@ -1213,36 +1112,28 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 				for(const auto& sub : cpu.leaves.at(leaf_type::extended_topology)) {
 					const register_set_t& regs = sub.second;
 
-					const union
+					const struct
 					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t shift_distance : 5;
-							std::uint32_t reserved_1     : 27;
-						} split;
-					} a = { regs[eax] };
+						std::uint32_t shift_distance : 5;
+						std::uint32_t reserved_1     : 27;
+					} a = bit_cast<decltype(a)>(regs[eax]);
 
-					const union
+					const struct
 					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t level_number : 8;
-							std::uint32_t level_type   : 8;
-							std::uint32_t reserved_1   : 16;
-						} split;
-					} c = { regs[ecx] };
+						std::uint32_t level_number : 8;
+						std::uint32_t level_type   : 8;
+						std::uint32_t reserved_1   : 16;
+					} c = bit_cast<decltype(c)>(regs[ecx]);
 
-					switch(c.split.level_type) {
+					switch(c.level_type) {
 					case 1:
 						if(machine.logical_mask_width == 0_u32) {
-							machine.logical_mask_width = a.split.shift_distance;
+							machine.logical_mask_width = a.shift_distance;
 						}
 						break;
 					case 2:
 						if(machine.physical_mask_width == 0_u32) {
-							machine.physical_mask_width = a.split.shift_distance;
+							machine.physical_mask_width = a.shift_distance;
 						}
 						break;
 					default:
@@ -1254,55 +1145,39 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 				for(const auto& sub : cpu.leaves.at(leaf_type::deterministic_cache)) {
 					const register_set_t& regs = sub.second;
 
-					const union
+					const struct
 					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t type                           : 5;
-							std::uint32_t level                          : 3;
-							std::uint32_t self_initializing              : 1;
-							std::uint32_t fully_associative              : 1;
-							std::uint32_t reserved_1                     : 4;
-							std::uint32_t maximum_addressable_thread_ids : 12;
-							std::uint32_t maximum_addressable_core_ids   : 6;
-						} split;
-					} a = { regs[eax] };
+						std::uint32_t type                           : 5;
+						std::uint32_t level                          : 3;
+						std::uint32_t self_initializing              : 1;
+						std::uint32_t fully_associative              : 1;
+						std::uint32_t reserved_1                     : 4;
+						std::uint32_t maximum_addressable_thread_ids : 12;
+						std::uint32_t maximum_addressable_core_ids   : 6;
+					} a = bit_cast<decltype(a)>(regs[eax]);
 
-					const union
+					const struct
 					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t coherency_line_size      : 12;
-							std::uint32_t physical_line_partitions : 10;
-							std::uint32_t associativity_ways       : 10;
-						} split;
-					} b = { regs[ebx] };
+						std::uint32_t coherency_line_size      : 12;
+						std::uint32_t physical_line_partitions : 10;
+						std::uint32_t associativity_ways       : 10;
+					} b = bit_cast<decltype(b)>(regs[ebx]);
 
-					const union
+					const struct
 					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t writeback_invalidates : 1;
-							std::uint32_t cache_inclusive       : 1;
-							std::uint32_t complex_indexing      : 1;
-							std::uint32_t reserved_1            : 29;
-						} split;
-					} d = { regs[edx] };
+						std::uint32_t writeback_invalidates : 1;
+						std::uint32_t cache_inclusive       : 1;
+						std::uint32_t complex_indexing      : 1;
+						std::uint32_t reserved_1            : 29;
+					} d = bit_cast<decltype(d)>(regs[edx]);
 
 					switch(sub.first) {
 					case subleaf_type::main:
 						if(machine.logical_mask_width == 0_u32) {
-							const union
-							{
-								std::uint32_t full;
-								id_info_t     split;
-							} leaf_1_b = { cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main).at(ebx) };
+							const id_info_t leaf_1_b = bit_cast<decltype(leaf_1_b)>(cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main).at(ebx));
 
-							const std::uint32_t total_possible_cores = leaf_1_b.split.maximum_addressable_ids;
-							const std::uint32_t total_cores_in_package = a.split.maximum_addressable_core_ids + 1_u32;
+							const std::uint32_t total_possible_cores = leaf_1_b.maximum_addressable_ids;
+							const std::uint32_t total_cores_in_package = a.maximum_addressable_core_ids + 1_u32;
 							const std::uint32_t logical_cores_per_physical_core = total_possible_cores / total_cores_in_package;
 							
 							const auto logical_mask = generate_mask(logical_cores_per_physical_core);
@@ -1314,26 +1189,26 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 						[[fallthrough]];
 					default:
 						const std::uint32_t sets = regs[ecx];
-						const std::uint32_t cache_size = (b.split.associativity_ways       + 1_u32)
-						                               * (b.split.physical_line_partitions + 1_u32)
-						                               * (b.split.coherency_line_size      + 1_u32)
-						                               * (sets                             + 1_u32);
+						const std::uint32_t cache_size = (b.associativity_ways       + 1_u32)
+						                               * (b.physical_line_partitions + 1_u32)
+						                               * (b.coherency_line_size      + 1_u32)
+						                               * (sets                       + 1_u32);
 
 						const cache_t cache = {
-							a.split.level,
-							a.split.type,
-							b.split.associativity_ways + 1_u32,
+							a.level,
+							a.type,
+							b.associativity_ways + 1_u32,
 							sets + 1_u32,
-							b.split.coherency_line_size + 1_u32,
-							b.split.physical_line_partitions + 1_u32,
+							b.coherency_line_size + 1_u32,
+							b.physical_line_partitions + 1_u32,
 							cache_size,
-							a.split.fully_associative != 0_u32,
-							b.split.associativity_ways == 0_u32,
-							d.split.complex_indexing == 1_u32,
-							a.split.self_initializing != 0_u32,
-							d.split.writeback_invalidates != 0_u32,
-							d.split.cache_inclusive != 0_u32,
-							a.split.maximum_addressable_thread_ids
+							a.fully_associative != 0_u32,
+							b.associativity_ways == 0_u32,
+							d.complex_indexing == 1_u32,
+							a.self_initializing != 0_u32,
+							d.writeback_invalidates != 0_u32,
+							d.cache_inclusive != 0_u32,
+							a.maximum_addressable_thread_ids
 						};
 						machine.all_caches.push_back(cache);
 						break;
@@ -1388,99 +1263,79 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 		case amd:
 			if(cpu.leaves.find(leaf_type::extended_apic) != cpu.leaves.end()) {
 				const register_set_t& regs = cpu.leaves.at(leaf_type::extended_apic).at(subleaf_type::main);
-				const union
+				const struct
 				{
-					std::uint32_t full;
-					struct
-					{
-						std::uint32_t core_id          : 8;
-						std::uint32_t threads_per_core : 8;
-						std::uint32_t reserved_1       : 16;
-					} split;
-				} b = { regs[ebx] };
-				machine.logical_mask_width = generate_mask(b.split.threads_per_core).second;
+					std::uint32_t core_id          : 8;
+					std::uint32_t threads_per_core : 8;
+					std::uint32_t reserved_1       : 16;
+				} b = bit_cast<decltype(b)>(regs[ebx]);
+				machine.logical_mask_width = generate_mask(b.threads_per_core).second;
 			}
 			if(cpu.leaves.find(leaf_type::cache_properties) != cpu.leaves.end()) {
 				for(const auto& sub : cpu.leaves.at(leaf_type::cache_properties)) {
 					const register_set_t& regs = sub.second;
-					const union
+					const struct
 					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t type                           : 5;
-							std::uint32_t level                          : 3;
-							std::uint32_t self_initializing              : 1;
-							std::uint32_t fully_associative              : 1;
-							std::uint32_t reserved_1                     : 4;
-							std::uint32_t maximum_addressable_thread_ids : 12;
-							std::uint32_t reserved_2                     : 6;
-						} split;
-					} a = { regs[eax] };
+						std::uint32_t type                           : 5;
+						std::uint32_t level                          : 3;
+						std::uint32_t self_initializing              : 1;
+						std::uint32_t fully_associative              : 1;
+						std::uint32_t reserved_1                     : 4;
+						std::uint32_t maximum_addressable_thread_ids : 12;
+						std::uint32_t reserved_2                     : 6;
+					} a = bit_cast<decltype(a)>(regs[eax]);
 
-					const union
+					const struct
 					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t coherency_line_size      : 12;
-							std::uint32_t physical_line_partitions : 10;
-							std::uint32_t associativity_ways       : 10;
-						} split;
-					} b = { regs[ebx] };
+						std::uint32_t coherency_line_size      : 12;
+						std::uint32_t physical_line_partitions : 10;
+						std::uint32_t associativity_ways       : 10;
+					} b = bit_cast<decltype(b)>(regs[ebx]);
 
-					const union
+					const struct
 					{
-						std::uint32_t full;
-						struct
-						{
-							std::uint32_t writeback_invalidates : 1;
-							std::uint32_t cache_inclusive       : 1;
-							std::uint32_t reserved_1            : 30;
-						} split;
-					} d = { regs[edx] };
+						std::uint32_t writeback_invalidates : 1;
+						std::uint32_t cache_inclusive       : 1;
+						std::uint32_t reserved_1            : 30;
+					} d = bit_cast<decltype(d)>(regs[edx]);
 
 					const std::uint32_t sets = regs[ecx];
-					const std::uint32_t cache_size = (b.split.associativity_ways       + 1_u32)
-					                               * (b.split.physical_line_partitions + 1_u32)
-					                               * (b.split.coherency_line_size      + 1_u32)
-					                               * (sets                             + 1_u32);
+					const std::uint32_t cache_size = (b.associativity_ways       + 1_u32)
+					                               * (b.physical_line_partitions + 1_u32)
+					                               * (b.coherency_line_size      + 1_u32)
+					                               * (sets                       + 1_u32);
 
 					const cache_t cache = {
-						a.split.level,
-						a.split.type,
-						b.split.associativity_ways + 1_u32,
+						a.level,
+						a.type,
+						b.associativity_ways + 1_u32,
 						sets + 1_u32,
-						b.split.coherency_line_size + 1_u32,
-						b.split.physical_line_partitions + 1_u32,
+						b.coherency_line_size + 1_u32,
+						b.physical_line_partitions + 1_u32,
 						cache_size,
-						a.split.fully_associative != 0,
-						b.split.associativity_ways == 0_u32,
+						a.fully_associative != 0,
+						b.associativity_ways == 0_u32,
 						false,
-						a.split.self_initializing != 0,
-						d.split.writeback_invalidates != 0,
-						d.split.cache_inclusive != 0,
-						a.split.maximum_addressable_thread_ids
+						a.self_initializing != 0,
+						d.writeback_invalidates != 0,
+						d.cache_inclusive != 0,
+						a.maximum_addressable_thread_ids
 					};
 					machine.all_caches.push_back(cache);
 				}
 			}
 			if(cpu.leaves.find(leaf_type::address_limits) != cpu.leaves.end()) {
 				const register_set_t& regs = cpu.leaves.at(leaf_type::address_limits).at(subleaf_type::main);
-				const union
+				const struct
 				{
-					std::uint32_t full;
-					struct
-					{
-						std::uint32_t package_threads : 8;
-						std::uint32_t reserved_1      : 4;
-						std::uint32_t apic_id_size    : 4;
-						std::uint32_t perf_tsc_size   : 2;
-						std::uint32_t reserved_2      : 24;
-					} split;
-				} c = { regs[ecx] };
+					std::uint32_t package_threads : 8;
+					std::uint32_t reserved_1      : 4;
+					std::uint32_t apic_id_size    : 4;
+					std::uint32_t perf_tsc_size   : 2;
+					std::uint32_t reserved_2      : 14;
+				} c = bit_cast<decltype(c)>(regs[ecx]);
 
-				machine.physical_mask_width = c.split.apic_id_size;
+				machine.physical_mask_width = c.apic_id_size;
 			}
 			break;
 		}

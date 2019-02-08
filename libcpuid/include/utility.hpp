@@ -79,8 +79,33 @@ void run_on_every_core(Fn&& f) {
 	bouncer.join();
 }
 
-unsigned char bit_scan_reverse(unsigned long* index, unsigned int mask);
-unsigned char bit_scan_forward(unsigned long* index, unsigned int mask);
+#if defined(_MSC_VER)
+inline unsigned char bit_scan_reverse(unsigned long* index, unsigned int mask) {
+	return _BitScanReverse(index, mask);
+}
+
+inline unsigned char bit_scan_forward(unsigned long* index, unsigned int mask) {
+	return _BitScanForward(index, mask);
+}
+#else
+inline unsigned char bit_scan_reverse(unsigned long* index, unsigned int mask) {
+	if(mask) {
+		*index = 31 - __builtin_clz(mask);
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+inline unsigned char bit_scan_forward(unsigned long* index, unsigned int mask) {
+	if(mask) {
+		*index = __builtin_ctz(mask);
+		return 1;
+	} else {
+		return 0;
+	}
+}
+#endif
 
 inline std::uint32_t simple_mask(const std::uint32_t length) noexcept {
 	if(length == 32_u32) {
@@ -115,6 +140,19 @@ namespace fmt {
 			return ctx.begin();
 		}
 	};
+}
+
+template <class To, class From>
+typename std::enable_if_t<sizeof(To) == sizeof(From)
+	&& std::is_trivially_copyable<From>::value
+	&& std::is_trivial<To>::value,
+	To>
+	// constexpr support needs compiler magic
+	bit_cast(const From& src) noexcept
+{
+	std::remove_const_t<To> dst;
+	std::memcpy(&dst, &src, sizeof(To));
+	return dst;
 }
 
 #endif

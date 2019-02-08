@@ -14,13 +14,15 @@ void print_hypervisor_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "Hypervisor present\n");
 	format_to(out, "\tMaximum hypervisor leaf: {:#010x}\n", regs[eax]);
 
-	const union
-	{
-		std::array<std::uint32_t, 3> registers;
-		std::array<char, 12> vndr;
-	} data = { regs[ebx], regs[ecx], regs[edx] };
+	const std::array<char, 12> vndr = bit_cast<decltype(vndr)>(
+		std::array<std::uint32_t, 3> {
+			regs[ebx],
+			regs[ecx],
+			regs[edx]
+		}
+	);
 
-	format_to(out, "\tVendor: {}\n", data.vndr);
+	format_to(out, "\tVendor: {}\n", vndr);
 	format_to(out, "\tVendor name: {:s}\n", to_string(cpu.vendor));
 	format_to(out, "\n");
 }
@@ -28,22 +30,18 @@ void print_hypervisor_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
 void print_hyper_v_signature(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_signature).at(subleaf_type::main);
 	format_to(out, "Hyper-V signature\n");
-	const union
+	const struct
 	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t signature_1 : 8;
-			std::uint32_t signature_2 : 8;
-			std::uint32_t signature_3 : 8;
-			std::uint32_t signature_4 : 8;
-		} split;
-	} a = { regs[eax] };
+		std::uint32_t signature_1 : 8;
+		std::uint32_t signature_2 : 8;
+		std::uint32_t signature_3 : 8;
+		std::uint32_t signature_4 : 8;
+	} a = bit_cast<decltype(a)>(regs[eax]);
 
-	format_to(out, "\tSignature: {:c}{:c}{:c}{:c}\n", gsl::narrow_cast<char>(a.split.signature_1),
-	                                                  gsl::narrow_cast<char>(a.split.signature_2),
-	                                                  gsl::narrow_cast<char>(a.split.signature_3),
-	                                                  gsl::narrow_cast<char>(a.split.signature_4));
+	format_to(out, "\tSignature: {:c}{:c}{:c}{:c}\n", gsl::narrow_cast<char>(a.signature_1),
+	                                                  gsl::narrow_cast<char>(a.signature_2),
+	                                                  gsl::narrow_cast<char>(a.signature_3),
+	                                                  gsl::narrow_cast<char>(a.signature_4));
 	format_to(out, "\n");
 }
 
@@ -51,54 +49,42 @@ void print_hyper_v_system_identity(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_system_identity).at(subleaf_type::main);
 	format_to(out, "Hyper-V system identiy\n");
 
-	const union
+	const struct
 	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t minor_version : 16;
-			std::uint32_t major_version : 16;
-		} split;
-	} b = { regs[ebx] };
+		std::uint32_t minor_version : 16;
+		std::uint32_t major_version : 16;
+	} b = bit_cast<decltype(b)>(regs[ebx]);
 
-	const union
+	const struct
 	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t service_number : 24;
-			std::uint32_t service_branch : 8;
-		} split;
-	} d = { regs[edx] };
+		std::uint32_t service_number : 24;
+		std::uint32_t service_branch : 8;
+	} d = bit_cast<decltype(d)>(regs[edx]);
 
 	format_to(out, "\tBuild number: {:d}\n", regs[eax]);
-	format_to(out, "\tVersion : {:d}.{:d}\n", b.split.major_version, b.split.minor_version);
+	format_to(out, "\tVersion : {:d}.{:d}\n", b.major_version, b.minor_version);
 	format_to(out, "\tService Pack: {:d}\n", regs[ecx]);
-	format_to(out, "\tService number: {:d}\n", d.split.service_number);
-	format_to(out, "\tService branch: {:d}\n", d.split.service_branch);
+	format_to(out, "\tService number: {:d}\n", d.service_number);
+	format_to(out, "\tService branch: {:d}\n", d.service_branch);
 	format_to(out, "\n");
 }
 
 void print_hyper_v_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_features).at(subleaf_type::main);
-	const union
+	const struct
 	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t maximum_power_state : 4;
-			std::uint32_t hpet_needed_for_c3  : 1;
-			std::uint32_t reserved_1          : 27;
-		} split;
-	} c = { regs[ecx] };
+		std::uint32_t maximum_power_state : 4;
+		std::uint32_t hpet_needed_for_c3  : 1;
+		std::uint32_t reserved_1          : 27;
+	} c = bit_cast<decltype(c)>(regs[ecx]);
 
 	format_to(out, "Hyper-V features\n");
 	print_features(out, cpu, leaf_type::hyper_v_features, subleaf_type::main, eax);
 	format_to(out, "\n");
 	print_features(out, cpu, leaf_type::hyper_v_features, subleaf_type::main, ebx);
 	format_to(out, "\n");
-	format_to(out, "\tMaximum power state: C{:d}\n", c.split.maximum_power_state);
-	if(c.split.hpet_needed_for_c3) {
+	format_to(out, "\tMaximum power state: C{:d}\n", c.maximum_power_state);
+	if(c.hpet_needed_for_c3) {
 		format_to(out, "\tHPET needed for C3\n");
 	}
 	format_to(out, "\n");
@@ -144,21 +130,17 @@ void print_hyper_v_root_cpu_management(fmt::memory_buffer& out, const cpu_t& cpu
 void print_hyper_v_shared_virtual_memory(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_shared_virtual_memory).at(subleaf_type::main);
 
-	const union
-	{
-		std::uint32_t full;
-		struct
-		{ 
-			std::uint32_t svm_supported : 1;
-			std::uint32_t reserved_1    : 10;
-			std::uint32_t max_pasid_space_count : 21;
-		} split;
-	} a = { regs[eax] };
+	const struct
+	{ 
+		std::uint32_t svm_supported : 1;
+		std::uint32_t reserved_1    : 10;
+		std::uint32_t max_pasid_space_count : 21;
+	} a = bit_cast<decltype(a)>(regs[eax]);
 
 	format_to(out, "Hyper-V shared virtual memory features\n");
 	print_features(out, cpu, leaf_type::hyper_v_shared_virtual_memory, subleaf_type::main, eax);
 	format_to(out, "\n");
-	format_to(out, "\tMaximum PASID space count: {:d}\n", a.split.max_pasid_space_count);
+	format_to(out, "\tMaximum PASID space count: {:d}\n", a.max_pasid_space_count);
 	format_to(out, "\n");
 }
 
@@ -171,23 +153,19 @@ void print_hyper_v_nested_hypervisor(fmt::memory_buffer& out, const cpu_t& cpu) 
 
 void print_hyper_v_nested_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_type::hyper_v_nested_features).at(subleaf_type::main);
-	const union
+	const struct
 	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t low_version            : 8;
-			std::uint32_t high_version           : 8;
-			std::uint32_t reserved_1             : 1;
-			std::uint32_t direct_flush           : 1;
-			std::uint32_t flush_guest_physical   : 1;
-			std::uint32_t enlightened_msr_bitmap : 1;
-			std::uint32_t reserved_2             : 12;
-		} split;
-	} a = { regs[eax] };
+		std::uint32_t low_version            : 8;
+		std::uint32_t high_version           : 8;
+		std::uint32_t reserved_1             : 1;
+		std::uint32_t direct_flush           : 1;
+		std::uint32_t flush_guest_physical   : 1;
+		std::uint32_t enlightened_msr_bitmap : 1;
+		std::uint32_t reserved_2             : 12;
+	} a = bit_cast<decltype(a)>(regs[eax]);
 
 	format_to(out, "Nested hypervisor virtualization features\n");
-	format_to(out, "\tEnlightened VMCS version: {:d}.{:d}\n", a.split.high_version, a.split.low_version);
+	format_to(out, "\tEnlightened VMCS version: {:d}.{:d}\n", a.high_version, a.low_version);
 	print_features(out, cpu, leaf_type::hyper_v_nested_features, subleaf_type::main, eax);
 	format_to(out, "\n");
 }
@@ -198,13 +176,15 @@ void print_xen_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "Xen{:s} signature\n", (cpu.vendor & hyper_v) ? " with viridian extensions" : "");
 	format_to(out, "\tMaximum Xen leaf: {:#010x}\n", regs[eax]);
 
-	const union
-	{
-		std::array<std::uint32_t, 3> registers;
-		std::array<char, 12> vndr;
-	} data = { regs[ebx], regs[ecx], regs[edx] };
+	const std::array<char, 12> vndr = bit_cast<decltype(vndr)>(
+		std::array<std::uint32_t, 3> {
+			regs[ebx],
+			regs[ecx],
+			regs[edx]
+		}
+	);
 
-	format_to(out, "\tVendor: {}\n", data.vndr);
+	format_to(out, "\tVendor: {}\n", vndr);
 	format_to(out, "\tVendor name: {:s}\n", to_string(cpu.vendor));
 	format_to(out, "\n");
 }
@@ -213,18 +193,14 @@ void print_xen_version(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_version : leaf_type::xen_version_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 
-	const union
+	const struct
 	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t minor_version : 16;
-			std::uint32_t major_version : 16;
-		} split;
-	} a = { regs[eax] };
+		std::uint32_t minor_version : 16;
+		std::uint32_t major_version : 16;
+	} a = bit_cast<decltype(a)>(regs[eax]);
 
 	format_to(out, "Xen version\n");
-	format_to(out, "\tVersion : {:d}.{:d}\n", a.split.major_version, a.split.minor_version);
+	format_to(out, "\tVersion : {:d}.{:d}\n", a.major_version, a.minor_version);
 	format_to(out, "\n");
 }
 
@@ -297,15 +273,11 @@ void print_xen_pv_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_pv_features : leaf_type::xen_pv_features_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 
-	const union
+	const struct
 	{
-		std::uint32_t full;
-		struct
-		{
-			std::uint32_t machine_address_width : 8;
-			std::uint32_t reserved_1            : 24;
-		} split;
-	} b = { regs[ebx] };
+		std::uint32_t machine_address_width : 8;
+		std::uint32_t reserved_1            : 24;
+	} b = bit_cast<decltype(b)>(regs[ebx]);
 
 	format_to(out, "Xen PV features\n");
 	format_to(out, "\tHighest subleaf: {:#010x}\n", regs[eax]);
