@@ -1,5 +1,11 @@
 cmake_minimum_required (VERSION 3.10)
 
+if(CMAKE_GENERATOR MATCHES "Visual Studio.*")
+    set(CMAKE_GENERATOR_PLATFORM x64)
+    set(CMAKE_GENERATOR_TOOLSET v141,host=x64)
+    set(CMAKE_VS_PLATFORM_NAME Win64)
+endif()
+
 set(VCPKG_TARGET_ARCHITECTURE x64)
 if(WIN32)
     set(VCPKG_TARGET_TRIPLET x64-windows-static CACHE STRING "")
@@ -12,13 +18,6 @@ endif()
 set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
-
-if(MSVC)
-    set(CMAKE_GENERATOR_PLATFORM x64)
-    set(CMAKE_GENERATOR_TOOLSET v141,host=x64)
-    set(CMAKE_VS_PLATFORM_NAME Win64)
-else()
-endif()
 
 macro(configure_msvc_runtime)
   if(MSVC)

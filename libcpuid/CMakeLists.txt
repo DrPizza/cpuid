@@ -8,9 +8,9 @@ target_include_directories(libcpuid PRIVATE include)
 target_include_directories(libcpuid PRIVATE cpuid)
 target_include_directories(libcpuid PRIVATE ${Boost_INCLUDE_DIRS})
 
-target_link_libraries(libcpuid ${Boost_LIBRARIES})
-target_link_libraries(libcpuid gsl)
-target_link_libraries(libcpuid fmt::fmt)
+target_link_libraries(libcpuid PRIVATE ${Boost_LIBRARIES})
+target_link_libraries(libcpuid PRIVATE gsl)
+target_link_libraries(libcpuid PRIVATE fmt::fmt)
 
 find_package(Threads REQUIRED)
-target_link_libraries(libcpuid Threads::Threads)
+target_link_libraries(libcpuid PRIVATE Threads::Threads)
