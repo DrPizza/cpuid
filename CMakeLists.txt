@@ -66,7 +66,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
-project(cpuid VERSION 1.0.0 LANGUAGES C CXX)
+project(cpuid-toplevel VERSION 1.0.0 LANGUAGES C CXX)
 
 if(MSVC)
     set(MSVC_RUNTIME "static")
@@ -84,7 +84,7 @@ if(MSVC)
     configure_msvc_runtime()
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
 endif()
 
 set(Boost_USE_STATIC_LIBS ON)
