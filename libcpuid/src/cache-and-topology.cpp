@@ -1158,7 +1158,7 @@ constexpr full_apic_id_t split_apic_id(std::uint32_t id, std::uint32_t smt_mask_
 	const std::uint32_t smt_id  =  id & logical_select_mask;
 	const std::uint32_t core_id = (id & core_select_mask   ) >> smt_mask_width;
 	const std::uint32_t package_id  = (id & package_select_mask) >> core_mask_width;
-	return { smt_id, core_id, package_id };
+	return { smt_id, core_id, 0_u32, 0_u32, 0_u32, package_id };
 }
 
 std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noexcept {

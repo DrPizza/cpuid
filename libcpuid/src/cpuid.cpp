@@ -561,7 +561,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					};
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
 				} else {
-					std::cerr << "ignoring line:" << line << std::endl;
+					//std::cerr << "ignoring line:" << line << std::endl;
 				}
 			}
 		}
