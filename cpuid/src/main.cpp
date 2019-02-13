@@ -27,7 +27,7 @@ Input options:
 Output options:
 	--raw                      Write unparsed output to screen
 	--write-dump=<filename>    Write unparsed output to <filename>
-	--write-format=<format>    Dump format to write: native, etallen, libcpuid, instlat. [default: native]
+	--write-format=<format>    Dump format to write: native, etallen, libcpuid, instlat, cpuinfo. [default: native]
 	--no-topology              Don't print the processor and cache topology
 	--only-topology            Only print the processor and cache topology
 	--list-ids                 List all core IDs
@@ -73,6 +73,8 @@ int main(int argc, char* argv[]) try {
 			format = file_format::libcpuid;
 		} else if("instlat" == format_name) {
 			format = file_format::instlat;
+		} else if("cpuinfo" == format_name) {
+			format = file_format::cpuinfo;
 		}
 		const std::string filename = std::get<std::string>(args.at("--read-dump"));
 		std::ifstream fin;
@@ -109,6 +111,8 @@ int main(int argc, char* argv[]) try {
 			format = file_format::libcpuid;
 		} else if("instlat" == format_name) {
 			format = file_format::instlat;
+		} else if("cpuinfo" == format_name) {
+			format = file_format::cpuinfo;
 		}
 		fmt::memory_buffer out;
 		print_dump(out, logical_cpus, format);

@@ -539,6 +539,17 @@ void enumerate_extended_topology(cpu_t& cpu) {
 	}
 }
 
+void enumerate_extended_topology_v2(cpu_t& cpu) {
+	cpu.leaves[leaf_type::extended_topology_v2][subleaf_type::main] = cpuid(leaf_type::extended_topology_v2, subleaf_type::main);
+	for(subleaf_type sub = subleaf_type{ 1 }; ; ++sub) {
+		register_set_t regs = cpuid(leaf_type::extended_topology_v2, sub);
+		if((regs[ecx] & 0x0000'ff00_u32) == 0_u32) {
+			break;
+		}
+		cpu.leaves[leaf_type::extended_topology_v2][sub] = regs;
+	}
+}
+
 void print_extended_topology(fmt::memory_buffer& out, const cpu_t& cpu) {
 	for(const auto& sub : cpu.leaves.at(leaf_type::extended_topology)) {
 		const register_set_t& regs = sub.second;
@@ -579,6 +590,65 @@ void print_extended_topology(fmt::memory_buffer& out, const cpu_t& cpu) {
 				break;
 			case 2:
 				format_to(out, "\t\tlevel type: Core\n");
+				break;
+			default:
+				format_to(out, "\t\tlevel type: reserved {:#04x}\n", c.level_type);
+				break;
+			}
+			format_to(out, "\n");
+		}
+	}
+}
+
+void print_extended_topology_v2(fmt::memory_buffer& out, const cpu_t& cpu) {
+	for(const auto& sub : cpu.leaves.at(leaf_type::extended_topology_v2)) {
+		const register_set_t& regs = sub.second;
+		switch(sub.first) {
+		case subleaf_type::main:
+			format_to(out, "Extended topology v2\n");
+			format_to(out, "\tx2 APIC id: {:#010x}\n", regs[edx]);
+			[[fallthrough]];
+		default:
+			const struct
+			{
+				std::uint32_t shift_distance : 5;
+				std::uint32_t reserved_1     : 27;
+			} a = bit_cast<decltype(a)>(regs[eax]);
+
+			const struct
+			{
+				std::uint32_t logical_procesors_at_level_type : 16;
+				std::uint32_t reserved_1                      : 16;
+			} b = bit_cast<decltype(b)>(regs[ebx]);
+
+			const struct
+			{
+				std::uint32_t level_number : 8;
+				std::uint32_t level_type   : 8;
+				std::uint32_t reserved_1   : 16;
+			} c = bit_cast<decltype(c)>(regs[ecx]);
+
+			format_to(out, "\t\tbits to shift: {:d}\n", a.shift_distance);
+			format_to(out, "\t\tlogical processors at level type: {:d}\n", b.logical_procesors_at_level_type);
+			format_to(out, "\t\tlevel number: {:d}\n", c.level_number);
+			switch(c.level_type) {
+			case 0:
+				format_to(out, "\t\tLevel type: invalid\n");
+				break;
+			case 1:
+				format_to(out, "\t\tlevel type: SMT\n");
+				break;
+			case 2:
+				format_to(out, "\t\tlevel type: Core\n");
+				break;
+			case 3:
+				format_to(out, "\t\tlevel type: Module\n");
+				break;
+			case 4:
+				format_to(out, "\t\tlevel type: Tile\n");
+				break;
+			case 5:
+				format_to(out, "\t\tlevel type: Die\n");
 				break;
 			default:
 				format_to(out, "\t\tlevel type: reserved {:#04x}\n", c.level_type);
@@ -1072,14 +1142,23 @@ std::string to_short_string(const cache_t& cache) {
 	return to_string(out);
 }
 
-constexpr full_apic_id_t split_apic_id(std::uint32_t id, std::uint32_t logical_mask_width, std::uint32_t physical_mask_width) noexcept {
-	const std::uint32_t logical_select_mask  = ~(0xffff'ffff_u32 << logical_mask_width);
-	const std::uint32_t logical_id = id & logical_select_mask;
-	const std::uint32_t core_select_mask = ~(0xffff'ffff_u32 << physical_mask_width);
-	const std::uint32_t physical_id = (id & core_select_mask) >> logical_mask_width;
-	const std::uint32_t package_select_mask = 0xffff'ffff_u32 << physical_mask_width;
-	const std::uint32_t package_id = (id & package_select_mask) >> physical_mask_width;
-	return { logical_id, physical_id, package_id };
+constexpr full_apic_id_t split_apic_id(std::uint32_t id, std::uint32_t smt_mask_width, std::uint32_t core_mask_width) noexcept {
+	//
+	//                                                   |<         >| core_mask_width = 7
+	//                                                           |< >| smt_mask_width = 3
+	//   3                   2                   1                   0
+	// 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+	//                                                           |< >| smt_id
+	//                                                   |<   >|       core_id
+	// |<                                             >|               package_id
+	// |<                                                           >| x2_apic_id
+	const std::uint32_t logical_select_mask  = ~(0xffff'ffff_u32 << smt_mask_width);
+	const std::uint32_t core_select_mask     = ~(0xffff'ffff_u32 << core_mask_width);
+	const std::uint32_t package_select_mask  =   0xffff'ffff_u32 << core_mask_width;
+	const std::uint32_t smt_id  =  id & logical_select_mask;
+	const std::uint32_t core_id = (id & core_select_mask   ) >> smt_mask_width;
+	const std::uint32_t package_id  = (id & package_select_mask) >> core_mask_width;
+	return { smt_id, core_id, package_id };
 }
 
 std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noexcept {
@@ -1127,13 +1206,13 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 
 					switch(c.level_type) {
 					case 1:
-						if(machine.logical_mask_width == 0_u32) {
-							machine.logical_mask_width = a.shift_distance;
+						if(machine.smt_mask_width == 0_u32) {
+							machine.smt_mask_width = a.shift_distance;
 						}
 						break;
 					case 2:
-						if(machine.physical_mask_width == 0_u32) {
-							machine.physical_mask_width = a.shift_distance;
+						if(machine.core_mask_width == 0_u32) {
+							machine.core_mask_width = a.shift_distance;
 						}
 						break;
 					default:
@@ -1173,7 +1252,7 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 
 					switch(sub.first) {
 					case subleaf_type::main:
-						if(machine.logical_mask_width == 0_u32) {
+						if(machine.smt_mask_width == 0_u32) {
 							const id_info_t leaf_1_b = bit_cast<decltype(leaf_1_b)>(cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main).at(ebx));
 
 							const std::uint32_t total_possible_cores = leaf_1_b.maximum_addressable_ids;
@@ -1181,9 +1260,9 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 							const std::uint32_t logical_cores_per_physical_core = total_possible_cores / total_cores_in_package;
 							
 							const auto logical_mask = generate_mask(logical_cores_per_physical_core);
-							machine.logical_mask_width = logical_mask.second;
+							machine.smt_mask_width = logical_mask.second;
 							const auto physical_mask = generate_mask(total_cores_in_package);
-							machine.physical_mask_width = physical_mask.second;
+							machine.core_mask_width = physical_mask.second;
 						}
 
 						[[fallthrough]];
@@ -1215,8 +1294,8 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 					}
 				}
 			} else if(cpu.leaves.find(leaf_type::cache_and_tlb) != cpu.leaves.end()) {
-				machine.logical_mask_width = 0_u32;
-				machine.physical_mask_width = 0_u32;
+				machine.smt_mask_width = 0_u32;
+				machine.core_mask_width = 0_u32;
 				
 				decomposed_cache_t decomposed = decompose_cache_descriptors(cpu, cpu.leaves.at(leaf_type::cache_and_tlb).at(subleaf_type::main));
 				std::vector<gsl::not_null<const cache_descriptor_t*>> combined;
@@ -1269,7 +1348,7 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 					std::uint32_t threads_per_core : 8;
 					std::uint32_t reserved_1       : 16;
 				} b = bit_cast<decltype(b)>(regs[ebx]);
-				machine.logical_mask_width = generate_mask(b.threads_per_core).second;
+				machine.smt_mask_width = generate_mask(b.threads_per_core).second;
 			}
 			if(cpu.leaves.find(leaf_type::cache_properties) != cpu.leaves.end()) {
 				for(const auto& sub : cpu.leaves.at(leaf_type::cache_properties)) {
@@ -1335,7 +1414,7 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 					std::uint32_t reserved_2      : 14;
 				} c = bit_cast<decltype(c)>(regs[ecx]);
 
-				machine.physical_mask_width = c.apic_id_size;
+				machine.core_mask_width = c.apic_id_size;
 			}
 			break;
 		}
@@ -1345,9 +1424,9 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 	case intel:
 		// per the utterly miserable source code at https://software.intel.com/en-us/articles/intel-64-architecture-processor-topology-enumeration
 		for(const std::uint32_t id : machine.x2_apic_ids) {
-			const full_apic_id_t split = split_apic_id(id, machine.logical_mask_width, machine.physical_mask_width);
+			const full_apic_id_t split = split_apic_id(id, machine.smt_mask_width, machine.core_mask_width);
 		
-			logical_core_t core = { id, split.package_id, split.physical_id, split.logical_id };
+			logical_core_t core = { id, split.package_id, split.core_id, split.smt_id };
 
 			for(const cache_t& cache : machine.all_caches) {
 				core.shared_cache_ids.push_back(id & cache.sharing_mask);
@@ -1355,7 +1434,7 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 			}
 			machine.all_cores.push_back(core);
 
-			machine.packages[split.package_id].physical_cores[split.physical_id].logical_cores[split.logical_id] = core;
+			machine.packages[split.package_id].physical_cores[split.core_id].logical_cores[split.smt_id] = core;
 		}
 		for(std::size_t i = 0; i < machine.all_caches.size(); ++i) {
 			cache_t& cache = machine.all_caches[i];
@@ -1367,11 +1446,11 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 	case amd:
 		// pure guesswork, since AMD does not appear to document its algorithm anywhere
 		for(const std::uint32_t id : machine.x2_apic_ids) {
-			const full_apic_id_t split = split_apic_id(id, machine.logical_mask_width, machine.physical_mask_width);
+			const full_apic_id_t split = split_apic_id(id, machine.smt_mask_width, machine.core_mask_width);
 		
-			logical_core_t core = { id, split.package_id, split.physical_id, split.logical_id };
+			logical_core_t core = { id, split.package_id, split.core_id, split.smt_id };
 			machine.all_cores.push_back(core);
-			machine.packages[split.package_id].physical_cores[split.physical_id].logical_cores[split.logical_id] = core;
+			machine.packages[split.package_id].physical_cores[split.core_id].logical_cores[split.smt_id] = core;
 		}
 		for(std::size_t i = 0; i < machine.all_caches.size(); ++i) {
 			cache_t& cache = machine.all_caches[i];

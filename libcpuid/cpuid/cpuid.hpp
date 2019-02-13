@@ -46,6 +46,10 @@ enum struct leaf_type : std::uint32_t
 	reserved_6                        = 0x0000'0019_u32,
 	reserved_7                        = 0x0000'001a_u32,
 	pconfig                           = 0x0000'001b_u32,
+	reserved_8                        = 0x0000'001c_u32,
+	reserved_9                        = 0x0000'001d_u32,
+	reserved_10                       = 0x0000'001e_u32,
+	extended_topology_v2              = 0x0000'001f_u32,
 
 	hypervisor_limit                  = 0x4000'0000_u32,
 
@@ -80,7 +84,7 @@ enum struct leaf_type : std::uint32_t
 	l2_cache_identifiers              = 0x8000'0006_u32,
 	ras_advanced_power_management     = 0x8000'0007_u32,
 	address_limits                    = 0x8000'0008_u32,
-	reserved_8                        = 0x8000'0009_u32,
+	reserved_11                       = 0x8000'0009_u32,
 	secure_virtual_machine            = 0x8000'000a_u32,
 
 	extended_reserved_1               = 0x8000'000b_u32,
@@ -295,7 +299,7 @@ struct id_info_t
 	std::uint32_t brand_id                : 8;
 	std::uint32_t cache_line_size         : 8;
 	std::uint32_t maximum_addressable_ids : 8;
-	std::uint32_t local_apic_id           : 8;
+	std::uint32_t initial_apic_id         : 8;
 };
 
 struct split_model_t
@@ -347,7 +351,8 @@ enum struct file_format
 	native,
 	etallen,
 	libcpuid,
-	instlat
+	instlat,
+	cpuinfo
 };
 
 std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format format);
@@ -430,8 +435,11 @@ struct package_t
 
 struct system_t
 {
-	std::uint32_t logical_mask_width;
-	std::uint32_t physical_mask_width;
+	std::uint32_t smt_mask_width;
+	std::uint32_t core_mask_width;
+	std::uint32_t module_mask_width;
+	std::uint32_t tile_mask_width;
+	std::uint32_t die_mask_width;
 	std::vector<std::uint32_t> x2_apic_ids;
 
 	std::vector<cache_t> all_caches;

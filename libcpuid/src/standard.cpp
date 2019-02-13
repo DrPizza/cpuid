@@ -108,7 +108,7 @@ void print_version_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 	if(0 != (cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main).at(edx) & 0x1000'0000_u32)) {
 		format_to(out, "\tlogical processors per package: {:d}\n", b.maximum_addressable_ids);
 	}
-	format_to(out, "\tlocal APIC ID: {:#04x}\n", b.local_apic_id);
+	format_to(out, "\tinitial APIC ID: {:#04x}\n", b.initial_apic_id);
 	format_to(out, "\n");
 
 	format_to(out, "\tFeature identifiers\n");
@@ -703,7 +703,7 @@ void print_processor_trace(fmt::memory_buffer& out, const cpu_t& cpu) {
 				} b = bit_cast<decltype(b)>(regs[ebx]);
 				format_to(out, "\tNumber of configurable address ranges for filtering: {:d}\n", a.number_of_ranges);
 				format_to(out, "\tBitmap of supported MTC period encodings: {:#010x}\n", a.mtc_period_bitmap);
-				format_to(out, "\tBitmap of supported Cycle Treshold value encodings: {:#010x}\n", b.cycle_threshold_bitmap);
+				format_to(out, "\tBitmap of supported Cycle Threshold value encodings: {:#010x}\n", b.cycle_threshold_bitmap);
 				format_to(out, "\tBitmap of supported Configurable PSB frequency encodings: {:#010x}\n", b.supported_psb_bitmap);
 				format_to(out, "\n");
 			}
@@ -716,8 +716,25 @@ void print_time_stamp_counter(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_type::time_stamp_counter).at(subleaf_type::main);
 	format_to(out, "Time Stamp Counter and Nominal Core Crystal Clock\n");
 	format_to(out, "\tTSC:core crystal clock ratio: {:d}:{:d}\n", regs[ebx], regs[eax]);
-	format_to(out, "\tNominal core crystal clock/Hz: {:d}\n", regs[ecx]);
-	format_to(out, "\tTSC frequency/Hz: {:d}\n", gsl::narrow_cast<std::uint64_t>(regs[ecx]) * regs[ebx] / regs[eax]);
+	std::uint64_t crystal_frequency = regs[ecx];
+	if(crystal_frequency == 0_u64) {
+		switch(cpu.model.model) {
+		case 0x4e: // skylake mobile
+		case 0x5e: // skylake desktop
+		case 0x8e: // kaby lake mobile
+		case 0x9e: // kaby lake/coffee lake desktop
+			crystal_frequency = 24'000'000_u64;
+			break;
+		case 0x5f: // denverton
+			crystal_frequency = 25'000'000_u64;
+			break;
+		case 0x5c: // apollo lake
+			crystal_frequency = 19'200'000_u64;
+			break;
+		}
+	}
+	format_to(out, "\tNominal core crystal clock/Hz: {:d}\n", crystal_frequency);
+	format_to(out, "\tTSC frequency/Hz: {:d}\n", crystal_frequency * regs[ebx] / regs[eax]);
 	format_to(out, "\n");
 }
 

@@ -9,8 +9,11 @@
 
 struct full_apic_id_t
 {
-	std::uint32_t logical_id;
-	std::uint32_t physical_id;
+	std::uint32_t smt_id;
+	std::uint32_t core_id;
+	std::uint32_t module_id;
+	std::uint32_t tile_id;
+	std::uint32_t die_id;
 	std::uint32_t package_id;
 };
 
@@ -21,6 +24,9 @@ void print_deterministic_cache(fmt::memory_buffer& out, const cpu_t& cpu);
 
 void enumerate_extended_topology(cpu_t& cpu);
 void print_extended_topology(fmt::memory_buffer& out, const cpu_t& cpu);
+
+void enumerate_extended_topology_v2(cpu_t& cpu);
+void print_extended_topology_v2(fmt::memory_buffer& out, const cpu_t& cpu);
 
 void enumerate_deterministic_tlb(cpu_t& cpu);
 void print_deterministic_tlb(fmt::memory_buffer& out, const cpu_t& cpu);

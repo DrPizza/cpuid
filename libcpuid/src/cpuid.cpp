@@ -142,15 +142,17 @@ model_t get_model(vendor_type vendor, const register_set_t& regs) noexcept {
 	return model;
 }
 
-uint8_t get_local_apic_id(const register_set_t& regs) noexcept {
-	const id_info_t b = bit_cast<decltype(b)>(regs[ebx]);
-	return b.local_apic_id;
+uint8_t get_initial_apic_id(const cpu_t& cpu) noexcept {
+	const id_info_t b = bit_cast<decltype(b)>(cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main)[ebx]);
+	return b.initial_apic_id;
 }
 
 uint32_t get_apic_id(const cpu_t& cpu) {
 	switch(cpu.vendor & any_silicon) {
 	case intel:
-		if(cpu.leaves.find(leaf_type::extended_topology) != cpu.leaves.end()) {
+		if(cpu.leaves.find(leaf_type::extended_topology_v2) != cpu.leaves.end()) {
+			return cpu.leaves.at(leaf_type::extended_topology_v2).at(subleaf_type::main).at(edx);
+		} else if(cpu.leaves.find(leaf_type::extended_topology) != cpu.leaves.end()) {
 			return cpu.leaves.at(leaf_type::extended_topology).at(subleaf_type::main).at(edx);
 		}
 		break;
@@ -162,7 +164,7 @@ uint32_t get_apic_id(const cpu_t& cpu) {
 	default:
 		break;
 	}
-	return get_local_apic_id(cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main));
+	return get_initial_apic_id(cpu);
 }
 
 using leaf_print = void(*)(fmt::memory_buffer& out, const cpu_t& cpu);
@@ -228,6 +230,10 @@ const std::multimap<leaf_type, leaf_descriptor_t> descriptors = {
 	{ leaf_type::reserved_6                     , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_type::reserved_7                     , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_type::pconfig                        , { any                    , enumerate_pconfig              , print_pconfig                        , { leaf_type::extended_features              , subleaf_type::main, edx, 0x0004'0000_u32 } } },
+	{ leaf_type::reserved_8                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::reserved_9                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::reserved_10                    , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::extended_topology_v2           , { intel                  , enumerate_extended_topology_v2 , print_extended_topology_v2           , {} } },
 
 	{ leaf_type::hypervisor_limit               , { any                    , nullptr                        , print_hypervisor_limit               , {} } },
 	{ leaf_type::hyper_v_signature              , { hyper_v                , nullptr                        , print_hyper_v_signature              , {} } },
@@ -264,7 +270,7 @@ const std::multimap<leaf_type, leaf_descriptor_t> descriptors = {
 	{ leaf_type::l2_cache_identifiers           , { intel | amd            , nullptr                        , print_l2_cache_tlb                   , {} } },
 	{ leaf_type::ras_advanced_power_management  , { intel | amd            , nullptr                        , print_ras_advanced_power_management  , {} } },
 	{ leaf_type::address_limits                 , { intel | amd            , nullptr                        , print_address_limits                 , {} } },
-	{ leaf_type::reserved_8                     , { any                    , enumerate_null                 , print_null                           , {} } },
+	{ leaf_type::reserved_11                    , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_type::secure_virtual_machine         , {         amd            , nullptr                        , print_secure_virtual_machine         , { leaf_type::extended_signature_and_features, subleaf_type::main, ecx, 0x0000'0004_u32 } } },
 	{ leaf_type::extended_reserved_1            , { any                    , enumerate_null                 , print_null                           , {} } },
 	{ leaf_type::extended_reserved_2            , { any                    , enumerate_null                 , print_null                           , {} } },
@@ -559,6 +565,9 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 				}
 			}
 		}
+		break;
+	case file_format::cpuinfo:
+		throw std::runtime_error("/proc/cpuinfo is not allowed as an input format");
 		break;
 	}
 
@@ -955,6 +964,511 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 		}
 		break;
 	case file_format::instlat:
+		throw std::runtime_error("instlatx64 is not allowed as an output format");
+		break;
+	case file_format::cpuinfo:
+		{
+			system_t system = build_topology(logical_cpus);
+
+			std::uint32_t count = 0_u32;
+			for(const auto& c : logical_cpus) {
+				const auto& cpu = c.second;
+				const auto get_vendor_id = [&] () {
+					const register_set_t& regs = cpu.leaves.at(leaf_type::basic_info).at(subleaf_type::main);
+					const std::array<char, 12> vndr = bit_cast<decltype(vndr)>(
+						std::array<std::uint32_t, 3> {
+							regs[ebx],
+							regs[edx],
+							regs[ecx]
+						}
+					);
+					return vndr;
+				};
+
+				const auto get_brand_string = [&] () {
+					const std::array<char, 48> brand = bit_cast<decltype(brand)>(
+						std::array<register_set_t, 3> {
+							cpu.leaves.at(leaf_type::brand_string_0).at(subleaf_type::main),
+							cpu.leaves.at(leaf_type::brand_string_1).at(subleaf_type::main),
+							cpu.leaves.at(leaf_type::brand_string_2).at(subleaf_type::main)
+						}
+					);
+					return brand;
+				};
+
+				const auto get_mhz = [&] () {
+					switch(cpu.vendor & vendor_type::any_silicon) {
+					case vendor_type::intel:
+						{
+							if(cpu.leaves.find(leaf_type::processor_frequency) != cpu.leaves.end()) {
+								const register_set_t& regs = cpu.leaves.at(leaf_type::processor_frequency).at(subleaf_type::main);
+								struct frequency_t
+								{
+									std::uint32_t frequency : 16;
+									std::uint32_t reserved_1 : 16;
+								};
+
+								const frequency_t a = bit_cast<decltype(a)>(regs[eax]);
+								return a.frequency;
+							}
+						}
+						break;
+					case vendor_type::amd:
+						break;
+					}
+					return 0_u32;
+				};
+
+				const auto get_cache_size = [&] () {
+					std::map<std::uint32_t, std::uint32_t> max_sizes;
+					for(const auto& cache : system.all_caches) {
+						max_sizes[cache.level] = std::max(max_sizes[cache.level], cache.total_size);
+					}
+					return max_sizes.empty() ? 0_u32 : std::prev(max_sizes.end())->second;
+				};
+
+				const auto get_core_id = [&] () {
+					for(const auto& core : system.all_cores) {
+						if(core.full_apic_id == cpu.apic_id) {
+							return core.physical_core_id;
+						}
+					}
+					return 0_u32;
+				};
+
+				const auto get_package_id = [&] () {
+					for(const auto& core : system.all_cores) {
+						if(core.full_apic_id == cpu.apic_id) {
+							return core.package_id;
+						}
+					}
+					return 0_u32;
+				};
+
+				const auto get_logical_core_count = [&] () {
+					const std::uint32_t package_id = get_package_id();
+					std::uint32_t logicals = 0_u32;
+					for(const auto& core : system.all_cores) {
+						if(core.package_id == package_id) {
+							++logicals;
+						}
+					}
+					return logicals;
+				};
+
+				const auto has_feature = [&] (leaf_type leaf, subleaf_type subleaf, register_type reg, std::uint32_t bit) {
+					if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
+						if(cpu.leaves.at(leaf).find(subleaf) != cpu.leaves.at(leaf).end()) {
+							if(cpu.leaves.at(leaf).at(subleaf)[reg] & (1_u32 << bit)) {
+								return true;
+							}
+						}
+					}
+					return false;
+					};
+
+				const auto get_feature = [&] (leaf_type leaf, register_type reg, std::uint32_t bit, const char* name) {
+					return has_feature(leaf, subleaf_type::main, reg, bit) ? name : "";
+				};
+
+				const auto get_feature_ext = [&] (leaf_type leaf, subleaf_type subleaf, register_type reg, std::uint32_t bit, const char* name) {
+					return has_feature(leaf, subleaf, reg, bit) ? name : "";
+				};
+
+				const auto get_flags = [&] () {
+					std::string flags;
+					flags += get_feature(leaf_type::version_info, edx, 0_u32, "fpu ");
+					flags += get_feature(leaf_type::version_info, edx, 1_u32, "vme ");
+					flags += get_feature(leaf_type::version_info, edx, 2_u32, "de ");
+					flags += get_feature(leaf_type::version_info, edx, 3_u32, "pse ");
+					flags += get_feature(leaf_type::version_info, edx, 4_u32, "tsc ");
+					flags += get_feature(leaf_type::version_info, edx, 5_u32, "msr ");
+					flags += get_feature(leaf_type::version_info, edx, 6_u32, "pae ");
+					flags += get_feature(leaf_type::version_info, edx, 7_u32, "mce ");
+					flags += get_feature(leaf_type::version_info, edx, 8_u32, "cx8 ");
+					flags += get_feature(leaf_type::version_info, edx, 9_u32, "apic ");
+					flags += get_feature(leaf_type::version_info, edx, 11_u32, "sep ");
+					flags += get_feature(leaf_type::version_info, edx, 12_u32, "mtrr ");
+					flags += get_feature(leaf_type::version_info, edx, 13_u32, "pge ");
+					flags += get_feature(leaf_type::version_info, edx, 14_u32, "mca ");
+					flags += get_feature(leaf_type::version_info, edx, 15_u32, "cmov ");
+					flags += get_feature(leaf_type::version_info, edx, 16_u32, "pat ");
+					flags += get_feature(leaf_type::version_info, edx, 17_u32, "pse36 ");
+					flags += get_feature(leaf_type::version_info, edx, 18_u32, "pn ");
+					flags += get_feature(leaf_type::version_info, edx, 19_u32, "clflush ");
+					flags += get_feature(leaf_type::version_info, edx, 21_u32, "dts ");
+					flags += get_feature(leaf_type::version_info, edx, 22_u32, "acpi ");
+					flags += get_feature(leaf_type::version_info, edx, 23_u32, "mmx ");
+					flags += get_feature(leaf_type::version_info, edx, 24_u32, "fxsr ");
+					flags += get_feature(leaf_type::version_info, edx, 25_u32, "sse ");
+					flags += get_feature(leaf_type::version_info, edx, 26_u32, "sse2 ");
+					flags += get_feature(leaf_type::version_info, edx, 27_u32, "ss ");
+					flags += get_feature(leaf_type::version_info, edx, 28_u32, "ht ");
+					flags += get_feature(leaf_type::version_info, edx, 29_u32, "tm ");
+					flags += get_feature(leaf_type::version_info, edx, 30_u32, "ia64 ");
+					flags += get_feature(leaf_type::version_info, edx, 31_u32, "pbe ");
+
+					flags += get_feature(leaf_type::extended_signature_and_features, edx, 11_u32, "syscall ");
+					flags += get_feature(leaf_type::extended_signature_and_features, edx, 19_u32, "mp ");
+					flags += get_feature(leaf_type::extended_signature_and_features, edx, 20_u32, "nx ");
+					flags += get_feature(leaf_type::extended_signature_and_features, edx, 22_u32, "mmxext ");
+					flags += get_feature(leaf_type::extended_signature_and_features, edx, 25_u32, "fxsr_opt ");
+					flags += get_feature(leaf_type::extended_signature_and_features, edx, 26_u32, "pdpe1gb ");
+					flags += get_feature(leaf_type::extended_signature_and_features, edx, 27_u32, "rdtscp ");
+					flags += get_feature(leaf_type::extended_signature_and_features, edx, 29_u32, "lm ");
+					flags += get_feature(leaf_type::extended_signature_and_features, edx, 30_u32, "3dnowext ");
+					flags += get_feature(leaf_type::extended_signature_and_features, edx, 31_u32, "3dnow ");
+
+					bool constant_tsc = false;
+					bool nonstop_tsc = false;
+					bool nonstop_tsc_s3 = false;
+					bool tsc_reliable = false;
+					bool tsc_known_freq = false;
+					bool always_running_timer = false;
+
+					const auto get_tsc_info = [&] () {
+						if(has_feature(leaf_type::ras_advanced_power_management, subleaf_type::main, edx, 8)) {
+							constant_tsc = true;
+							nonstop_tsc = true;
+						}
+						if(cpu.vendor & intel) {
+							if((cpu.model.family == 0xf && cpu.model.model >= 0x3)
+							|| (cpu.model.family == 0x6 && cpu.model.model >= 0xe)) {
+								constant_tsc = true;
+							}
+							if(cpu.model.family == 0x6 && (cpu.model.model == 0x27 || cpu.model.model == 0x35 || cpu.model.model == 0x4a)) {
+								nonstop_tsc_s3 = true;
+							}
+							if(cpu.model.family == 0x6 && cpu.model.model == 0x5c) {
+								tsc_reliable = true;
+							}
+							if(cpu.leaves.find(leaf_type::time_stamp_counter) != cpu.leaves.end()) {
+								if(cpu.leaves.at(leaf_type::time_stamp_counter).at(subleaf_type::main)[ecx] != 0_u32) {
+									tsc_known_freq = true;
+								}
+								if(cpu.model.model == 0x4e
+								|| cpu.model.model == 0x5e
+								|| cpu.model.model == 0x8e
+								|| cpu.model.model == 0x9e
+								|| cpu.model.model == 0x5f
+								|| cpu.model.model == 0x5c) {
+									tsc_known_freq = true;
+								}
+								if(!has_feature(leaf_type::version_info, subleaf_type::main, ecx, 31)
+								&& nonstop_tsc
+								&&  has_feature(leaf_type::extended_features, subleaf_type::main, ebx, 1)) {
+									always_running_timer = true;
+								}
+							}
+						}
+					};
+
+					const auto get_rep_good = [&] () {
+						switch(cpu.vendor & vendor_type::any_silicon) {
+						case intel:
+							if(cpu.model.family == 0x6) {
+								return true;
+							}
+							break;
+						case amd:
+							if(cpu.model.family >= 0x10) {
+								return true;
+							}
+							const std::uint32_t a = cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main)[eax];
+							if(a >= 0x0f58 || (0x0f48 <= a && a < 0x0f50)) {
+								return true;
+							}
+							break;
+						}
+						return false;
+					};
+
+					const auto get_amd_dcm = [&] () {
+						if(cpu.vendor & vendor_type::amd) {
+							if(cpu.leaves.find(leaf_type::extended_apic) != cpu.leaves.end()) {
+								const register_set_t& regs = cpu.leaves.at(leaf_type::extended_apic).at(subleaf_type::main);
+
+								const struct
+								{
+									std::uint32_t node_id             : 8;
+									std::uint32_t nodes_per_processor : 3;
+									std::uint32_t reserved_1          : 21;
+								} c = bit_cast<decltype(c)>(regs[ecx]);
+
+								return c.nodes_per_processor > 1;
+							}
+						}
+						return false;
+					};
+
+					const bool arch_perfmon = cpu.leaves.find(leaf_type::performance_monitoring) != cpu.leaves.end()
+					                       && (((cpu.leaves.at(leaf_type::performance_monitoring).at(subleaf_type::main)[eax] >> 0_u32) & 0xff_u32) != 0_u32)
+					                       && (((cpu.leaves.at(leaf_type::performance_monitoring).at(subleaf_type::main)[eax] >> 8_u32) & 0xff_u32) != 0_u32);
+					const bool rep_good = get_rep_good();
+					const bool acc_power = has_feature(leaf_type::ras_advanced_power_management, subleaf_type::main, edx, 12);
+					const bool xtopology = cpu.leaves.find(leaf_type::extended_topology) != cpu.leaves.end();
+					const bool extd_apicid = (cpu.vendor & vendor_type::any_silicon) == vendor_type::amd;
+					const bool amd_dcm = get_amd_dcm();
+
+					get_tsc_info();
+
+					//synthetic features:
+					flags += constant_tsc ? "constant_tsc " : "";
+					// up // never set
+					flags += always_running_timer ? "art " : "";
+					flags += arch_perfmon ? "arch_perfmon " : "";
+					// pebs // needs MSR
+					// bts // needs MSR
+					flags += rep_good ? "rep_good " : "";
+					flags += acc_power ? "acc_power " : "";
+					flags += "nopl "; // always set
+					flags += xtopology ? "xtopology " : "";
+					flags += tsc_reliable ? "tsc_reliable " : "";
+					flags += nonstop_tsc  ? "nonstop_tsc " : "";
+					flags += "cpuid "; // always set
+					flags += extd_apicid ? "extd_apicid " : "";
+					flags += amd_dcm ? "amd_dcm " : "";
+					flags += get_feature(leaf_type::thermal_and_power, ecx, 0_u32, "aperfmperf ");
+					flags += nonstop_tsc_s3 ? "nonstop_tsc_s3 " : "";
+					flags += tsc_known_freq ? "tsc_known_freq " : "";
+
+					flags += get_feature(leaf_type::version_info, ecx, 0_u32, "pni ");
+					flags += get_feature(leaf_type::version_info, ecx, 1_u32, "pclmulqdq ");
+					flags += get_feature(leaf_type::version_info, ecx, 2_u32, "dtes64 ");
+					flags += get_feature(leaf_type::version_info, ecx, 3_u32, "monitor ");
+					flags += get_feature(leaf_type::version_info, ecx, 4_u32, "ds_cpl ");
+					flags += get_feature(leaf_type::version_info, ecx, 5_u32, "vmx ");
+					flags += get_feature(leaf_type::version_info, ecx, 6_u32, "smx ");
+					flags += get_feature(leaf_type::version_info, ecx, 7_u32, "est ");
+					flags += get_feature(leaf_type::version_info, ecx, 8_u32, "tm2 ");
+					flags += get_feature(leaf_type::version_info, ecx, 9_u32, "ssse3 ");
+					flags += get_feature(leaf_type::version_info, ecx, 10_u32, "cid ");
+					flags += get_feature(leaf_type::version_info, ecx, 11_u32, "sdbg ");
+					flags += get_feature(leaf_type::version_info, ecx, 12_u32, "fma ");
+					flags += get_feature(leaf_type::version_info, ecx, 13_u32, "cx16 ");
+					flags += get_feature(leaf_type::version_info, ecx, 14_u32, "xtpr ");
+					flags += get_feature(leaf_type::version_info, ecx, 15_u32, "pdcm ");
+					flags += get_feature(leaf_type::version_info, ecx, 17_u32, "pcid ");
+					flags += get_feature(leaf_type::version_info, ecx, 18_u32, "dca ");
+					flags += get_feature(leaf_type::version_info, ecx, 19_u32, "sse4_1 ");
+					flags += get_feature(leaf_type::version_info, ecx, 20_u32, "sse4_2 ");
+					flags += get_feature(leaf_type::version_info, ecx, 21_u32, "x2apic ");
+					flags += get_feature(leaf_type::version_info, ecx, 22_u32, "movbe ");
+					flags += get_feature(leaf_type::version_info, ecx, 23_u32, "popcnt ");
+					flags += get_feature(leaf_type::version_info, ecx, 24_u32, "tsc_deadline_timer ");
+					flags += get_feature(leaf_type::version_info, ecx, 25_u32, "aes ");
+					flags += get_feature(leaf_type::version_info, ecx, 26_u32, "xsave ");
+					flags += get_feature(leaf_type::version_info, ecx, 28_u32, "avx ");
+					flags += get_feature(leaf_type::version_info, ecx, 29_u32, "f16c ");
+					flags += get_feature(leaf_type::version_info, ecx, 30_u32, "rdrand ");
+					flags += get_feature(leaf_type::version_info, ecx, 31_u32, "hypervisor ");
+
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 0_u32, "lahf_lm ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 1_u32, "cmp_legacy ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 2_u32, "svm ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 3_u32, "extapic ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 4_u32, "cr8_legacy ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 5_u32, "abm ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 6_u32, "sse4a ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 7_u32, "misalignsse ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 8_u32, "3dnowprefetch ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 9_u32, "osvw ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 10_u32, "ibs ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 11_u32, "xop ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 12_u32, "skinit ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 13_u32, "wdt ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 15_u32, "lwp ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 16_u32, "fma4 ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 17_u32, "tce ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 19_u32, "nodeid_msr ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 21_u32, "tbm ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 22_u32, "topoext ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 23_u32, "perfctr_core ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 24_u32, "perfctr_nb ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 26_u32, "bpext ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 27_u32, "ptsc ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 28_u32, "perfctr_llc ");
+					flags += get_feature(leaf_type::extended_signature_and_features, ecx, 29_u32, "mwaitx ");
+
+					//scattered features:
+
+					const auto get_ring3mwait = [&] () {
+						if(cpu.vendor & vendor_type::intel) {
+							if(cpu.model.family == 0x6
+							&& (cpu.model.model == 0x57 || cpu.model.model == 0x85)) {
+								return true;
+							}
+						}
+						return false;
+					};
+
+					const bool ring3mwait = get_ring3mwait();
+
+					flags += ring3mwait ? "ring3mwait " : "";
+					// cpuid_fault // needs MSR
+					flags += get_feature(leaf_type::ras_advanced_power_management, edx, 9_u32, "cpb ");
+					flags += get_feature(leaf_type::thermal_and_power, ecx, 3_u32, "epb ");
+					flags += get_feature(leaf_type::rdt_allocation, ebx, 1_u32, "cat_l3 ");
+					flags += get_feature(leaf_type::rdt_allocation, ebx, 2_u32, "cat_l2 ");
+					flags += get_feature_ext(leaf_type::rdt_allocation, subleaf_type::rdt_cat_l3, ecx, 2_u32, "cdp_l3 ");
+					flags += get_feature(leaf_type::extended_features, ebx, 10_u32, "invpcid_single "); // if invpcid is set, invpcid_single is also set
+					flags += get_feature(leaf_type::ras_advanced_power_management, edx, 7_u32, "hw_pstate ");
+					flags += get_feature(leaf_type::ras_advanced_power_management, edx, 11_u32, "proc_feedback ");
+					flags += get_feature(leaf_type::encrypted_memory, eax, 0_u32, "sme ");
+					// pti
+					// intel_ppin
+					flags += get_feature_ext(leaf_type::rdt_allocation, subleaf_type::rdt_cat_l2, ecx, 2_u32, "cdp_l2 ");
+					// ssbd
+					flags += get_feature(leaf_type::rdt_allocation, ebx, 3_u32, "mba ");
+					flags += get_feature(leaf_type::address_limits, ebx, 6_u32, "mba ");
+					flags += get_feature(leaf_type::encrypted_memory, eax, 1_u32, "sev ");
+					// ibrs
+					// ibpb
+					// stibp
+					// ibrs_enhanced
+
+					//synthetic virtualization features:
+					// tpr_shadow
+					// vnmi
+					// flexpriority
+					// ept
+					// vpid
+					// vmmcall
+					// ept_ad
+
+					flags += get_feature(leaf_type::extended_features, ebx, 0_u32, "fsgsbase ");
+					flags += get_feature(leaf_type::extended_features, ebx, 1_u32, "tsc_adjust ");
+					flags += get_feature(leaf_type::extended_features, ebx, 2_u32, "sgx ");
+					flags += get_feature(leaf_type::extended_features, ebx, 3_u32, "bmi1 ");
+					flags += get_feature(leaf_type::extended_features, ebx, 4_u32, "hle ");
+					flags += get_feature(leaf_type::extended_features, ebx, 5_u32, "avx2 ");
+					flags += get_feature(leaf_type::extended_features, ebx, 7_u32, "smep ");
+					flags += get_feature(leaf_type::extended_features, ebx, 8_u32, "bmi2 ");
+					flags += get_feature(leaf_type::extended_features, ebx, 9_u32, "erms ");
+					flags += get_feature(leaf_type::extended_features, ebx, 10_u32, "invpcid ");
+					flags += get_feature(leaf_type::extended_features, ebx, 11_u32, "rtm ");
+					flags += get_feature(leaf_type::extended_features, ebx, 12_u32, "cqm ");
+					flags += get_feature(leaf_type::extended_features, ebx, 14_u32, "mpx ");
+					flags += get_feature(leaf_type::extended_features, ebx, 15_u32, "rdt_a ");
+					flags += get_feature(leaf_type::extended_features, ebx, 16_u32, "avx512f ");
+					flags += get_feature(leaf_type::extended_features, ebx, 17_u32, "avx512dq ");
+					flags += get_feature(leaf_type::extended_features, ebx, 18_u32, "rdseed ");
+					flags += get_feature(leaf_type::extended_features, ebx, 19_u32, "adx ");
+					flags += get_feature(leaf_type::extended_features, ebx, 20_u32, "smap ");
+					flags += get_feature(leaf_type::extended_features, ebx, 21_u32, "avx512ifma ");
+					flags += get_feature(leaf_type::extended_features, ebx, 23_u32, "clflushopt ");
+					flags += get_feature(leaf_type::extended_features, ebx, 24_u32, "clwb ");
+					flags += get_feature(leaf_type::extended_features, ebx, 25_u32, "intel_pt ");
+					flags += get_feature(leaf_type::extended_features, ebx, 26_u32, "avx512pf ");
+					flags += get_feature(leaf_type::extended_features, ebx, 27_u32, "avx512er ");
+					flags += get_feature(leaf_type::extended_features, ebx, 28_u32, "avx512cd ");
+					flags += get_feature(leaf_type::extended_features, ebx, 29_u32, "sha_ni ");
+					flags += get_feature(leaf_type::extended_features, ebx, 30_u32, "avs512bw ");
+					flags += get_feature(leaf_type::extended_features, ebx, 31_u32, "avs512vl ");
+
+					flags += get_feature(leaf_type::extended_state, eax, 0_u32, "xsaveopt ");
+					flags += get_feature(leaf_type::extended_state, eax, 1_u32, "xsavec ");
+					flags += get_feature(leaf_type::extended_state, eax, 2_u32, "xgetbv1 ");
+					flags += get_feature(leaf_type::extended_state, eax, 3_u32, "xsaves ");
+
+					flags += get_feature(leaf_type::rdt_monitoring, edx, 0_u32, "cqm_occup_llc ");
+					flags += get_feature(leaf_type::rdt_monitoring, edx, 1_u32, "cqm_mbm_total ");
+					flags += get_feature(leaf_type::rdt_monitoring, edx, 2_u32, "cqm_mbm_local ");
+
+					flags += get_feature(leaf_type::address_limits, ebx, 0_u32, "clzero ");
+					flags += get_feature(leaf_type::address_limits, ebx, 1_u32, "irperf ");
+					flags += get_feature(leaf_type::address_limits, ebx, 2_u32, "xsaveerptr ");
+					flags += get_feature(leaf_type::address_limits, ebx, 9_u32, "wbnoinvd ");
+					flags += get_feature(leaf_type::address_limits, ebx, 25_u32, "virt_ssbd ");
+
+					flags += get_feature(leaf_type::thermal_and_power, eax, 0_u32, "dtherm ");
+					flags += get_feature(leaf_type::thermal_and_power, eax, 1_u32, "ida ");
+					flags += get_feature(leaf_type::thermal_and_power, eax, 2_u32, "arat ");
+					flags += get_feature(leaf_type::thermal_and_power, eax, 4_u32, "pln ");
+					flags += get_feature(leaf_type::thermal_and_power, eax, 6_u32, "pts ");
+					flags += get_feature(leaf_type::thermal_and_power, eax, 7_u32, "hwp ");
+					flags += get_feature(leaf_type::thermal_and_power, eax, 8_u32, "hwp_notify ");
+					flags += get_feature(leaf_type::thermal_and_power, eax, 9_u32, "hwp_act_window ");
+					flags += get_feature(leaf_type::thermal_and_power, eax, 10_u32, "hwp_epp ");
+					flags += get_feature(leaf_type::thermal_and_power, eax, 11_u32, "hpw_pkg_req ");
+
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 0_u32, "npt ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 1_u32, "lbrv ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 2_u32, "svm_lock ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 3_u32, "nrip_save ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 4_u32, "tsc_scale ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 5_u32, "vmcb_clean ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 6_u32, "flushbyasid ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 7_u32, "decodeassists ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 10_u32, "pausefilter ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 12_u32, "pfthreshold ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 13_u32, "avic ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 15_u32, "v_vmsave_vmload ");
+					flags += get_feature(leaf_type::secure_virtual_machine, edx, 16_u32, "vgif ");
+
+					flags += get_feature(leaf_type::extended_features, ecx, 1_u32, "avx512bmi ");
+					flags += get_feature(leaf_type::extended_features, ecx, 2_u32, "umip ");
+					flags += get_feature(leaf_type::extended_features, ecx, 3_u32, "pku ");
+					flags += get_feature(leaf_type::extended_features, ecx, 4_u32, "ospke ");
+					flags += get_feature(leaf_type::extended_features, ecx, 6_u32, "avx512_vbmi2 ");
+					flags += get_feature(leaf_type::extended_features, ecx, 8_u32, "gfni ");
+					flags += get_feature(leaf_type::extended_features, ecx, 9_u32, "vaes ");
+					flags += get_feature(leaf_type::extended_features, ecx, 10_u32, "vpclmulqdq ");
+					flags += get_feature(leaf_type::extended_features, ecx, 11_u32, "avx512_vnni ");
+					flags += get_feature(leaf_type::extended_features, ecx, 12_u32, "avx512_bitalg ");
+					flags += get_feature(leaf_type::extended_features, ecx, 13_u32, "tme ");
+					flags += get_feature(leaf_type::extended_features, ecx, 14_u32, "avx512_vpopcntdq ");
+					flags += get_feature(leaf_type::extended_features, ecx, 16_u32, "la57 ");
+					flags += get_feature(leaf_type::extended_features, ecx, 22_u32, "rdpid ");
+					flags += get_feature(leaf_type::extended_features, ecx, 25_u32, "cldemote ");
+					flags += get_feature(leaf_type::extended_features, ecx, 27_u32, "movdiri ");
+					flags += get_feature(leaf_type::extended_features, ecx, 28_u32, "movdir64b ");
+					flags += get_feature(leaf_type::extended_features, ecx, 30_u32, "sgx_lc ");
+
+					flags += get_feature(leaf_type::ras_advanced_power_management, ebx, 0_u32, "overflow_recov ");
+					flags += get_feature(leaf_type::ras_advanced_power_management, ebx, 1_u32, "succor ");
+					flags += get_feature(leaf_type::ras_advanced_power_management, ebx, 3_u32, "smca ");
+
+					flags += get_feature(leaf_type::extended_features, edx, 2_u32, "avx512_4vnniw ");
+					flags += get_feature(leaf_type::extended_features, edx, 3_u32, "avx512_4fmaps ");
+					flags += get_feature(leaf_type::extended_features, edx, 18_u32, "pconfig ");
+					flags += get_feature(leaf_type::extended_features, edx, 28_u32, "flush_l1d ");
+					flags += get_feature(leaf_type::extended_features, edx, 29_u32, "arch_capabilities ");
+
+					return flags;
+				};
+
+				format_to(out, "processor       : {:d}\n", count);
+				format_to(out, "vendor_id       : {}\n", get_vendor_id());
+				format_to(out, "cpu family      : {:d}\n", cpu.model.family);
+				format_to(out, "model           : {:d}\n", cpu.model.model);
+				format_to(out, "model name      : {}\n", get_brand_string());
+				format_to(out, "stepping        : {:d}\n", cpu.model.stepping);
+				format_to(out, "microcode       : {:#x}\n", 0xffff'ffff_u32);
+				format_to(out, "cpu MHz         : {:d} MHz\n", get_mhz());
+				format_to(out, "cache size      : {:d} KB\n", get_cache_size() / 1'024_u32);
+				format_to(out, "physical id     : {:d}\n", get_package_id());
+				format_to(out, "siblings        : {:d}\n", get_logical_core_count());
+				format_to(out, "core id         : {:d}\n", get_core_id());
+				format_to(out, "cpu cores       : {:d}\n", system.packages[get_package_id()].physical_cores.size());
+				format_to(out, "apicid          : {:d}\n", get_apic_id(cpu));
+				format_to(out, "initial apicid  : {:d}\n", get_initial_apic_id(cpu));
+				format_to(out, "fpu             : {:s}\n", get_feature(leaf_type::version_info, edx, 0_u32, "yes"));
+				format_to(out, "fpu_exception   : {:s}\n", get_feature(leaf_type::version_info, edx, 0_u32, "yes"));
+				format_to(out, "cpuid level     : {:d}\n", cpu.leaves.at(leaf_type::basic_info).at(subleaf_type::main)[eax]);
+				format_to(out, "wp              : yes\n");
+				format_to(out, "flags           : {:s}\n", get_flags());
+				format_to(out, "bugs            : \n");
+				format_to(out, "bogomips        : \n");
+				format_to(out, "TLB size        : \n");
+				format_to(out, "clflush size    : \n");
+				format_to(out, "cache_alignment : \n");
+				format_to(out, "address sizes   : \n");
+				format_to(out, "power management: \n");
+				format_to(out, "\n");
+				++count;
+			}
+		}
 		break;
 	}
 }
