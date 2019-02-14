@@ -527,6 +527,7 @@ const feature_map_t all_features = {
 				{         amd            , 0x0000'0004_u32, "VID"                   , "Voltage ID control"                      },
 				{         amd            , 0x0000'0008_u32, "TTP"                   , "THERMTRIP"                               },
 				{         amd            , 0x0000'0010_u32, "TM"                    , "Hardware thermal control (HTC)"          },
+				{         amd            , 0x0000'0020_u32, "STC"                   , "Software thermal control (HTC)"          },
 				{         amd            , 0x0000'0040_u32, "100MHzSteps"           , "100 MHz multiplier control"              },
 				{         amd            , 0x0000'0080_u32, "HwPstate"              , "Hardware P-state control"                },
 				{ intel | amd            , 0x0000'0100_u32, "TscInvariant"          , "TSC invariant"                           },

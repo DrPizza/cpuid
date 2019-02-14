@@ -1127,7 +1127,7 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 					bool always_running_timer = false;
 
 					const auto get_tsc_info = [&] () {
-						if(has_feature(leaf_type::ras_advanced_power_management, subleaf_type::main, edx, 8)) {
+						if(has_feature(leaf_type::ras_advanced_power_management, subleaf_type::main, edx, 8_u32)) {
 							constant_tsc = true;
 							nonstop_tsc = true;
 						}
@@ -1154,9 +1154,9 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 								|| cpu.model.model == 0x5c) {
 									tsc_known_freq = true;
 								}
-								if(!has_feature(leaf_type::version_info, subleaf_type::main, ecx, 31)
+								if(!has_feature(leaf_type::version_info, subleaf_type::main, ecx, 31_u32)
 								&& nonstop_tsc
-								&&  has_feature(leaf_type::extended_features, subleaf_type::main, ebx, 1)) {
+								&&  has_feature(leaf_type::extended_features, subleaf_type::main, ebx, 1_u32)) {
 									always_running_timer = true;
 								}
 							}
@@ -1205,7 +1205,7 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 					                       && (((cpu.leaves.at(leaf_type::performance_monitoring).at(subleaf_type::main)[eax] >> 0_u32) & 0xff_u32) != 0_u32)
 					                       && (((cpu.leaves.at(leaf_type::performance_monitoring).at(subleaf_type::main)[eax] >> 8_u32) & 0xff_u32) != 0_u32);
 					const bool rep_good = get_rep_good();
-					const bool acc_power = has_feature(leaf_type::ras_advanced_power_management, subleaf_type::main, edx, 12);
+					const bool acc_power = has_feature(leaf_type::ras_advanced_power_management, subleaf_type::main, edx, 12_u32);
 					const bool xtopology = cpu.leaves.find(leaf_type::extended_topology) != cpu.leaves.end();
 					const bool extd_apicid = (cpu.vendor & vendor_type::any_silicon) == vendor_type::amd;
 					const bool amd_dcm = get_amd_dcm();
@@ -1302,6 +1302,38 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 						return false;
 					};
 
+					bool ssbd = false;
+					bool ibrs = false;
+					bool ibpb = false;
+					bool stibp = false;
+
+					const auto get_speculative_controls = [&] () {
+						if(has_feature(leaf_type::extended_features, subleaf_type::main, edx, 26_u32)) {
+							ibrs = true;
+							ibpb = true;
+						}
+						if(has_feature(leaf_type::extended_features, subleaf_type::main, edx, 27_u32)) {
+							stibp = true;
+						}
+						if(has_feature(leaf_type::extended_features, subleaf_type::main, edx, 31_u32)
+						|| has_feature(leaf_type::address_limits, subleaf_type::main, ebx, 25_u32)) {
+							ssbd = true;
+						}
+						if(has_feature(leaf_type::address_limits, subleaf_type::main, ebx, 14_u32)) {
+							ibrs = true;
+						}
+						if(has_feature(leaf_type::address_limits, subleaf_type::main, ebx, 12_u32)) {
+							ibpb = true;
+						}
+						if(has_feature(leaf_type::address_limits, subleaf_type::main, ebx, 15_u32)) {
+							stibp = true;
+						}
+						if(has_feature(leaf_type::address_limits, subleaf_type::main, ebx, 24_u32)) {
+							ssbd = true;
+						}
+					};
+
+					get_speculative_controls();
 					const bool ring3mwait = get_ring3mwait();
 
 					flags += ring3mwait ? "ring3mwait " : "";
@@ -1315,26 +1347,28 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 					flags += get_feature(leaf_type::ras_advanced_power_management, edx, 7_u32, "hw_pstate ");
 					flags += get_feature(leaf_type::ras_advanced_power_management, edx, 11_u32, "proc_feedback ");
 					flags += get_feature(leaf_type::encrypted_memory, eax, 0_u32, "sme ");
-					// pti
-					// intel_ppin
+					// pti // TODO API call to see if shadow pagetables are enabled
+					// intel_ppin // needs MSR
 					flags += get_feature_ext(leaf_type::rdt_allocation, subleaf_type::rdt_cat_l2, ecx, 2_u32, "cdp_l2 ");
-					// ssbd
+					flags += ssbd ? "ssbd " : "";
 					flags += get_feature(leaf_type::rdt_allocation, ebx, 3_u32, "mba ");
 					flags += get_feature(leaf_type::address_limits, ebx, 6_u32, "mba ");
 					flags += get_feature(leaf_type::encrypted_memory, eax, 1_u32, "sev ");
-					// ibrs
-					// ibpb
-					// stibp
-					// ibrs_enhanced
+					flags += ibrs ? "ibrs " : "";
+					flags += ibpb ? "ibpb " : "";
+					flags += stibp ? "stibp " : "";
+					// ibrs_enhanced // needs MSR
+
+					const bool vmmcall = (cpu.vendor & vendor_type::any_silicon) == vendor_type::amd;
 
 					//synthetic virtualization features:
-					// tpr_shadow
-					// vnmi
-					// flexpriority
-					// ept
-					// vpid
-					// vmmcall
-					// ept_ad
+					// tpr_shadow // needs MSR
+					// vnmi // needs MSR
+					// flexpriority // needs MSR
+					// ept // needs MSR
+					// vpid // needs MSR
+					flags += vmmcall ? "vmmcall " : "";
+					// ept_ad // needs MSR
 
 					flags += get_feature(leaf_type::extended_features, ebx, 0_u32, "fsgsbase ");
 					flags += get_feature(leaf_type::extended_features, ebx, 1_u32, "tsc_adjust ");
@@ -1379,7 +1413,8 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 					flags += get_feature(leaf_type::address_limits, ebx, 1_u32, "irperf ");
 					flags += get_feature(leaf_type::address_limits, ebx, 2_u32, "xsaveerptr ");
 					flags += get_feature(leaf_type::address_limits, ebx, 9_u32, "wbnoinvd ");
-					flags += get_feature(leaf_type::address_limits, ebx, 25_u32, "virt_ssbd ");
+					flags += has_feature(leaf_type::address_limits, subleaf_type::main, ebx, 24_u32) ? "" // amd ssbd suppresses display of virt_ssbd
+					       : get_feature(leaf_type::address_limits, ebx, 25_u32, "virt_ssbd ");
 
 					flags += get_feature(leaf_type::thermal_and_power, eax, 0_u32, "dtherm ");
 					flags += get_feature(leaf_type::thermal_and_power, eax, 1_u32, "ida ");
@@ -1438,6 +1473,192 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 					return flags;
 				};
 
+				const auto get_bugs = [&] () {
+					std::string bugs;
+					
+					const auto get_clflush_monitor = [&] () {
+						if((cpu.vendor & vendor_type::any_silicon) == vendor_type::intel) {
+							if(cpu.model.family == 0x6 && has_feature(leaf_type::version_info, subleaf_type::main, edx, 19_u32)) {
+								if(cpu.model.model == 29 || cpu.model.model == 46 || cpu.model.model == 47) {
+									return true;
+								}
+							}
+						}
+						return false;
+					};
+
+					const auto get_sysret_ss_attrs = [&] () {
+						if((cpu.vendor & vendor_type::any_silicon) == vendor_type::amd) {
+							return true;
+						}
+						return false;
+					};
+
+					const auto get_null_seg = [&] () {
+						if((cpu.vendor & vendor_type::any_silicon) == vendor_type::amd) {
+							return true;
+						}
+						return false;
+					};
+
+					const auto get_monitor = [&] () {
+						if((cpu.vendor & vendor_type::any_silicon) == vendor_type::intel) {
+							if(cpu.model.family == 0x6 && has_feature(leaf_type::version_info, subleaf_type::main, ecx, 3_u32)) {
+								if(cpu.model.model == 0x5c) {
+									return true;
+								}
+							}
+						}
+						return false;
+					};
+
+
+					const bool clflush_monitor = get_clflush_monitor();
+					const bool sysret_ss_attrs = get_sysret_ss_attrs();
+					const bool null_seg = get_null_seg();
+					const bool monitor = get_monitor();
+
+					bool cpu_meltdown = false;
+					bool spectre_v1 = false;
+					bool spectre_v2 = false;
+					bool spec_store_bypass = false;
+					bool l1tf = false;
+
+					const auto get_speculative_bugs = [&] () {
+						// in-order 64-bit Atoms have none of these bugs
+						if((cpu.vendor & vendor_type::any_silicon) == vendor_type::intel) {
+							if(cpu.model.family == 0x6) {
+								if(cpu.model.model == 0x36
+								|| cpu.model.model == 0x27
+								|| cpu.model.model == 0x35
+								|| cpu.model.model == 0x1c
+								|| cpu.model.model == 0x26) {
+									return;
+								}
+							}
+						}
+						spectre_v1 = true;
+						spectre_v2 = true;
+
+						spec_store_bypass = true;
+
+						if((cpu.vendor & vendor_type::any_silicon) == vendor_type::intel) {
+							if(cpu.model.family == 0x6) {
+								if(cpu.model.model == 0x37
+								|| cpu.model.model == 0x4c
+								|| cpu.model.model == 0x4d
+								|| cpu.model.model == 0x4a
+								|| cpu.model.model == 0x0e
+								|| cpu.model.model == 0x57
+								|| cpu.model.model == 0x85) {
+									spec_store_bypass = false;
+								}
+							}
+						}
+						if(has_feature(leaf_type::address_limits, subleaf_type::main, ebx, 26_u32)) {
+							spec_store_bypass = false;
+						}
+						if((cpu.vendor & vendor_type::any_silicon) == vendor_type::amd) {
+							return;
+						}
+						cpu_meltdown = true;
+						if((cpu.vendor & vendor_type::any_silicon) == vendor_type::intel) {
+							if(cpu.model.family == 0x6) {
+								if(cpu.model.model == 0x37
+								|| cpu.model.model == 0x4d
+								|| cpu.model.model == 0x4c
+								|| cpu.model.model == 0x4a
+								|| cpu.model.model == 0x5a
+								|| cpu.model.model == 0x5c
+								|| cpu.model.model == 0x5f
+								|| cpu.model.model == 0x7a
+								|| cpu.model.model == 0x57
+								|| cpu.model.model == 0x85) {
+									return;
+								}
+							}
+						}
+						l1tf = true;
+					};
+
+					get_speculative_bugs();
+
+					// f00f // never
+					// fdiv // never
+					// coma // never
+					// amd_tlb_mmatch // needs MSR
+					// amd_apic_c1e // needs MSR
+					// 11ap // never
+					// fxsave_leak // never
+					bugs += clflush_monitor ? "clflush_monitor " : "";
+					bugs += sysret_ss_attrs ? "sysret_ss_attrs " : "";
+					bugs += null_seg ? "null_seg " : "";
+					// swapgs_fence // never
+					bugs += monitor ? "monitor " : "";
+					// amd_e400 // needs MSR
+					bugs += cpu_meltdown ? "cpu_meltdown " : "";
+					bugs += spectre_v1 ? "spectre_v1 " : "";
+					bugs += spectre_v2 ? "spectre_v2 " : "";
+					bugs += spec_store_bypass ? "spec_store_bypass " : "";
+					bugs += l1tf ? "l1tf " : "";
+
+					return bugs;
+				};
+
+				const auto get_tlb_size = [&] () -> std::uint32_t {
+					if(cpu.leaves.find(leaf_type::l2_cache_identifiers) != cpu.leaves.end()) {
+						const register_set_t& regs = cpu.leaves.at(leaf_type::l2_cache_identifiers).at(subleaf_type::main);
+						struct tlb_element
+						{
+							std::uint16_t entries       : 12;
+							std::uint16_t associativity : 4;
+						};
+
+						struct tlb_info
+						{
+							tlb_element i;
+							tlb_element d;
+						};
+
+						const tlb_info b = bit_cast<decltype(b)>(regs[ebx]); // 4K page
+						return std::uint32_t{ b.i.entries } + std::uint32_t{ b.d.entries };
+					}
+					return 0_u32;
+				};
+
+				const auto get_flush_size = [&] () {
+					const register_set_t& regs = cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main);
+					const id_info_t b = bit_cast<decltype(b)>(regs[ebx]);
+					if(has_feature(leaf_type::version_info, subleaf_type::main, ecx, 19_u32)) {
+						return b.cache_line_size * 8_u32;
+					}
+					return 0_u32;
+				};
+
+				const std::uint32_t tlb_size = get_tlb_size();
+				const std::uint32_t flush_size = get_flush_size();
+
+				std::uint32_t physical_bits = 36_u32;
+				std::uint32_t virtual_bits = 48_u32;
+
+				const auto get_bitness = [&] () {
+					if(cpu.leaves.find(leaf_type::address_limits) != cpu.leaves.end()) {
+						const register_set_t& regs = cpu.leaves.at(leaf_type::address_limits).at(subleaf_type::main);
+						const struct
+						{
+							std::uint32_t physical_address_size : 8;
+							std::uint32_t virtual_address_size  : 8;
+							std::uint32_t guest_physical_size   : 8;
+							std::uint32_t reserved_1            : 8;
+						} a = bit_cast<decltype(a)>(regs[eax]);
+
+						physical_bits = a.physical_address_size;
+						virtual_bits = a.virtual_address_size;
+					}
+				};
+
+				get_bitness();
+
 				format_to(out, "processor       : {:d}\n", count);
 				format_to(out, "vendor_id       : {}\n", get_vendor_id());
 				format_to(out, "cpu family      : {:d}\n", cpu.model.family);
@@ -1458,12 +1679,14 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 				format_to(out, "cpuid level     : {:d}\n", cpu.leaves.at(leaf_type::basic_info).at(subleaf_type::main)[eax]);
 				format_to(out, "wp              : yes\n");
 				format_to(out, "flags           : {:s}\n", get_flags());
-				format_to(out, "bugs            : \n");
+				format_to(out, "bugs            : {:s}\n", get_bugs());
 				format_to(out, "bogomips        : \n");
-				format_to(out, "TLB size        : \n");
-				format_to(out, "clflush size    : \n");
-				format_to(out, "cache_alignment : \n");
-				format_to(out, "address sizes   : \n");
+				if(tlb_size != 0) {
+					format_to(out, "TLB size        : {:d} 4K pages\n", tlb_size);
+				}
+				format_to(out, "clflush size    : {:d}\n", flush_size);
+				format_to(out, "cache_alignment : {:d}\n", flush_size);
+				format_to(out, "address sizes   : {:d} bits physical, {:d} bits virtual\n", physical_bits, virtual_bits);
 				format_to(out, "power management: \n");
 				format_to(out, "\n");
 				++count;
