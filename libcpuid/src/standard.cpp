@@ -734,7 +734,9 @@ void print_time_stamp_counter(fmt::memory_buffer& out, const cpu_t& cpu) {
 		}
 	}
 	format_to(out, "\tNominal core crystal clock/Hz: {:d}\n", crystal_frequency);
-	format_to(out, "\tTSC frequency/Hz: {:d}\n", crystal_frequency * regs[ebx] / regs[eax]);
+	if(regs[eax] != 0_u32) {
+		format_to(out, "\tTSC frequency/Hz: {:d}\n", crystal_frequency * regs[ebx] / regs[eax]);
+	}
 	format_to(out, "\n");
 }
 

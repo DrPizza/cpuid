@@ -177,7 +177,7 @@ const feature_map_t all_features = {
 			}},
 			{ edx, {
 				{ intel                  , 0x0000'0004_u32, "AVX512_4NNIW"      , "AVX512 4-register Neural Network Instructions"                                },
-				{ intel                  , 0x0000'0008_u32, "AVX512_4FMAPS"     , "AVX512 4-register Neural Network Instructions"                                },
+				{ intel                  , 0x0000'0008_u32, "AVX512_4FMAPS"     , "AVX512 4-register Multiply Accumulate Single Precision"                       },
 				{ intel                  , 0x0000'0010_u32, "REPMOVS"           , "Fast short REP MOV"                                                           },
 				{ intel                  , 0x0004'0000_u32, "PCONFIG"           , "Platform configuration for MKTME"                                             },
 				{ intel                  , 0x0400'0000_u32, "IBRS"              , "Indirect Branch Restricted Speculation and Indirect Branch Predictor Barrier" },
