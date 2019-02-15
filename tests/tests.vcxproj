@@ -53,11 +53,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)libcpuid;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)internal;$(SolutionDir)libcpuid\external;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>$(ProjectDir)include;$(SolutionDir)libcpuid;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)internal;$(SolutionDir)libcpuid\external;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -88,9 +88,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\stdafx.h" />
-    <ClInclude Include="include\targetver.h" />
-    <ClInclude Include="include\utility.hpp" />
+    <ClInclude Include="internal\stdafx.h" />
+    <ClInclude Include="internal\targetver.h" />
+    <ClInclude Include="internal\utility.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\stdafx.cpp">

@@ -1,6 +1,6 @@
 ﻿#include "stdafx.h"
 
-#include "cpuid.hpp"
+#include "cpuid/cpuid.hpp"
 #include "cache-and-topology.hpp"
 #include "features.hpp"
 #include "standard.hpp"

@@ -1,7 +1,7 @@
 #ifndef CACHE_AND_TOPOLOGY_HPP
 #define CACHE_AND_TOPOLOGY_HPP
 
-#include "cpuid.hpp"
+#include "cpuid/cpuid.hpp"
 
 #include <map>
 #include <vector>

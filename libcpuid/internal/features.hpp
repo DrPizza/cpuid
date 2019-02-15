@@ -1,7 +1,7 @@
 #ifndef FEATURES_HPP
 #define FEATURES_HPP
 
-#include "cpuid.hpp"
+#include "cpuid/cpuid.hpp"
 
 #include <fmt/format.h>
 

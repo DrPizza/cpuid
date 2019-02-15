@@ -51,12 +51,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>$(ProjectDir)cpuid;$(ProjectDir)include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)internal;$(ProjectDir)external;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>$(ProjectDir)cpuid;$(ProjectDir)include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)internal;$(ProjectDir)external;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -87,15 +87,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\cache-and-topology.hpp" />
-    <ClInclude Include="cpuid\cpuid.hpp" />
-    <ClInclude Include="include\features.hpp" />
-    <ClInclude Include="include\hypervisors.hpp" />
-    <ClInclude Include="include\standard.hpp" />
-    <ClInclude Include="include\stdafx.h" />
-    <ClInclude Include="cpuid\suffixes.hpp" />
-    <ClInclude Include="include\targetver.h" />
-    <ClInclude Include="include\utility.hpp" />
+    <ClInclude Include="internal\cache-and-topology.hpp" />
+    <ClInclude Include="external\cpuid\cpuid.hpp" />
+    <ClInclude Include="internal\features.hpp" />
+    <ClInclude Include="internal\hypervisors.hpp" />
+    <ClInclude Include="internal\standard.hpp" />
+    <ClInclude Include="internal\stdafx.h" />
+    <ClInclude Include="external\cpuid\suffixes.hpp" />
+    <ClInclude Include="internal\targetver.h" />
+    <ClInclude Include="internal\utility.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\cache-and-topology.cpp" />

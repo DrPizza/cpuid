@@ -22,7 +22,7 @@
 
 #include <fmt/format.h>
 
-#include "suffixes.hpp"
+#include "cpuid/suffixes.hpp"
 
 #if !defined(_WIN32)
 

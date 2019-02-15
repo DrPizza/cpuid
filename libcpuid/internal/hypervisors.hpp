@@ -1,7 +1,7 @@
 #ifndef HYPERVISORS_HPP
 #define HYPERVISORS_HPP
 
-#include "cpuid.hpp"
+#include "cpuid/cpuid.hpp"
 
 void print_hypervisor_limit(fmt::memory_buffer& out, const cpu_t& cpu);
 

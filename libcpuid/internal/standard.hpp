@@ -1,7 +1,7 @@
 ﻿#ifndef STANDARD_HPP
 #define STANDARD_HPP
 
-#include "cpuid.hpp"
+#include "cpuid/cpuid.hpp"
 
 void print_basic_info(fmt::memory_buffer& out, const cpu_t& cpu);
 

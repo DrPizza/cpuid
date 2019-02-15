@@ -15,31 +15,31 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\targetver.h">
+    <ClInclude Include="external\cpuid\cpuid.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\stdafx.h">
+    <ClInclude Include="external\cpuid\suffixes.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\cache-and-topology.hpp">
+    <ClInclude Include="internal\cache-and-topology.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\features.hpp">
+    <ClInclude Include="internal\features.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\hypervisors.hpp">
+    <ClInclude Include="internal\hypervisors.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\standard.hpp">
+    <ClInclude Include="internal\standard.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\utility.hpp">
+    <ClInclude Include="internal\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="cpuid\cpuid.hpp">
+    <ClInclude Include="internal\targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="cpuid\suffixes.hpp">
+    <ClInclude Include="internal\utility.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

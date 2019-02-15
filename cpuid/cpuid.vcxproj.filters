@@ -26,16 +26,16 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\docopt.h">
+    <ClInclude Include="internal\docopt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\docopt_private.h">
+    <ClInclude Include="internal\docopt_private.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\docopt_util.h">
+    <ClInclude Include="internal\docopt_util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\stdafx.h">
+    <ClInclude Include="internal\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -15,13 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\stdafx.h">
+    <ClInclude Include="internal\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\targetver.h">
+    <ClInclude Include="internal\targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\utility.hpp">
+    <ClInclude Include="internal\utility.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
