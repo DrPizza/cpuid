@@ -351,7 +351,7 @@ enum struct file_format
 	native,
 	etallen,
 	libcpuid,
-	instlat,
+	aida64,
 	cpuinfo
 };
 

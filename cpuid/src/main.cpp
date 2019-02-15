@@ -15,7 +15,7 @@ Usage:
 
 Input options:
 	--read-dump=<filename>     Read from <filename> rather than the current processors
-	--read-format=<format>     Dump format to read: native, etallen, libcpuid, instlat. [default: native]
+	--read-format=<format>     Dump format to read: native, etallen, libcpuid, aida64. [default: native]
 	--all-cpus                 Show output from every CPU
 	--cpu <id>                 Show output from CPU with APIC ID <id>
 	--single-value <spec>      Print specific flag value, using Intel syntax (e.g. CPUID.01H.EDX.SSE[bit 25]).
@@ -27,7 +27,7 @@ Input options:
 Output options:
 	--raw                      Write unparsed output to screen
 	--write-dump=<filename>    Write unparsed output to <filename>
-	--write-format=<format>    Dump format to write: native, etallen, libcpuid, instlat, cpuinfo. [default: native]
+	--write-format=<format>    Dump format to write: native, etallen, libcpuid, aida64, cpuinfo. [default: native]
 	--no-topology              Don't print the processor and cache topology
 	--only-topology            Only print the processor and cache topology
 	--list-ids                 List all core IDs
@@ -35,6 +35,10 @@ Output options:
 Other options:
 	--help                     Show this text
 	--version                  Show the version
+
+etallen format is dumped by cpuid by etallen (http://etallen.com/cpuid.html)
+libcpuid is dumped by libcpuid by anrieff (https://github.com/anrieff/libcpuid)
+aida64 is dumped by aida64 (https://www.aida64.com)
 
 )";
 
@@ -67,14 +71,18 @@ int main(int argc, char* argv[]) try {
 	if(std::holds_alternative<std::string>(args.at("--read-dump"))) {
 		file_format format = file_format::native;
 		const std::string format_name = boost::to_lower_copy(std::get<std::string>(args.at("--read-format")));
-		if("etallen" == format_name) {
+		if("native" == format_name) {
+			format = file_format::native;
+		} else if("etallen" == format_name) {
 			format = file_format::etallen;
 		} else if("libcpuid" == format_name) {
 			format = file_format::libcpuid;
-		} else if("instlat" == format_name) {
-			format = file_format::instlat;
+		} else if("aida64" == format_name) {
+			format = file_format::aida64;
 		} else if("cpuinfo" == format_name) {
 			format = file_format::cpuinfo;
+		} else {
+			throw std::runtime_error(fmt::format("unknown input format {:s}", format_name));
 		}
 		const std::string filename = std::get<std::string>(args.at("--read-dump"));
 		std::ifstream fin;
@@ -99,23 +107,25 @@ int main(int argc, char* argv[]) try {
 			format_to(out, "{:#04x}\n", p.first);
 		}
 		std::cout << to_string(out) << std::flush;
-		return 0;
+		return EXIT_SUCCESS;
 	}
 
-	if(raw_dump || std::holds_alternative<std::string>(args.at("--write-dump"))) {
+	if(raw_dump || std::holds_alternative<std::string>(args.at("--write-dump")) || std::holds_alternative<std::string>(args.at("--write-format"))) {
 		file_format format = file_format::native;
 		const std::string format_name = boost::to_lower_copy(std::get<std::string>(args.at("--write-format")));
-		if("etallen" == format_name) {
+		if("native" == format_name) {
+			format = file_format::native;
+		} else if("etallen" == format_name) {
 			format = file_format::etallen;
 		} else if("libcpuid" == format_name) {
 			format = file_format::libcpuid;
-		} else if("instlat" == format_name) {
-			format = file_format::instlat;
+		} else if("aida64" == format_name) {
+			format = file_format::aida64;
 		} else if("cpuinfo" == format_name) {
 			format = file_format::cpuinfo;
+		} else {
+			throw std::runtime_error(fmt::format("unknown output format {:s}", format_name));
 		}
-		fmt::memory_buffer out;
-		print_dump(out, logical_cpus, format);
 		std::string filename = "-";
 		if(std::holds_alternative<std::string>(args.at("--write-dump"))) {
 			filename = std::get<std::string>(args.at("--write-dump"));
@@ -127,15 +137,17 @@ int main(int argc, char* argv[]) try {
 				throw std::runtime_error(fmt::format("Could not open {:s} for output", filename));
 			}
 		}
+		fmt::memory_buffer out;
+		print_dump(out, logical_cpus, format);
 		(filename != "-" ? fout : std::cout) << to_string(out) << std::flush;
-		return 0;
+		return EXIT_SUCCESS;
 	}
 
-	std::vector<std::uint32_t> cpu_ids;
+	std::vector<std::uint32_t> chosen_ids;
 
 	if(all_cpus) {
 		for(const auto& p : logical_cpus) {
-			cpu_ids.push_back(p.second.apic_id);
+			chosen_ids.push_back(p.second.apic_id);
 		}
 	} else {
 		const std::uint32_t chosen_id = std::holds_alternative<std::string>(args.at("--cpu")) ? std::stoul(std::get<std::string>(args.at("--cpu")), nullptr, 16)
@@ -143,26 +155,31 @@ int main(int argc, char* argv[]) try {
 		if(logical_cpus.find(chosen_id) == logical_cpus.end()) {
 			throw std::runtime_error(fmt::format("No such CPU ID: {:#04x}\n", chosen_id));
 		}
-		cpu_ids.push_back(chosen_id);
+		chosen_ids.push_back(chosen_id);
+	}
+
+	if(std::holds_alternative<std::string>(args.at("--single-value"))) {
+		const std::string flag_spec_raw = std::get<std::string>(args.at("--single-value"));
+		const flag_spec_t flag_spec = parse_flag_spec(flag_spec_raw);
+		for(const std::uint32_t chosen_id : chosen_ids) {
+			const cpu_t& cpu = logical_cpus.at(chosen_id);
+			fmt::memory_buffer out;
+			print_single_flag(out, cpu, flag_spec);
+			std::cout << to_string(out) << std::flush;
+		}
+		return EXIT_SUCCESS;
 	}
 
 	if(!only_topology) {
-		for(const std::uint32_t chosen_id : cpu_ids) {
+		for(const std::uint32_t chosen_id : chosen_ids) {
 			const cpu_t& cpu = logical_cpus.at(chosen_id);
 			fmt::memory_buffer out;
-			if(std::holds_alternative<std::string>(args.at("--single-value"))) {
-				const std::string flag_spec_raw = std::get<std::string>(args.at("--single-value"));
-				const flag_spec_t flag_spec = parse_flag_spec(flag_spec_raw);
-				print_single_flag(out, cpu, flag_spec);
-			} else {
-				print_leaves(out, cpu, skip_vendor_check, skip_feature_check);
-			}
+			print_leaves(out, cpu, skip_vendor_check, skip_feature_check);
 			std::cout << to_string(out) << std::flush;
 		}
 	}
 
-	if(!std::holds_alternative<std::string>(args.at("--single-value"))
-	&& !no_topology) {
+	if(!no_topology) {
 		fmt::memory_buffer out;
 		system_t machine = build_topology(logical_cpus);
 		print_topology(out, machine);

@@ -380,9 +380,9 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 				if(std::regex_search(line, m, comment_line) || line == "") {
 					continue;
 				} else if(std::regex_search(line, m, data_line)) {
-					const std::uint32_t apic_id =                        std::stoul(m[1].str(), nullptr, 16) ;
-					const leaf_type        leaf    = static_cast<leaf_type   >(std::stoul(m[2].str(), nullptr, 16));
-					const subleaf_type     subleaf = static_cast<subleaf_type>(std::stoul(m[3].str(), nullptr, 16));
+					const std::uint32_t apic_id =                           std::stoul(m[1].str(), nullptr, 16) ;
+					const leaf_type     leaf    = static_cast<leaf_type   >(std::stoul(m[2].str(), nullptr, 16));
+					const subleaf_type  subleaf = static_cast<subleaf_type>(std::stoul(m[3].str(), nullptr, 16));
 					const register_set_t regs   = {
 						gsl::narrow_cast<std::uint32_t>(std::stoul(m[4].str(), nullptr, 16)),
 						gsl::narrow_cast<std::uint32_t>(std::stoul(m[5].str(), nullptr, 16)),
@@ -391,7 +391,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					};
 					logical_cpus[apic_id].leaves[leaf][subleaf] = regs;
 				} else {
-					std::cerr << "Unrecognized line: " << line << std::endl;
+					//std::cerr << "Unrecognized line: " << line << std::endl;
 				}
 			}
 		}
@@ -399,7 +399,8 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 	case file_format::etallen:
 		{
 			const std::regex comment_line("#.*");
-			const std::regex cpu_line("CPU ([[:digit:]]+)");
+			const std::regex solo_cpu_line("CPU:");
+			const std::regex cpu_line("CPU ([[:digit:]]+):");
 			const std::string single_element = "(0[xX][[:xdigit:]]{1,8})";
 			const std::string multiple_elements = fmt::format("   {} {}: eax={} ebx={} ecx={} edx={}", single_element, single_element, single_element, single_element, single_element, single_element, single_element);
 			const std::regex data_line(multiple_elements);
@@ -409,11 +410,13 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 				std::smatch m;
 				if(std::regex_search(line, m, comment_line) || line == "") {
 					continue;
+				} else if(std::regex_search(line, m, solo_cpu_line)) {
+					++current_cpu;
 				} else if(std::regex_search(line, m, cpu_line)) {
 					current_cpu = std::stoul(m[1].str());
 				} else if(std::regex_search(line, m, data_line)) {
-					const leaf_type         leaf    = static_cast<leaf_type   >(std::stoul(m[1].str(), nullptr, 16));
-					const subleaf_type      subleaf = static_cast<subleaf_type>(std::stoul(m[2].str(), nullptr, 16));
+					const leaf_type      leaf    = static_cast<leaf_type   >(std::stoul(m[1].str(), nullptr, 16));
+					const subleaf_type   subleaf = static_cast<subleaf_type>(std::stoul(m[2].str(), nullptr, 16));
 					const register_set_t regs    = {
 						gsl::narrow_cast<std::uint32_t>(std::stoul(m[3].str(), nullptr, 16)),
 						gsl::narrow_cast<std::uint32_t>(std::stoul(m[4].str(), nullptr, 16)),
@@ -422,7 +425,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					};
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
 				} else {
-					std::cerr << "Unrecognized line: " << line << std::endl;
+					//std::cerr << "Unrecognized line: " << line << std::endl;
 				}
 			}
 		}
@@ -481,7 +484,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 				} else if(std::regex_search(line, m, delimiter_line)) {
 					break;
 				} else {
-					std::cerr << "Unrecognized line: " << line << std::endl;
+					//std::cerr << "Unrecognized line: " << line << std::endl;
 				}
 			}
 			const leaf_type highest_leaf          = leaf_type{ logical_cpus[current_cpu].leaves[leaf_type::basic_info    ][subleaf_type::main][eax] };
@@ -506,7 +509,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 			logical_cpus[current_cpu].leaves.swap(corrected_leaves);
 		}
 		break;
-	case file_format::instlat:
+	case file_format::aida64:
 		{
 			const std::string single_element = "([[:xdigit:]]{8})";
 			const std::string simple = fmt::format("CPUID {}: {}-{}-{}-{}", single_element, single_element, single_element, single_element, single_element);
@@ -561,7 +564,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					};
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
 				} else {
-					//std::cerr << "ignoring line:" << line << std::endl;
+					//std::cerr << "Unrecognized line: " << line << std::endl;
 				}
 			}
 		}
@@ -963,8 +966,38 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 			print_detailed_leaves(leaf_type::processor_trace, 4, "intel_fn14h");
 		}
 		break;
-	case file_format::instlat:
-		throw std::runtime_error("instlatx64 is not allowed as an output format");
+	case file_format::aida64:
+		{
+			std::uint32_t count = 0_u32;
+			for(const auto& c : logical_cpus) {
+				format_to(out, "CPU#{:0=03d}:\n", count);
+				const cpu_t& cpu = c.second;
+				for(const auto& l : c.second.leaves) {
+					const leaf_type leaf = l.first;
+					if(l.second.size() == 1) {
+						const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
+						format_to(out, "CPUID {:08x}: {:08x}-{:08x}-{:08x}-{:08x}\n", static_cast<std::uint32_t>(leaf),
+						                                                              regs[eax],
+						                                                              regs[ebx],
+						                                                              regs[ecx],
+						                                                              regs[edx]);
+					} else {
+						for(const auto& s : l.second) {
+							const subleaf_type subleaf = s.first;
+							const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf);
+							format_to(out, "CPUID {:08x}: {:08x}-{:08x}-{:08x}-{:08x} [SL {:02x}]\n", static_cast<std::uint32_t>(leaf),
+							                                                                          regs[eax],
+							                                                                          regs[ebx],
+							                                                                          regs[ecx],
+							                                                                          regs[edx],
+							                                                                          static_cast<std::uint32_t>(subleaf));
+						}
+					}
+				}
+				format_to(out, "\n");
+				++count;
+			}
+		}
 		break;
 	case file_format::cpuinfo:
 		{
