@@ -1043,6 +1043,32 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 
 								const frequency_t a = bit_cast<decltype(a)>(regs[eax]);
 								return a.frequency;
+							} else if(cpu.leaves.find(leaf_type::brand_string_2) != cpu.leaves.end()) {
+								const auto raw_brand = get_brand_string();
+								const std::string brand(std::begin(raw_brand), std::end(raw_brand));
+								const std::string::size_type hertz = brand.rfind("Hz");
+								if(hertz == std::string::npos) {
+									return 0_u32;
+								}
+								std::size_t to_megahertz = 1_u64;
+								switch(brand.at(hertz - 1)) {
+								case 'T': to_megahertz *= 1'000_u64; [[fallthrough]];
+								case 'G': to_megahertz *= 1'000_u64; [[fallthrough]];
+								case 'M':
+								{
+									const std::string::size_type freq_pos = brand.rfind(' ', hertz - 1);
+									if(freq_pos == std::string::npos) {
+										return 0_u32;
+									}
+									const std::string freq_str = brand.substr(freq_pos + 1, hertz - 1 - freq_pos - 1);
+									const double raw_freq = std::stod(freq_str);
+									const std::uint32_t frequency = gsl::narrow_cast<std::uint32_t>(raw_freq * to_megahertz);
+									return frequency;
+								}
+								break;
+								default:
+									return 0_u32;
+								}
 							}
 						}
 						break;

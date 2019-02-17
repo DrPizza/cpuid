@@ -138,7 +138,7 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0000'2000_u32, "FPU-CSDS"          , "x87 FPU CS and DS deprecated"                        , ""               },
 				{ intel                  , 0x0000'4000_u32, "MPX"               , "Memory Protection Extensions"                        , "mpx"            },
 				{ intel                  , 0x0000'8000_u32, "RDT-A"             , "Resource Director Technology Allocation"             , "rdt_a"          },
-				{ intel                  , 0x0001'0000_u32, "AVX512F"           , "AVX512 Foundation"                                   , "avx512f "       },
+				{ intel                  , 0x0001'0000_u32, "AVX512F"           , "AVX512 Foundation"                                   , "avx512f"        },
 				{ intel                  , 0x0002'0000_u32, "AVX512DQ"          , "AVX512 Double/Quadword Instructions"                 , "avx512dq"       },
 				{ intel | amd            , 0x0004'0000_u32, "RDSEED"            , "RDSEED instruction"                                  , "rdseed"         },
 				{ intel | amd            , 0x0008'0000_u32, "ADX"               , "Multi-Precision Add-Carry Instructions"              , "adx"            },
@@ -671,6 +671,9 @@ const feature_map_t all_features = {
 
 template<typename FoundFn, typename NotFoundFn>
 void for_feature_range(const cpu_t& cpu, leaf_type leaf, subleaf_type subleaf, register_type reg, FoundFn&& found, NotFoundFn&& not_found) {
+	const bool has_value = cpu.leaves.find(leaf) != cpu.leaves.end()
+	                    && cpu.leaves.at(leaf).find(subleaf) != cpu.leaves.at(leaf).end();
+	const std::uint32_t value = has_value ? cpu.leaves.at(leaf).at(subleaf).at(reg) : 0_u32;
 	const auto range = all_features.equal_range(leaf);
 	for(auto it = range.first; it != range.second; ++it) {
 		if(it->second.find(subleaf) == it->second.end()) {
@@ -682,9 +685,6 @@ void for_feature_range(const cpu_t& cpu, leaf_type leaf, subleaf_type subleaf, r
 		}
 
 		const std::vector<feature_t>& feats = sl.at(reg);
-		const bool has_value = cpu.leaves.find(leaf) != cpu.leaves.end()
-		                    && cpu.leaves.at(leaf).find(subleaf) != cpu.leaves.at(leaf).end();
-		const std::uint32_t value = has_value ? cpu.leaves.at(leaf).at(subleaf).at(reg) : 0_u32;
 		for(const feature_t& f : feats) {
 			if(__popcnt(f.mask) == 1_u32) {
 				if(cpu.vendor & f.vendor) {
@@ -720,14 +720,6 @@ bool has_feature(const cpu_t& cpu, leaf_type leaf, subleaf_type subleaf, registe
 	}
 	return false;
 }
-
-std::string get_feature(const cpu_t& cpu, leaf_type leaf, register_type reg, std::uint32_t bit, const char* name) {
-	return has_feature(cpu, leaf, subleaf_type::main, reg, bit) ? name : "";
-};
-
-std::string get_feature_ext(const cpu_t& cpu, leaf_type leaf, subleaf_type subleaf, register_type reg, std::uint32_t bit, const char* name) {
-	return has_feature(cpu, leaf, subleaf, reg, bit) ? name : "";
-};
 
 std::vector<std::string> get_linux_features(const cpu_t& cpu) {
 	std::vector<std::string> features;
@@ -895,7 +887,7 @@ std::vector<std::string> get_linux_features(const cpu_t& cpu) {
 	const auto get_ring3mwait = [&] () {
 		if(cpu.vendor & vendor_type::intel) {
 			if(cpu.model.family == 0x6
-				&& (cpu.model.model == 0x57 || cpu.model.model == 0x85)) {
+			&& (cpu.model.model == 0x57 || cpu.model.model == 0x85)) {
 				return true;
 			}
 		}
@@ -916,7 +908,7 @@ std::vector<std::string> get_linux_features(const cpu_t& cpu) {
 			stibp = true;
 		}
 		if(has_feature(cpu, leaf_type::extended_features, subleaf_type::main, edx, 31_u32)
-			|| has_feature(cpu, leaf_type::address_limits, subleaf_type::main, ebx, 25_u32)) {
+		|| has_feature(cpu, leaf_type::address_limits, subleaf_type::main, ebx, 25_u32)) {
 			ssbd = true;
 		}
 		if(has_feature(cpu, leaf_type::address_limits, subleaf_type::main, ebx, 14_u32)) {
@@ -938,22 +930,22 @@ std::vector<std::string> get_linux_features(const cpu_t& cpu) {
 
 	add_feature_single_condition(ring3mwait, "ring3mwait");
 	// cpuid_fault // needs MSR
-	add_feature_single_indexed(leaf_type::ras_advanced_power_management, subleaf_type::main      , edx, 9_u32 );
-	add_feature_single_indexed(leaf_type::thermal_and_power            , subleaf_type::main      , ecx, 3_u32 );
-	add_feature_single_indexed(leaf_type::rdt_allocation               , subleaf_type::main      , ebx, 1_u32 );
-	add_feature_single_indexed(leaf_type::rdt_allocation               , subleaf_type::main      , ebx, 2_u32 );
-	add_feature_single_indexed(leaf_type::rdt_allocation               , subleaf_type::rdt_cat_l3, ecx, 2_u32 );
+	add_feature_single_indexed(leaf_type::ras_advanced_power_management, subleaf_type::main      , edx,  9_u32);
+	add_feature_single_indexed(leaf_type::thermal_and_power            , subleaf_type::main      , ecx,  3_u32);
+	add_feature_single_indexed(leaf_type::rdt_allocation               , subleaf_type::main      , ebx,  1_u32);
+	add_feature_single_indexed(leaf_type::rdt_allocation               , subleaf_type::main      , ebx,  2_u32);
+	add_feature_single_indexed(leaf_type::rdt_allocation               , subleaf_type::rdt_cat_l3, ecx,  2_u32);
 	add_feature_single_indexed(leaf_type::extended_features            , subleaf_type::main      , ebx, 10_u32); // if invpcid is set, invpcid_single is also set
-	add_feature_single_indexed(leaf_type::ras_advanced_power_management, subleaf_type::main      , edx, 7_u32 );
+	add_feature_single_indexed(leaf_type::ras_advanced_power_management, subleaf_type::main      , edx,  7_u32);
 	add_feature_single_indexed(leaf_type::ras_advanced_power_management, subleaf_type::main      , edx, 11_u32);
-	add_feature_single_indexed(leaf_type::encrypted_memory             , subleaf_type::main      , eax, 0_u32 );
+	add_feature_single_indexed(leaf_type::encrypted_memory             , subleaf_type::main      , eax,  0_u32);
 	// pti // TODO API call to see if shadow pagetables are enabled
 	// intel_ppin // needs MSR
-	add_feature_single_indexed(leaf_type::rdt_allocation               , subleaf_type::rdt_cat_l2, ecx, 2_u32 );
+	add_feature_single_indexed(leaf_type::rdt_allocation               , subleaf_type::rdt_cat_l2, ecx,  2_u32);
 	add_feature_single_condition(ssbd, "ssbd");
-	add_feature_single_indexed(leaf_type::rdt_allocation               , subleaf_type::main      , ebx, 3_u32 );
-	add_feature_single_indexed(leaf_type::address_limits               , subleaf_type::main      , ebx, 6_u32 );
-	add_feature_single_indexed(leaf_type::encrypted_memory             , subleaf_type::main      , eax, 1_u32 );
+	add_feature_single_indexed(leaf_type::rdt_allocation               , subleaf_type::main      , ebx,  3_u32);
+	add_feature_single_indexed(leaf_type::address_limits               , subleaf_type::main      , ebx,  6_u32);
+	add_feature_single_indexed(leaf_type::encrypted_memory             , subleaf_type::main      , eax,  1_u32);
 	add_feature_single_condition(ibrs, "ibrs");
 	add_feature_single_condition(ibpb, "ibpb");
 	add_feature_single_condition(stibp, "stibp");
