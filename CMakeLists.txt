@@ -60,42 +60,9 @@ macro(configure_msvc_runtime)
   endif()
 endmacro()
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 project(cpuid-toplevel VERSION 1.0.0 LANGUAGES C CXX)
-
-if(MSVC)
-    set(MSVC_RUNTIME "static")
-
-    add_definitions(-DUNICODE -D_UNICODE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Zi -W4 -Wall -GF -Gm- -GS -guard:cf -Gy")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -EHsc -permissive- -Zc:wchar_t -Zc:forScope -Zc:inline -Zc:rvalueCast -GR -std:c++latest")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -experimental:external -external:anglebrackets -external:templates- -external:W0 ")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Od -RTC1")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -Ob2 -Oi -Ot -GL -arch:AVX2 -Qpar")
-    foreach (i SHARED MODULE EXE)
-        set(CMAKE_${i}_LINKER_FLAGS "${CMAKE_${i}_LINKER_FLAGS} -DYNAMICBASE -NXCOMPAT -DEBUG -HIGHENTROPYVA")
-        set(CMAKE_${i}_LINKER_FLAGS_RELEASE "${CMAKE_${i}_LINKER_FLAGS_RELEASE} -opt:ref -opt:icf")
-    endforeach()
-    configure_msvc_runtime()
-else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
-endif()
-
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_RUNTIME ON)
-find_package(Boost REQUIRED COMPONENTS regex)
-
-find_path(gsl_dir "gsl/gsl")
-add_library(gsl INTERFACE)
-target_include_directories(gsl INTERFACE ${gsl_dir})
-
-find_package(fmt CONFIG REQUIRED)
 
 add_subdirectory("libcpuid")
 add_subdirectory("cpuid")
