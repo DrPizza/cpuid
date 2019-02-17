@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) try {
 		return EXIT_SUCCESS;
 	}
 
-	if(raw_dump || std::holds_alternative<std::string>(args.at("--write-dump")) || std::holds_alternative<std::string>(args.at("--write-format"))) {
+	if(raw_dump || std::holds_alternative<std::string>(args.at("--write-dump"))) {
 		file_format format = file_format::native;
 		const std::string format_name = boost::to_lower_copy(std::get<std::string>(args.at("--write-format")));
 		if("native" == format_name) {
