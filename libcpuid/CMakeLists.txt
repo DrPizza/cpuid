@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.13)
 
 project(libcpuid VERSION 1.0.0 LANGUAGES C CXX)
 
@@ -63,15 +63,7 @@ else()
 	set(LIBCPUID_STATIC_LIBRARY_FLAGS_RELEASE ${LIBCPUID_STATIC_LIBRARY_FLAGS_RELEASE})
 endif()
 
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0") 
-	target_compile_features(libcpuid PUBLIC cxx_std_20)
-else()
-	if(MSVC)
-		target_compile_options(libcpuid PUBLIC "-std=c++-latest")
-	else()
-		target_compile_options(libcpuid PUBLIC "-std=c++2a")
-	endif()
-endif()
+target_compile_features(libcpuid PUBLIC cxx_std_20)
 
 target_compile_options(libcpuid PUBLIC  "${LIBCPUID_PUBLIC_CXX_FLAGS}")
 target_compile_options(libcpuid PUBLIC  "$<$<CONFIG:DEBUG>:${LIBCPUID_PUBLIC_CXX_FLAGS_DEBUG}>")
@@ -82,16 +74,6 @@ target_compile_options(libcpuid PRIVATE "${LIBCPUID_PRIVATE_CXX_FLAGS}")
 target_compile_options(libcpuid PRIVATE "$<$<CONFIG:DEBUG>:${LIBCPUID_PRIVATE_CXX_FLAGS_DEBUG}>")
 target_compile_options(libcpuid PRIVATE "$<$<CONFIG:RELEASE>:${LIBCPUID_PRIVATE_CXX_FLAGS_RELEASE}>")
 
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13.0") 
-	target_link_options(libcpuid PUBLIC "${LIBCPUID_PUBLIC_LINK_FLAGS}")
-	target_link_options(libcpuid PUBLIC "$<$<CONFIG:DEBUG>:${LIBCPUID_PUBLIC_LINK_FLAGS_DEBUG}>")
-	target_link_options(libcpuid PUBLIC "$<$<CONFIG:RELEASE>:${LIBCPUID_PUBLIC_LINK_FLAGS_RELEASE}>")
-endif()
-
-JOIN(LIBCPUID_STATIC_LIBRARY_FLAGS         " " LIBCPUID_STATIC_LIBRARY_FLAGS)
-JOIN(LIBCPUID_STATIC_LIBRARY_FLAGS_DEBUG   " " LIBCPUID_STATIC_LIBRARY_FLAGS_DEBUG)
-JOIN(LIBCPUID_STATIC_LIBRARY_FLAGS_RELEASE " " LIBCPUID_STATIC_LIBRARY_FLAGS_RELEASE)
-
-set_target_properties(libcpuid PROPERTIES STATIC_LIBRARY_FLAGS         "${STATIC_LIBRARY_FLAGS} ${LIBCPUID_STATIC_LIBRARY_FLAGS}")
-set_target_properties(libcpuid PROPERTIES STATIC_LIBRARY_FLAGS_DEBUG   "${STATIC_LIBRARY_FLAGS_DEBUG} ${LIBCPUID_STATIC_LIBRARY_FLAGS_DEBUG}")
-set_target_properties(libcpuid PROPERTIES STATIC_LIBRARY_FLAGS_RELEASE "${STATIC_LIBRARY_FLAGS_RELEASE} ${LIBCPUID_STATIC_LIBRARY_FLAGS_RELEASE}")
+target_link_options(libcpuid PUBLIC "${LIBCPUID_PUBLIC_LINK_FLAGS}")
+target_link_options(libcpuid PUBLIC "$<$<CONFIG:DEBUG>:${LIBCPUID_PUBLIC_LINK_FLAGS_DEBUG}>")
+target_link_options(libcpuid PUBLIC "$<$<CONFIG:RELEASE>:${LIBCPUID_PUBLIC_LINK_FLAGS_RELEASE}>")

@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.13.0)
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio.*")
     set(CMAKE_GENERATOR_PLATFORM x64)
@@ -19,24 +19,6 @@ set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
-FUNCTION(JOIN LISTNAME GLUE OUTPUT)
-	if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13.0") 
-		list(JOIN LISTNAME GLUE OUTPUT)
-	else()
-		SET(_TMP_STR "")
-		FOREACH(VAL ${${LISTNAME}})
-			SET(_TMP_STR "${_TMP_STR}${GLUE}${VAL}")
-		ENDFOREACH(VAL ${${LISTNAME}})
-		STRING(LENGTH "${GLUE}" GLUE_LEN)
-		STRING(LENGTH "${_TMP_STR}" OUT_LEN)
-		if(${OUT_LEN} GREATER 0)
-			MATH(EXPR OUT_LEN ${OUT_LEN}-${GLUE_LEN})
-			STRING(SUBSTRING "${_TMP_STR}" ${GLUE_LEN} ${OUT_LEN} _TMP_STR) 
-			SET(${OUTPUT} "${_TMP_STR}" PARENT_SCOPE)
-		endif()
-	endif()
-ENDFUNCTION()
-
 macro(configure_msvc_runtime)
   if(MSVC)
 
@@ -48,13 +30,9 @@ macro(configure_msvc_runtime)
     # Set compiler options.
     set(variables
       CMAKE_C_FLAGS_DEBUG
-      CMAKE_C_FLAGS_MINSIZEREL
       CMAKE_C_FLAGS_RELEASE
-      CMAKE_C_FLAGS_RELWITHDEBINFO
       CMAKE_CXX_FLAGS_DEBUG
-      CMAKE_CXX_FLAGS_MINSIZEREL
       CMAKE_CXX_FLAGS_RELEASE
-      CMAKE_CXX_FLAGS_RELWITHDEBINFO
     )
     if(${MSVC_RUNTIME} STREQUAL "static")
       message(STATUS
