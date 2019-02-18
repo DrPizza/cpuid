@@ -737,16 +737,6 @@ std::vector<std::string> get_linux_features(const cpu_t& cpu) {
 		for_feature_range(cpu, leaf, subleaf, reg, add_name, skip_name);
 	};
 
-	const auto add_feature_single_indexed = [&] (leaf_type leaf, subleaf_type subleaf, register_type reg, std::uint32_t index) {
-		for_feature_range(cpu, leaf, subleaf, reg,
-			[&] (const feature_t& feature, std::uint32_t value) {
-				if(feature.mask == (1_u32 << index)) {
-					add_name(feature, value);
-				}
-			}
-		, skip_name);
-	};
-
 	const auto add_feature_single_masked = [&] (leaf_type leaf, subleaf_type subleaf, register_type reg, std::uint32_t mask) {
 		for_feature_range(cpu, leaf, subleaf, reg,
 			[&] (const feature_t& feature, std::uint32_t value) {
@@ -755,6 +745,10 @@ std::vector<std::string> get_linux_features(const cpu_t& cpu) {
 				}
 			}
 		, skip_name);
+	};
+
+	const auto add_feature_single_indexed = [&] (leaf_type leaf, subleaf_type subleaf, register_type reg, std::uint32_t index) {
+		return add_feature_single_masked(leaf, subleaf, reg, 1_u32 << index);
 	};
 
 	const auto add_feature_single_condition = [&] (bool condition, const char* linux_name) {
