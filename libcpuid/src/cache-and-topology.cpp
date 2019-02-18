@@ -675,6 +675,7 @@ void print_deterministic_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 		switch(sub.first) {
 		case subleaf_type::main:
 			format_to(out, "Deterministic Address Translation\n");
+			format_to(out, "\tMaximum deterministic TLB cpuid leaf: {:#010x}\n", regs[eax]);
 			[[fallthrough]];
 		default:
 			{

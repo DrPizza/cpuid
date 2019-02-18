@@ -187,6 +187,7 @@ const feature_map_t all_features = {
 				{ intel                  , 0x0800'0000_u32, "STIBP"             , "Single Thread Indirect Branch Predictors"                                     , ""                  },
 				{ intel | amd            , 0x1000'0000_u32, "L1TF"              , "L1 Data Cache flush"                                                          , "flush_l1d"         },
 				{ intel                  , 0x2000'0000_u32, "ARCH_CAPS"         , "ARCH_CAPABILITIES MSR"                                                        , "arch_capabilities" },
+				{ intel                  , 0x4000'0000_u32, "CORE_CAPS"         , "CORE_CAPABILITIES MSR"                                                        , ""                  },
 				{ intel                  , 0x8000'0000_u32, "SSBD"              , "Speculative Store Bypass Disable"                                             , ""                  },
 			}}
 		}}
@@ -219,9 +220,14 @@ const feature_map_t all_features = {
 	{ leaf_type::rdt_monitoring, {
 		{ subleaf_type::main, {
 			{ edx, {
-				{ intel                  , 0x0000'0001_u32, "cqm_occup_llc", "LLC occupancy monitoring", "cqm_occup_llc" },
-				{ intel                  , 0x0000'0002_u32, "cqm_mbm_total", "LLC Total MBM monitoring", "cqm_mbm_total" },
-				{ intel                  , 0x0000'0004_u32, "cqm_mbm_local", "LLC Local MBM monitoring", "cqm_mbm_local" },
+				{ intel                  , 0x0000'0002_u32, "cqm_llc"      , "Supports L3 Cache RDT monitoring", "cqm_llc"       },
+			}}
+		}},
+		{ subleaf_type::rdt_monitoring_l3, {
+			{ edx, {
+				{ intel                  , 0x0000'0001_u32, "cqm_occup_llc", "LLC occupancy monitoring"        , "cqm_occup_llc" },
+				{ intel                  , 0x0000'0002_u32, "cqm_mbm_total", "LLC Total MBM monitoring"        , "cqm_mbm_total" },
+				{ intel                  , 0x0000'0004_u32, "cqm_mbm_local", "LLC Local MBM monitoring"        , "cqm_mbm_local" },
 			}}
 		}}
 	}},
@@ -241,6 +247,11 @@ const feature_map_t all_features = {
 		{ subleaf_type::rdt_cat_l2, {
 			{ ecx, {
 				{ intel                  , 0x0000'0004_u32, "CDP", "L2 Code and data prioritization support", "cdt_l2" },
+			}}
+		}},
+		{ subleaf_type::rdt_mba, {
+			{ ecx, {
+				{ intel                  , 0x0000'0004_u32, "Linear", "Response of the delay values is linear", "" },
 			}}
 		}},
 	}},

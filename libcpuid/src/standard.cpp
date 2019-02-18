@@ -451,21 +451,20 @@ void print_rdt_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
 		case subleaf_type::rdt_monitoring_main:
 			format_to(out, "Intel Resource Director Technology monitoring\n");
 			format_to(out, "\tMaximum Resource Monitoring ID of all types: {:#010x}\n", regs[ebx]);
+			print_features(out, cpu, leaf_type::rdt_monitoring, subleaf_type::rdt_monitoring_main, edx);
 			format_to(out, "\n");
 			break;
 		case subleaf_type::rdt_monitoring_l3:
 			format_to(out, "\tL3 cache monitoring\n");
 			format_to(out, "\t\tConversion factor: {:d}\n", regs[ebx]);
-			for(const feature_t& mon : monitorables) {
-				if(regs[edx] & mon.mask) {
-					format_to(out, "\t\tL3 {:s}\n", mon.description);
-				}
-			}
+			format_to(out, "\t\tMaximum Resource Monitoring ID of this type: {:#010x}\n", regs[ecx]);
+			print_features(out, cpu, leaf_type::rdt_monitoring, subleaf_type::rdt_monitoring_l3, edx);
 			format_to(out, "\n");
 			break;
 		default:
 			format_to(out, "\tUnknown resource type {:#04x} monitoring\n", static_cast<std::uint32_t>(sub.first));
 			format_to(out, "\t\tConversion factor: {:d}\n", regs[ebx]);
+			format_to(out, "\t\tMaximum Resource Monitoring ID of this type: {:#010x}\n", regs[ecx]);
 			for(const feature_t& mon : monitorables) {
 				if(regs[edx] & mon.mask) {
 					format_to(out, "\t\tUnknown resource {:s}\n", mon.description);
@@ -491,11 +490,11 @@ void enumerate_rdt_allocation(cpu_t& cpu) {
 }
 
 void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
-	static const std::vector<feature_t> allocatables = {
-		{ intel , 0x0000'0002_u32, "L3" , "L3 Cache Allocation"},
-		{ intel , 0x0000'0004_u32, "L2" , "L2 Cache Allocation"},
-		{ intel , 0x0000'0008_u32, "MEM", "Memory Bandwidth Allocation" }
-	};
+	//static const std::vector<feature_t> allocatables = {
+	//	{ intel , 0x0000'0002_u32, "L3" , "L3 Cache Allocation"},
+	//	{ intel , 0x0000'0004_u32, "L2" , "L2 Cache Allocation"},
+	//	{ intel , 0x0000'0008_u32, "MEM", "Memory Bandwidth Allocation" }
+	//};
 
 	for(const auto& sub : cpu.leaves.at(leaf_type::rdt_allocation)) {
 		const register_set_t& regs = sub.second;
@@ -509,11 +508,7 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 		switch(sub.first) {
 		case subleaf_type::rdt_allocation_main:
 			format_to(out, "Intel Resource Director Technology allocation\n");
-			for(const feature_t& all : allocatables) {
-				if(regs[edx] & all.mask) {
-					format_to(out, "\t\tSupports {:s}\n", all.description);
-				}
-			}
+			print_features(out, cpu, leaf_type::rdt_allocation, subleaf_type::rdt_allocation_main, edx);
 			format_to(out, "\n");
 			break;
 		case subleaf_type::rdt_cat_l3:
@@ -528,8 +523,9 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 				format_to(out, "\tLength of capacity bitmask: {:d}\n", (a.bit_mask_length + 1_u32));
 				format_to(out, "\tBitmap of isolation/contention: {:#010x}\n", regs[ebx]);
 				if(regs[ecx] & 0x0000'0004_u32) {
-					format_to(out, "\tCode and Data Prioritization supported\n");
+					format_to(out, "\tCode and Data Prioritization Technology supported\n");
 				}
+				//print_features(out, cpu, leaf_type::rdt_allocation, subleaf_type::rdt_cat_l3, ecx);
 				format_to(out, "\tHighest COS number for this resource: {:d}\n", d.highest_cos_number);
 				format_to(out, "\n");
 			}
@@ -545,6 +541,10 @@ void print_rdt_allocation(fmt::memory_buffer& out, const cpu_t& cpu) {
 				format_to(out, "\tL2 Cache Allocation Technology\n");
 				format_to(out, "\tLength of capacity bitmask: {:d}\n", (a.bit_mask_length + 1_u32));
 				format_to(out, "\tBitmap of isolation/contention: {:#010x}\n", regs[ebx]);
+				if(regs[ecx] & 0x0000'0004_u32) {
+					format_to(out, "\tCode and Data Prioritization Technology supported\n");
+				}
+				//print_features(out, cpu, leaf_type::rdt_allocation, subleaf_type::rdt_cat_l2, ecx);
 				format_to(out, "\tHighest COS number for this resource: {:d}\n", d.highest_cos_number);
 				format_to(out, "\n");
 			}
@@ -648,7 +648,7 @@ void print_sgx_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 
 				switch(a.type) {
 				case 0b0000:
-					break;
+					//break;
 				case 0b0001:
 					const std::uint64_t physical_address = (gsl::narrow_cast<std::uint64_t>(b.epc_physical_address_hi_bits ) << 32_u64)
 					                                     | (gsl::narrow_cast<std::uint64_t>(a.epc_physical_address_low_bits) << 12_u64);
@@ -682,6 +682,7 @@ void print_processor_trace(fmt::memory_buffer& out, const cpu_t& cpu) {
 		switch(sub.first) {
 		case subleaf_type::main:
 			format_to(out, "Processor Trace\n");
+			format_to(out, "\tMaximum processor trace cpuid leaf: {:#010x}\n", regs[eax]);
 			print_features(out, cpu, leaf_type::processor_trace, subleaf_type::main, ebx);
 			format_to(out, "\n");
 			print_features(out, cpu, leaf_type::processor_trace, subleaf_type::main, ecx);
@@ -784,6 +785,7 @@ void print_system_on_chip_vendor(fmt::memory_buffer& out, const cpu_t& cpu) {
 				} b = bit_cast<decltype(b)>(regs[ebx]);
 
 				format_to(out, "System-on-chip\n");
+				format_to(out, "\tMaximum SoC cpuid leaf: {:#010x}\n", regs[eax]);
 				format_to(out, "\tVendor ID: {:#06x}\n", b.vendor_id);
 				if(b.is_industry_standard_vendor) {
 					format_to(out, "\tVendor ID is assigned by an industry standard scheme\n");
