@@ -10,7 +10,7 @@
 
 #if !defined(_MSC_VER)
 #include <x86intrin.h>
-#define __popcnt _popcnt32
+#define __popcnt __builtin_popcount
 #endif
 
 const feature_map_t all_features = {

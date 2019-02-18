@@ -46,8 +46,6 @@ namespace docopt {
 
 #endif
 
-#pragma region declarations
-
 namespace std {
 	template<> struct hash<std::vector<std::string> >
 	{
@@ -378,9 +376,6 @@ namespace docopt {
 		bool match(PatternList& left, std::vector<std::shared_ptr<LeafPattern>>& collected) const override;
 	};
 
-#pragma endregion
-#pragma region inline implementations
-
 	namespace {
 		inline std::vector<PatternList> transform(PatternList pattern) {
 			std::vector<PatternList> result;
@@ -704,7 +699,5 @@ namespace docopt {
 	}
 
 }
-
-#pragma endregion
 
 #endif

@@ -30,7 +30,6 @@
 #include <cassert>
 #include <cstddef>
 
-#pragma region Parsing stuff
 namespace {
 	
 	struct Tokens {
@@ -673,5 +672,3 @@ docopt::docopt(std::string const& doc,
 		std::exit(-1);
 	} /* Any other exception is unexpected: let std::terminate grab it */
 }
-
-#pragma endregion

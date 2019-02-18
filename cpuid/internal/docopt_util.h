@@ -27,8 +27,6 @@ namespace docopt {
 }
 #endif
 
-#pragma region General utility
-
 namespace {
 	bool starts_with(std::string const& str, std::string const& prefix) {
 		if(str.length() < prefix.length()) {
@@ -120,7 +118,5 @@ namespace docopt {
 		seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 	}
 }
-
-#pragma endregion
 
 #endif

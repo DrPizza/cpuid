@@ -1126,12 +1126,12 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 					return false;
 					};
 
-				const auto get_feature = [&] (leaf_type leaf, register_type reg, std::uint32_t bit, const char* name) {
-					return has_feature(leaf, subleaf_type::main, reg, bit) ? name : "";
-				};
-
 				const auto get_feature_ext = [&] (leaf_type leaf, subleaf_type subleaf, register_type reg, std::uint32_t bit, const char* name) {
 					return has_feature(leaf, subleaf, reg, bit) ? name : "";
+				};
+
+				const auto get_feature = [&] (leaf_type leaf, register_type reg, std::uint32_t bit, const char* name) {
+					return get_feature_ext(leaf, subleaf_type::main, reg, bit, name);
 				};
 
 				const auto get_tlb_size = [&] () -> std::uint32_t {
