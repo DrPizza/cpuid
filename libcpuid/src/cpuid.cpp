@@ -23,7 +23,7 @@
 
 #if defined(_MSC_VER)
 
-inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
+register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
 	register_set_t regs = {};
 	std::array<int, 4> raw_regs;
 	__cpuidex(raw_regs.data(), gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf));
@@ -36,7 +36,7 @@ inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
 
 #else
 
-inline register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
+register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
 	register_set_t regs = {};
 	std::array<unsigned int, 4> raw_regs;
 	__get_cpuid_count(gsl::narrow_cast<int>(leaf), gsl::narrow_cast<int>(subleaf), &raw_regs[eax], &raw_regs[ebx], &raw_regs[ecx], &raw_regs[edx]);
