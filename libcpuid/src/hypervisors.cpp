@@ -171,9 +171,9 @@ void print_hyper_v_nested_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_xen_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_limit : leaf_type::xen_limit_offset;
+	const leaf_type leaf = (cpu.vendor & vendor_type::hyper_v) == vendor_type::hyper_v ? leaf_type::xen_limit : leaf_type::xen_limit_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
-	format_to(out, "Xen{:s} signature\n", (cpu.vendor & hyper_v) ? " with viridian extensions" : "");
+	format_to(out, "Xen{:s} signature\n", (cpu.vendor & vendor_type::hyper_v) == vendor_type::hyper_v ? " with viridian extensions" : "");
 	format_to(out, "\tMaximum Xen leaf: {:#010x}\n", regs[eax]);
 
 	const std::array<char, 12> vndr = bit_cast<decltype(vndr)>(
@@ -190,7 +190,7 @@ void print_xen_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_xen_version(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_version : leaf_type::xen_version_offset;
+	const leaf_type leaf = (cpu.vendor & vendor_type::hyper_v) == vendor_type::hyper_v ? leaf_type::xen_version : leaf_type::xen_version_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 
 	const struct
@@ -205,7 +205,7 @@ void print_xen_version(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_xen_features(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_features : leaf_type::xen_features_offset;
+	const leaf_type leaf = (cpu.vendor & vendor_type::hyper_v) == vendor_type::hyper_v ? leaf_type::xen_features : leaf_type::xen_features_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 
 	format_to(out, "Xen features\n");
@@ -215,14 +215,14 @@ void print_xen_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void enumerate_xen_time(cpu_t& cpu) {
-	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_time : leaf_type::xen_time_offset;
+	const leaf_type leaf = (cpu.vendor & vendor_type::hyper_v) == vendor_type::hyper_v ? leaf_type::xen_time : leaf_type::xen_time_offset;
 	cpu.leaves[leaf][subleaf_type::xen_time_main      ] = cpuid(leaf, subleaf_type::xen_time_main      );
 	cpu.leaves[leaf][subleaf_type::xen_time_tsc_offset] = cpuid(leaf, subleaf_type::xen_time_tsc_offset);
 	cpu.leaves[leaf][subleaf_type::xen_time_host      ] = cpuid(leaf, subleaf_type::xen_time_host      );
 }
 
 void print_xen_time(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_time : leaf_type::xen_time_offset;
+	const leaf_type leaf = (cpu.vendor & vendor_type::hyper_v) == vendor_type::hyper_v ? leaf_type::xen_time : leaf_type::xen_time_offset;
 	for(const auto& sub : cpu.leaves.at(leaf)) {
 		const register_set_t& regs = sub.second;
 		switch(sub.first) {
@@ -259,7 +259,7 @@ void print_xen_time(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_xen_hvm_features(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_hvm_features : leaf_type::xen_hvm_features_offset;
+	const leaf_type leaf = (cpu.vendor & vendor_type::hyper_v) == vendor_type::hyper_v ? leaf_type::xen_hvm_features : leaf_type::xen_hvm_features_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 	format_to(out, "Xen HVM features\n");
 	print_features(out, cpu, leaf, subleaf_type::main, eax);
@@ -270,7 +270,7 @@ void print_xen_hvm_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 }
 
 void print_xen_pv_features(fmt::memory_buffer& out, const cpu_t& cpu) {
-	const leaf_type leaf = (cpu.vendor & hyper_v) ? leaf_type::xen_pv_features : leaf_type::xen_pv_features_offset;
+	const leaf_type leaf = (cpu.vendor & vendor_type::hyper_v) == vendor_type::hyper_v ? leaf_type::xen_pv_features : leaf_type::xen_pv_features_offset;
 	const register_set_t& regs = cpu.leaves.at(leaf).at(subleaf_type::main);
 
 	const struct

@@ -199,6 +199,7 @@ enum vendor_type : std::uint32_t
 	parallels      = 0x0008'0000_u32,
 	vmware         = 0x0010'0000_u32,
 	xen_hvm        = 0x0020'0000_u32,
+	xen_viridian   = xen_hvm | hyper_v,
 	qemu           = 0x0040'0000_u32,
 	// for filtering
 	any_silicon    = 0x0000'0fff_u32,
@@ -210,45 +211,49 @@ constexpr inline vendor_type operator|(const vendor_type& lhs, const vendor_type
 	return static_cast<vendor_type>(static_cast<std::uint32_t>(lhs) | static_cast<std::uint32_t>(rhs));
 }
 
+constexpr inline vendor_type operator&(const vendor_type& lhs, const vendor_type& rhs) {
+	return static_cast<vendor_type>(static_cast<std::uint32_t>(lhs) & static_cast<std::uint32_t>(rhs));
+}
+
 inline std::string to_string(vendor_type vendor) {
 	std::string silicon;
 	std::string hypervisor;
 
-	switch(vendor & any_silicon) {
-	case amd:
+	switch(vendor & vendor_type::any_silicon) {
+	case vendor_type::amd:
 		silicon = "AMD";
 		break;
-	case centaur:
+	case vendor_type::centaur:
 		silicon = "Centaur";
 		break;
-	case cyrix:
+	case vendor_type::cyrix:
 		silicon = "Cyrix";
 		break;
-	case intel:
+	case vendor_type::intel:
 		silicon = "Intel";
 		break;
-	case transmeta:
+	case vendor_type::transmeta:
 		silicon = "Transmeta";
 		break;
-	case nat_semi:
+	case vendor_type::nat_semi:
 		silicon = "National Semiconductor";
 		break;
-	case nexgen:
+	case vendor_type::nexgen:
 		silicon = "NexGen";
 		break;
-	case rise:
+	case vendor_type::rise:
 		silicon = "Rise";
 		break;
-	case sis:
+	case vendor_type::sis:
 		silicon = "SiS";
 		break;
-	case umc:
+	case vendor_type::umc:
 		silicon = "UMC";
 		break;
-	case via:
+	case vendor_type::via:
 		silicon = "VIA";
 		break;
-	case vortex:
+	case vendor_type::vortex:
 		silicon = "Vortex";
 		break;
 	default:
@@ -256,29 +261,29 @@ inline std::string to_string(vendor_type vendor) {
 		break;
 	}
 
-	switch(vendor & any_hypervisor) {
-	case bhyve:
+	switch(vendor & vendor_type::any_hypervisor) {
+	case vendor_type::bhyve:
 		hypervisor = "bhyve";
 		break;
-	case kvm:
+	case vendor_type::kvm:
 		hypervisor = "KVM";
 		break;
-	case hyper_v:
+	case vendor_type::hyper_v:
 		hypervisor = "Hyper-V";
 		break;
-	case parallels:
+	case vendor_type::parallels:
 		hypervisor = "Parallels";
 		break;
-	case vmware:
+	case vendor_type::vmware:
 		hypervisor = "VMware";
 		break;
-	case xen_hvm:
+	case vendor_type::xen_hvm:
 		hypervisor = "Xen HVM";
 		break;
-	case xen_hvm | hyper_v:
+	case vendor_type::xen_viridian:
 		hypervisor = "Xen HVM with Viridian Extensions";
 		break;
-	case qemu:
+	case vendor_type::qemu:
 		hypervisor = "QEMU";
 		break;
 	default:
@@ -359,6 +364,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_vendor_check, bool skip_feature_check);
 
 void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_cpus, file_format format);
+void print_leaf(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf, bool skip_vendor_check, bool skip_feature_check);
 void print_leaves(fmt::memory_buffer& out, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check);
 
 struct flag_spec_t

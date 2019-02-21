@@ -41,7 +41,7 @@ void print_version_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "\t stepping: {:#02x}\n" , cpu.model.stepping);
 	format_to(out, "\n");
 
-	if(cpu.vendor & intel) {
+	if((cpu.vendor & vendor_type::intel) == vendor_type::intel) {
 		format_to(out, "\t");
 		switch(a.type) {
 		case 0:
@@ -122,8 +122,8 @@ void print_serial_number(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "Processor serial number\n");
 	format_to(out, "\t");
 	const register_set_t& regs = cpu.leaves.at(leaf_type::serial_number).at(subleaf_type::main);
-	switch(cpu.vendor & any_silicon) {
-	case intel:
+	switch(cpu.vendor & vendor_type::any_silicon) {
+	case vendor_type::intel:
 		{
 			const std::uint32_t top = cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main)[eax];
 			const std::uint32_t middle = regs[edx];
@@ -133,7 +133,7 @@ void print_serial_number(fmt::memory_buffer& out, const cpu_t& cpu) {
 			                                                                             bottom >> 16_u32, bottom & 0xffff_u32);
 		}
 		break;
-	case transmeta:
+	case vendor_type::transmeta:
 		format_to(out, "{:08x}-{:08x}-{:08x}-{:08x}\n", regs[eax], regs[ebx], regs[ecx], regs[edx]);
 		break;
 	default:
@@ -170,7 +170,7 @@ void print_mwait_parameters(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "\tLargest monitor-line size: {:d} bytes\n", (b.largest_monitor_line  + 0_u32));
 	if(c.enumerable) {
 		print_features(out, cpu, leaf_type::monitor_mwait, subleaf_type::main, ecx);
-		if(cpu.vendor & intel) {
+		if((cpu.vendor & vendor_type::intel) == vendor_type::intel) {
 			const std::uint32_t mask = 0b1111;
 			for(std::size_t i = 0; i < 8; ++i) {
 				const std::uint32_t states = (regs[edx] & (mask << (i * 4))) >> (i * 4);
@@ -187,7 +187,7 @@ void print_thermal_and_power(fmt::memory_buffer& out, const cpu_t& cpu) {
 	print_features(out, cpu, leaf_type::thermal_and_power, subleaf_type::main, eax);
 	format_to(out, "\n");
 
-	if(cpu.vendor & intel) {
+	if((cpu.vendor & vendor_type::intel) == vendor_type::intel) {
 		const struct
 		{
 			std::uint32_t interrupt_thresholds : 4;
@@ -221,7 +221,7 @@ void print_extended_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 				format_to(out, "Extended features\n");
 				print_features(out, cpu, leaf_type::extended_features, subleaf_type::extended_features_main, ebx);
 				format_to(out, "\n");
-				if(cpu.vendor & intel) {
+				if((cpu.vendor & vendor_type::intel) == vendor_type::intel) {
 					const struct
 					{
 						std::uint32_t prefetchw        : 1;
@@ -359,7 +359,7 @@ void enumerate_extended_state(cpu_t& cpu) {
 			}
 		}
 	}
-	if(cpu.vendor & amd) {
+	if((cpu.vendor & vendor_type::amd) == vendor_type::amd) {
 		regs = cpuid(leaf_type::extended_state, subleaf_type{ 0x3e });
 		if(regs[ebx] != 0_u32) {
 			cpu.leaves[leaf_type::extended_state][subleaf_type{ 0x3e }] = regs;
@@ -441,9 +441,9 @@ void enumerate_rdt_monitoring(cpu_t& cpu) {
 
 void print_rdt_monitoring(fmt::memory_buffer& out, const cpu_t& cpu) {
 	static const std::vector<feature_t> monitorables = {
-		{ intel , 0x0000'0001_u32, "O", "Occupancy"       },
-		{ intel , 0x0000'0002_u32, "T", "Total Bandwidth" },
-		{ intel , 0x0000'0004_u32, "L", "Local Bandwidth" }
+		{ vendor_type::intel , 0x0000'0001_u32, "O", "Occupancy"       },
+		{ vendor_type::intel , 0x0000'0002_u32, "T", "Total Bandwidth" },
+		{ vendor_type::intel , 0x0000'0004_u32, "L", "Local Bandwidth" }
 	};
 	for(const auto& sub : cpu.leaves.at(leaf_type::rdt_monitoring)) {
 		const register_set_t& regs = sub.second;
@@ -881,7 +881,7 @@ void print_extended_signature_and_features(fmt::memory_buffer& out, const cpu_t&
 	const register_set_t& regs = cpu.leaves.at(leaf_type::extended_signature_and_features).at(subleaf_type::main);
 	format_to(out, "Extended signature and features\n");
 	
-	if(cpu.vendor & amd) {
+	if((cpu.vendor & vendor_type::amd) == vendor_type::amd) {
 		const struct
 		{
 			std::uint32_t brand_id     : 16;
@@ -947,8 +947,8 @@ void print_ras_advanced_power_management(fmt::memory_buffer& out, const cpu_t& c
 		std::uint32_t max_wrap_time      : 16;
 	} a = bit_cast<decltype(a)>(regs[eax]);
 
-	switch(cpu.vendor & any_silicon) {
-	case amd:
+	switch(cpu.vendor & vendor_type::any_silicon) {
+	case vendor_type::amd:
 		format_to(out, "Processor feedback capabilities\n");
 		format_to(out, "\tNumber of monitors: {:d}\n", a.number_of_monitors);
 		format_to(out, "\tVersion: {:d}\n", a.version);
@@ -961,7 +961,7 @@ void print_ras_advanced_power_management(fmt::memory_buffer& out, const cpu_t& c
 		format_to(out, "\tCompute unit power sample time period: {:d}\n", regs[ecx]);
 		print_features(out, cpu, leaf_type::ras_advanced_power_management, subleaf_type::main, edx);
 		break;
-	case intel:
+	case vendor_type::intel:
 		format_to(out, "Advanced Power Management information\n");
 		print_features(out, cpu, leaf_type::ras_advanced_power_management, subleaf_type::main, edx);
 		break;
@@ -993,8 +993,8 @@ void print_address_limits(fmt::memory_buffer& out, const cpu_t& cpu) {
 		std::uint32_t reserved_2      : 14;
 	} c = bit_cast<decltype(c)>(regs[ecx]);
 
-	switch(cpu.vendor & any_silicon) {
-	case amd:
+	switch(cpu.vendor & vendor_type::any_silicon) {
+	case vendor_type::amd:
 		format_to(out, "Address size limits\n");
 		format_to(out, "\tPhysical address size/bits: {:d}\n", a.physical_address_size);
 		format_to(out, "\tVirtual address size/bits: {:d}\n", a.virtual_address_size);
@@ -1030,7 +1030,7 @@ void print_address_limits(fmt::memory_buffer& out, const cpu_t& cpu) {
 			format_to(out, "\n");
 		}
 		break;
-	case intel:
+	case vendor_type::intel:
 		format_to(out, "Address size limits\n");
 		format_to(out, "\tPhysical address size/bits: {:d}\n", a.physical_address_size);
 		format_to(out, "\tVirtual address size/bits: {:d}\n", a.virtual_address_size);

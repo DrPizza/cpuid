@@ -8,7 +8,7 @@ static const char usage_message[] =
 R"(cpuid.
 
 Usage:
-	cpuid [--read-dump <filename>] [--read-format <format>] [--all-cpus | --cpu <id>] [--ignore-vendor] [--ignore-feature-bits] [--brute-force] [--raw] [--write-dump <filename>] [--write-format <format>] [--single-value <spec>] [--no-topology | --only-topology]
+	cpuid [--read-dump <filename>] [--read-format <format>] [--all-cpus | --cpu <id>] [--ignore-vendor] [--ignore-feature-bits] [--brute-force] [--raw] [--write-dump <filename>] [--write-format <format>] [--single-value <spec> | --single-leaf <leaf>] [--no-topology | --only-topology]
 	cpuid --list-ids [--read-dump <filename>] [--read-format <format>]
 	cpuid --help
 	cpuid --version
@@ -20,6 +20,7 @@ Input options:
 	--cpu <id>                 Show output from CPU with APIC ID <id>
 	--single-value <spec>      Print specific flag value, using Intel syntax (e.g. CPUID.01H.EDX.SSE[bit 25]).
 	                           Handles most of the wild inconsistencies found in Intel's documentation.
+	--single-leaf <leaf>       Print specific leaf
 	--ignore-vendor            Ignore vendor constraints
 	--ignore-feature-bits      Ignore feature bit constraints
 	--brute-force              Ignore constraints, and enumerate even reserved leaves
@@ -166,6 +167,19 @@ int main(int argc, char* argv[]) try {
 			fmt::memory_buffer out;
 			print_single_flag(out, cpu, flag_spec);
 			std::cout << to_string(out) << std::flush;
+		}
+		return EXIT_SUCCESS;
+	}
+
+	if(std::holds_alternative<std::string>(args.at("--single-leaf"))) {
+		const leaf_type leaf = gsl::narrow_cast<leaf_type>(std::stoull(std::get<std::string>(args.at("--single-leaf")), nullptr, 16));
+		for(const std::uint32_t chosen_id : chosen_ids) {
+			const cpu_t& cpu = logical_cpus.at(chosen_id);
+			if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
+				fmt::memory_buffer out;
+				print_leaf(out, cpu, leaf, skip_vendor_check, skip_feature_check);
+				std::cout << to_string(out) << std::flush;
+			}
 		}
 		return EXIT_SUCCESS;
 	}

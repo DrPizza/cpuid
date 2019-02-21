@@ -62,20 +62,20 @@ constexpr std::array<char, N - 1> to_array(const char(&str)[N]) {
 
 vendor_type get_vendor_from_name(const register_set_t& regs) {
 	static const std::map<std::array<char, 12>, vendor_type> vendors = {
-		{ to_array("AMDisbetter!"), amd },
-		{ to_array("AuthenticAMD"), amd },
-		{ to_array("CentaurHauls"), centaur },
-		{ to_array("CyrixInstead"), cyrix },
-		{ to_array("GenuineIntel"), intel },
-		{ to_array("TransmetaCPU"), transmeta },
-		{ to_array("GenuineTMx86"), transmeta },
-		{ to_array("Geode by NSC"), nat_semi },
-		{ to_array("NexGenDriven"), nexgen },
-		{ to_array("RiseRiseRise"), rise },
-		{ to_array("SiS SiS SiS "), sis },
-		{ to_array("UMC UMC UMC "), umc },
-		{ to_array("VIA VIA VIA "), via },
-		{ to_array("Vortex86 SoC"), vortex },
+		{ to_array("AMDisbetter!"), vendor_type::amd },
+		{ to_array("AuthenticAMD"), vendor_type::amd },
+		{ to_array("CentaurHauls"), vendor_type::centaur },
+		{ to_array("CyrixInstead"), vendor_type::cyrix },
+		{ to_array("GenuineIntel"), vendor_type::intel },
+		{ to_array("TransmetaCPU"), vendor_type::transmeta },
+		{ to_array("GenuineTMx86"), vendor_type::transmeta },
+		{ to_array("Geode by NSC"), vendor_type::nat_semi },
+		{ to_array("NexGenDriven"), vendor_type::nexgen },
+		{ to_array("RiseRiseRise"), vendor_type::rise },
+		{ to_array("SiS SiS SiS "), vendor_type::sis },
+		{ to_array("UMC UMC UMC "), vendor_type::umc },
+		{ to_array("VIA VIA VIA "), vendor_type::via },
+		{ to_array("Vortex86 SoC"), vendor_type::vortex },
 	};
 
 	const std::array<char, 12> vndr = bit_cast<decltype(vndr)>(
@@ -87,17 +87,17 @@ vendor_type get_vendor_from_name(const register_set_t& regs) {
 	);
 
 	const auto it = vendors.find(vndr);
-	return it != vendors.end() ? it->second : unknown;
+	return it != vendors.end() ? it->second : vendor_type::unknown;
 }
 
 vendor_type get_hypervisor_from_name(const register_set_t& regs) {
 	static const std::map<std::array<char, 12>, vendor_type> vendors = {
-		{ to_array("bhyve byhve "), bhyve },
-		{ to_array("KVMKVMKVM\0\0\0"), kvm },
-		{ to_array("Microsoft Hv"), hyper_v },
-		{ to_array(" lrpepyh vr\0"), parallels },
-		{ to_array("VMwareVMware"), vmware },
-		{ to_array("XenVMMXenVMM"), xen_hvm }
+		{ to_array("bhyve byhve "),    vendor_type::bhyve },
+		{ to_array("KVMKVMKVM\0\0\0"), vendor_type::kvm },
+		{ to_array("Microsoft Hv"),    vendor_type::hyper_v },
+		{ to_array(" lrpepyh vr\0"),   vendor_type::parallels },
+		{ to_array("VMwareVMware"),    vendor_type::vmware },
+		{ to_array("XenVMMXenVMM"),    vendor_type::xen_hvm }
 	};
 
 	const std::array<char, 12> vndr = bit_cast<decltype(vndr)>(
@@ -109,7 +109,7 @@ vendor_type get_hypervisor_from_name(const register_set_t& regs) {
 	);
 
 	const auto it = vendors.find(vndr);
-	return it != vendors.end() ? it->second : unknown;
+	return it != vendors.end() ? it->second : vendor_type::unknown;
 }
 
 model_t get_model(vendor_type vendor, const register_set_t& regs) noexcept {
@@ -119,8 +119,8 @@ model_t get_model(vendor_type vendor, const register_set_t& regs) noexcept {
 	model.family = a.family;
 	model.model = a.model;
 	model.stepping = a.stepping;
-	switch(vendor) {
-	case intel:
+	switch(vendor & vendor_type::any_silicon) {
+	case vendor_type::intel:
 		{
 			if(a.family == 0xf) {
 				model.family += a.extended_family;
@@ -130,7 +130,7 @@ model_t get_model(vendor_type vendor, const register_set_t& regs) noexcept {
 			}
 		}
 		break;
-	case amd:
+	case vendor_type::amd:
 		{
 			model.family += a.extended_family;
 			model.model += a.extended_model << 4_u32;
@@ -148,15 +148,15 @@ uint8_t get_initial_apic_id(const cpu_t& cpu) noexcept {
 }
 
 uint32_t get_apic_id(const cpu_t& cpu) {
-	switch(cpu.vendor & any_silicon) {
-	case intel:
+	switch(cpu.vendor & vendor_type::any_silicon) {
+	case vendor_type::intel:
 		if(cpu.leaves.find(leaf_type::extended_topology_v2) != cpu.leaves.end()) {
 			return cpu.leaves.at(leaf_type::extended_topology_v2).at(subleaf_type::main).at(edx);
 		} else if(cpu.leaves.find(leaf_type::extended_topology) != cpu.leaves.end()) {
 			return cpu.leaves.at(leaf_type::extended_topology).at(subleaf_type::main).at(edx);
 		}
 		break;
-	case amd:
+	case vendor_type::amd:
 		if(cpu.leaves.find(leaf_type::extended_apic) != cpu.leaves.end()) {
 			return cpu.leaves.at(leaf_type::extended_apic).at(subleaf_type::main).at(eax);
 		}
@@ -346,7 +346,7 @@ void enumerate_leaf(cpu_t& cpu, leaf_type leaf, bool brute_force, bool skip_vend
 	if(!brute_force
 	&& it != descriptors.end()) {
 		if(skip_vendor_check
-		|| it->second.vendor & cpu.vendor) {
+		|| ((it->second.vendor & cpu.vendor) != vendor_type::unknown)) {
 			const filter_t filter = it->second.filter;
 			if(skip_feature_check
 			|| filter      == no_filter
@@ -529,8 +529,8 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 				|| std::regex_search(line, m, registers_line)) {
 					++current_cpu;
 				} else if(std::regex_search(line, m, subleaf_line)) {
-					const leaf_type         leaf    = static_cast<leaf_type   >(std::stoul(m[1].str(), nullptr, 16));
-					const subleaf_type      subleaf = static_cast<subleaf_type>(std::stoul(m[6].str(), nullptr, 10));
+					const leaf_type      leaf    = static_cast<leaf_type   >(std::stoul(m[1].str(), nullptr, 16));
+					const subleaf_type   subleaf = static_cast<subleaf_type>(std::stoul(m[6].str(), nullptr, 10));
 					const register_set_t regs    = {
 						gsl::narrow_cast<std::uint32_t>(std::stoul(m[2].str(), nullptr, 16)),
 						gsl::narrow_cast<std::uint32_t>(std::stoul(m[3].str(), nullptr, 16)),
@@ -589,16 +589,16 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 			if(regs[eax] != 0_u32) {
 				const vendor_type hypervisor = get_hypervisor_from_name(regs);
 				// something is set, and it looks like a hypervisor
-				if(hypervisor & any_hypervisor) {
+				if((hypervisor & vendor_type::any_hypervisor) != vendor_type::unknown) {
 					cpu.vendor = cpu.vendor | hypervisor;
 
-					if(hypervisor & hyper_v) {
+					if((hypervisor & vendor_type::hyper_v) != vendor_type::unknown) {
 						// xen with viridian extensions masquerades as hyper-v, and puts its own cpuid leaves 0x100 further up
 						if(cpu.leaves.find(leaf_type::xen_limit_offset) != cpu.leaves.end()) {
 							regs = cpu.leaves.at(leaf_type::xen_limit_offset).at(subleaf_type::main);
 							const vendor_type xen_hypervisor = get_hypervisor_from_name(regs);
 
-							if(xen_hypervisor & xen_hvm) {
+							if((xen_hypervisor & vendor_type::xen_hvm) != vendor_type::unknown) {
 								cpu.vendor = cpu.vendor | xen_hypervisor;
 							}
 						}
@@ -642,7 +642,7 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_
 		if(regs[eax] != 0_u32) {
 			const vendor_type hypervisor = get_hypervisor_from_name(regs);
 			// something is set, and it looks like a hypervisor
-			if(hypervisor & any_hypervisor) {
+			if((hypervisor & vendor_type::any_hypervisor) != vendor_type::unknown) {
 				cpu.vendor = cpu.vendor | hypervisor;
 				const leaf_type highest_hypervisor_leaf = leaf_type{ regs[eax] };
 
@@ -650,13 +650,13 @@ std::map<std::uint32_t, cpu_t> enumerate_processors(bool brute_force, bool skip_
 					enumerate_leaf(cpu, leaf, brute_force, skip_vendor_check, skip_feature_check);
 				}
 
-				if(hypervisor & hyper_v) {
+				if((hypervisor & vendor_type::hyper_v) != vendor_type::unknown) {
 					// xen with viridian extensions masquerades as hyper-v, and puts its own cpuid leaves 0x100 further up
 					regs = cpuid(leaf_type::xen_limit_offset, subleaf_type::main);
 					const vendor_type xen_hypervisor = get_hypervisor_from_name(regs);
 
-					if(xen_hypervisor & xen_hvm) {
-						cpu.vendor                    = cpu.vendor | xen_hypervisor;
+					if((xen_hypervisor & vendor_type::xen_hvm) != vendor_type::unknown) {
+						cpu.vendor                       = cpu.vendor | xen_hypervisor;
 						const leaf_type xen_base         = leaf_type::xen_limit_offset;
 						const leaf_type highest_xen_leaf = leaf_type{ regs[eax] };
 
@@ -863,28 +863,32 @@ void print_single_flag(fmt::memory_buffer& out, const cpu_t& cpu, const flag_spe
 	}
 }
 
-void print_leaves(fmt::memory_buffer& out, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check) {
-	for(const auto& leaf : cpu.leaves) {
-		const auto range = descriptors.equal_range(leaf.first);
-		if(range.first != range.second) {
-			for(auto it = range.first; it != range.second; ++it) {
-				if(skip_vendor_check || (it->second.vendor & cpu.vendor)) {
-					const filter_t filter = it->second.filter;
-					if(skip_feature_check
-						|| filter == no_filter
-						|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
-						if(it->second.printer) {
-							it->second.printer(out, cpu);
-						} else {
-							print_generic(out, cpu, leaf.first);
-						}
+void print_leaf(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf, bool skip_vendor_check, bool skip_feature_check) {
+	const auto range = descriptors.equal_range(leaf);
+	if(range.first != range.second) {
+		for(auto it = range.first; it != range.second; ++it) {
+			if(skip_vendor_check || ((it->second.vendor & cpu.vendor) != vendor_type::unknown)) {
+				const filter_t filter = it->second.filter;
+				if(skip_feature_check
+					|| filter == no_filter
+					|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
+					if(it->second.printer) {
+						it->second.printer(out, cpu);
+					} else {
+						print_generic(out, cpu, leaf);
 					}
 				}
 			}
-		} else {
-			print_generic(out, cpu, leaf.first);
-			format_to(out, "\n");
 		}
+	} else {
+		print_generic(out, cpu, leaf);
+		format_to(out, "\n");
+	}
+}
+
+void print_leaves(fmt::memory_buffer& out, const cpu_t& cpu, bool skip_vendor_check, bool skip_feature_check) {
+	for(const auto& leaf : cpu.leaves) {
+		print_leaf(out, cpu, leaf.first, skip_vendor_check, skip_feature_check);
 	}
 }
 
@@ -1055,17 +1059,17 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 								case 'T': to_megahertz *= 1'000_u64; [[fallthrough]];
 								case 'G': to_megahertz *= 1'000_u64; [[fallthrough]];
 								case 'M':
-								{
-									const std::string::size_type freq_pos = brand.rfind(' ', hertz - 1);
-									if(freq_pos == std::string::npos) {
-										return 0_u32;
+									{
+										const std::string::size_type freq_pos = brand.rfind(' ', hertz - 1);
+										if(freq_pos == std::string::npos) {
+											return 0_u32;
+										}
+										const std::string freq_str = brand.substr(freq_pos + 1, hertz - 1 - freq_pos - 1);
+										const double raw_freq = std::stod(freq_str);
+										const std::uint32_t frequency = gsl::narrow_cast<std::uint32_t>(raw_freq * to_megahertz);
+										return frequency;
 									}
-									const std::string freq_str = brand.substr(freq_pos + 1, hertz - 1 - freq_pos - 1);
-									const double raw_freq = std::stod(freq_str);
-									const std::uint32_t frequency = gsl::narrow_cast<std::uint32_t>(raw_freq * to_megahertz);
-									return frequency;
-								}
-								break;
+									break;
 								default:
 									return 0_u32;
 								}
@@ -1073,6 +1077,8 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 						}
 						break;
 					case vendor_type::amd:
+						break;
+					default:
 						break;
 					}
 					return 0_u32;
@@ -1124,7 +1130,7 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 						}
 					}
 					return false;
-					};
+				};
 
 				const auto get_feature_ext = [&] (leaf_type leaf, subleaf_type subleaf, register_type reg, std::uint32_t bit, const char* name) {
 					return has_feature(leaf, subleaf, reg, bit) ? name : "";
@@ -1182,7 +1188,7 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 						} a = bit_cast<decltype(a)>(regs[eax]);
 
 						physical_bits = a.physical_address_size;
-						virtual_bits = a.virtual_address_size;
+						virtual_bits  = a.virtual_address_size;
 					}
 				};
 
@@ -1209,12 +1215,12 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 				format_to(out, "initial apicid  : {:d}\n", get_initial_apic_id(cpu));
 				format_to(out, "fpu             : {:s}\n", get_feature(leaf_type::version_info, edx, 0_u32, "yes"));
 				format_to(out, "fpu_exception   : {:s}\n", get_feature(leaf_type::version_info, edx, 0_u32, "yes"));
-				format_to(out, "cpuid level     : {:d}\n", cpu.leaves.at(leaf_type::basic_info).at(subleaf_type::main)[eax]);
+				format_to(out, "cpuid level     : {:d}\n", cpu.leaves.at(leaf_type::basic_info).at(subleaf_type::main).at(eax));
 				format_to(out, "wp              : yes\n");
 				format_to(out, "flags           : {:s}\n", flags);
 				format_to(out, "bugs            : {:s}\n", bugs);
 				format_to(out, "bogomips        : \n");
-				if(tlb_size != 0) {
+				if(tlb_size != 0_u32) {
 					format_to(out, "TLB size        : {:d} 4K pages\n", tlb_size);
 				}
 				format_to(out, "clflush size    : {:d}\n", flush_size);

@@ -784,7 +784,7 @@ std::vector<std::string> get_linux_features(const cpu_t& cpu) {
 			constant_tsc = true;
 			nonstop_tsc = true;
 		}
-		if(cpu.vendor & intel) {
+		if((cpu.vendor & vendor_type::intel) == vendor_type::intel) {
 			if((cpu.model.family == 0xf && cpu.model.model >= 0x3)
 			|| (cpu.model.family == 0x6 && cpu.model.model >= 0xe)) {
 				constant_tsc = true;
@@ -818,26 +818,32 @@ std::vector<std::string> get_linux_features(const cpu_t& cpu) {
 
 	const auto get_rep_good = [&] () {
 		switch(cpu.vendor & vendor_type::any_silicon) {
-		case intel:
-			if(cpu.model.family == 0x6) {
-				return true;
+		case vendor_type::intel:
+			{
+				if(cpu.model.family == 0x6) {
+					return true;
+				}
 			}
 			break;
-		case amd:
-			if(cpu.model.family >= 0x10) {
-				return true;
-			}
-			const std::uint32_t a = cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main)[eax];
-			if(a >= 0x0f58 || (0x0f48 <= a && a < 0x0f50)) {
-				return true;
+		case vendor_type::amd:
+			{
+				if(cpu.model.family >= 0x10) {
+					return true;
+				}
+				const std::uint32_t a = cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main)[eax];
+				if(a >= 0x0f58 || (0x0f48 <= a && a < 0x0f50)) {
+					return true;
+				}
 			}
 			break;
+		default:
+			;
 		}
 		return false;
 	};
 
 	const auto get_amd_dcm = [&] () {
-		if(cpu.vendor & vendor_type::amd) {
+		if((cpu.vendor & vendor_type::amd) == vendor_type::amd) {
 			if(cpu.leaves.find(leaf_type::extended_apic) != cpu.leaves.end()) {
 				const register_set_t& regs = cpu.leaves.at(leaf_type::extended_apic).at(subleaf_type::main);
 
@@ -890,7 +896,7 @@ std::vector<std::string> get_linux_features(const cpu_t& cpu) {
 	//scattered features:
 
 	const auto get_ring3mwait = [&] () {
-		if(cpu.vendor & vendor_type::intel) {
+		if((cpu.vendor & vendor_type::intel) == vendor_type::intel) {
 			if(cpu.model.family == 0x6
 			&& (cpu.model.model == 0x57 || cpu.model.model == 0x85)) {
 				return true;

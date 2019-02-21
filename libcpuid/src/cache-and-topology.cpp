@@ -917,8 +917,8 @@ void print_l2_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 		return print_size(cache_size * 1024_u64 * 512_u64);
 	};
 	
-	switch(cpu.vendor & any_silicon) {
-	case amd:
+	switch(cpu.vendor & vendor_type::any_silicon) {
+	case vendor_type::amd:
 		format_to(out, "Level 2 TLB\n");
 		format_to(out, "\t{:s}\n", print_tlb(a.d, "data", "2M"));
 		format_to(out, "\t{:s}\n", print_tlb(a.i, "instruction", "2M"));
@@ -940,7 +940,7 @@ void print_l2_cache_tlb(fmt::memory_buffer& out, const cpu_t & cpu) {
 		                                                                                         d.line_size,
 		                                                                                         d.lines_per_tag);
 		break;
-	case intel:
+	case vendor_type::intel:
 		format_to(out, "Level 2 cache\n");
 		format_to(out, "\t{:s} {:s} L2 cache with {:d} bytes per line\n", print_l2_size(c.size),
 		                                                                  print_associativity(c.associativity),
@@ -1186,8 +1186,8 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 		}
 		enumerated_caches = true;
 		vendor = cpu.vendor;
-		switch(cpu.vendor & any_silicon) {
-		case intel:
+		switch(cpu.vendor & vendor_type::any_silicon) {
+		case vendor_type::intel:
 			if(cpu.leaves.find(leaf_type::extended_topology) != cpu.leaves.end()) {
 				for(const auto& sub : cpu.leaves.at(leaf_type::extended_topology)) {
 					const register_set_t& regs = sub.second;
@@ -1340,7 +1340,7 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 				}
 			}
 			break;
-		case amd:
+		case vendor_type::amd:
 			if(cpu.leaves.find(leaf_type::extended_apic) != cpu.leaves.end()) {
 				const register_set_t& regs = cpu.leaves.at(leaf_type::extended_apic).at(subleaf_type::main);
 				const struct
@@ -1349,7 +1349,17 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 					std::uint32_t threads_per_core : 8;
 					std::uint32_t reserved_1       : 16;
 				} b = bit_cast<decltype(b)>(regs[ebx]);
+
+				//// the node_id and nodes_per_processor should surely be mapped somehow...
+				//const struct
+				//{
+				//	std::uint32_t node_id             : 8;
+				//	std::uint32_t nodes_per_processor : 3;
+				//	std::uint32_t reserved_1          : 21;
+				//} c = bit_cast<decltype(c)>(regs[ecx]);
+
 				machine.smt_mask_width = generate_mask(b.threads_per_core).second;
+
 			}
 			if(cpu.leaves.find(leaf_type::cache_properties) != cpu.leaves.end()) {
 				for(const auto& sub : cpu.leaves.at(leaf_type::cache_properties)) {
@@ -1418,11 +1428,13 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 				machine.core_mask_width = c.apic_id_size;
 			}
 			break;
+		default:
+			break;
 		}
 	});
 
-	switch(vendor & any_silicon) {
-	case intel:
+	switch(vendor & vendor_type::any_silicon) {
+	case vendor_type::intel:
 		// per the utterly miserable source code at https://software.intel.com/en-us/articles/intel-64-architecture-processor-topology-enumeration
 		for(const std::uint32_t id : machine.x2_apic_ids) {
 			const full_apic_id_t split = split_apic_id(id, machine.smt_mask_width, machine.core_mask_width);
@@ -1444,7 +1456,7 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 			}
 		}
 		break;
-	case amd:
+	case vendor_type::amd:
 		// pure guesswork, since AMD does not appear to document its algorithm anywhere
 		for(const std::uint32_t id : machine.x2_apic_ids) {
 			const full_apic_id_t split = split_apic_id(id, machine.smt_mask_width, machine.core_mask_width);
