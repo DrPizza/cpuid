@@ -1478,13 +1478,14 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 			const full_apic_id_t split = split_apic_id(id, machine.smt_mask_width, machine.core_mask_width);
 		
 			logical_core_t core = { id, split.smt_id, split.core_id, split.package_id };
-			machine.all_cores.push_back(core);
-			machine.packages[split.package_id].physical_cores[split.core_id].logical_cores[split.smt_id] = core;
 
 			for(const cache_t& cache : machine.all_caches) {
 				core.shared_cache_ids.push_back(id & cache.sharing_mask);
 				core.non_shared_cache_ids.push_back(id & ~cache.sharing_mask);
 			}
+
+			machine.all_cores.push_back(core);
+			machine.packages[split.package_id].physical_cores[split.core_id].logical_cores[split.smt_id] = core;
 		}
 		for(std::size_t i = 0; i < machine.all_caches.size(); ++i) {
 			cache_t& cache = machine.all_caches[i];

@@ -713,10 +713,14 @@ void for_feature_range(const cpu_t& cpu, leaf_type leaf, subleaf_type subleaf, r
 void print_features(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf, subleaf_type subleaf, register_type reg) {
 	for_feature_range(cpu, leaf, subleaf, reg,
 		[&] (const feature_t& feature, std::uint32_t) {
-			format_to(out, "{: >32s} \x1b[32;1m[+]\x1b[0m {:s}\n", feature.mnemonic, feature.description);
+			if(!feature.description.empty()) {
+				format_to(out, "{: >32s} \x1b[32;1m[+]\x1b[0m {:s}\n", feature.mnemonic, feature.description);
+			}
 		},
 		[&] (const feature_t& feature, std::uint32_t) {
-			format_to(out, "{: >32s} \x1b[31;1m[-]\x1b[0m {:s}\n", feature.mnemonic, feature.description);
+			if(!feature.description.empty()) {
+				format_to(out, "{: >32s} \x1b[31;1m[-]\x1b[0m {:s}\n", feature.mnemonic, feature.description);
+			}
 		}
 	);
 }

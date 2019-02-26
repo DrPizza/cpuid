@@ -27,7 +27,6 @@
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalOptions>/volatile:iso /Zc:strictStrings /Zc:throwingNew /Zc:externConstexpr /Zc:__cplusplus /vd2 /utf-8 /validate-charset %(AdditionalOptions)</AdditionalOptions>
-      <AssemblerOutput>All</AssemblerOutput>
       <SDLCheck>true</SDLCheck>
       <EnablePREfast>true</EnablePREfast>
       <StringPooling>true</StringPooling>
