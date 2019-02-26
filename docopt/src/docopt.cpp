@@ -590,7 +590,6 @@ namespace docopt {
 		} catch(Tokens::OptionError const& error) {
 			throw language_error(error.what());
 		}
-		//pattern = std::dynamic_pointer_cast<Required>(pattern->fix());
 		
 		PatternList argv_patterns;
 		try {

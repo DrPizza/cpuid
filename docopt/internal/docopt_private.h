@@ -21,7 +21,6 @@
 #include <variant>
 #include <charconv>
 
-// Workaround GCC 4.8 not having std::regex
 #if DOCOPT_USE_BOOST_REGEX
 #include <boost/regex.hpp>
 namespace docopt {
@@ -47,26 +46,6 @@ namespace docopt {
 
 #endif
 
-namespace std {
-	template<> struct hash<std::vector<std::string> >
-	{
-		typedef std::vector<std::string> argument_type;
-		typedef std::size_t result_type;
-
-		result_type operator()(const argument_type& v) const noexcept {
-			size_t seed = std::hash<size_t>{}(v.size());
-
-			// stolen from boost::hash_combine
-			std::hash<std::string> hasher = {};
-			for(auto const& str : v) {
-				seed ^= hasher(str) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-			}
-
-			return seed;
-		}
-	};
-}
-
 namespace docopt {
 	inline bool is_empty(const value& v) noexcept {
 		return std::holds_alternative<std::monostate>(v);
@@ -76,27 +55,6 @@ namespace docopt {
 	struct LeafPattern;
 
 	using PatternList = std::vector<std::shared_ptr<Pattern>>;
-
-	// Utility to use Pattern types in std hash-containers
-	struct PatternHasher
-	{
-		template <typename P>
-		size_t operator()(std::shared_ptr<P> const& pattern) const {
-			return pattern->hash();
-		}
-	};
-
-	// Utility to use 'hash' as the equality operator as well in std containers
-	struct PatternPointerEquality
-	{
-		template <typename P1, typename P2>
-		bool operator()(std::shared_ptr<P1> const& p1, std::shared_ptr<P2> const& p2) const {
-			return p1->hash() == p2->hash();
-		}
-	};
-
-	// A hash-set that uniques by hash value
-	using UniquePatternSet = std::unordered_set<std::shared_ptr<Pattern>, PatternHasher, PatternPointerEquality>;
 
 	struct Pattern : std::enable_shared_from_this<Pattern>
 	{
@@ -124,16 +82,6 @@ namespace docopt {
 		// flatten out children, stopping descent when the given filter returns 'true'
 		virtual std::vector<std::shared_ptr<Pattern>> do_flat(bool(* filter)(std::shared_ptr<const Pattern>)) = 0;
 
-		// flatten out all children into a list of LeafPattern objects
-		virtual void collect_leaves(std::vector<std::shared_ptr<LeafPattern>>&) = 0;
-
-		// flatten out all children into a list of LeafPattern objects
-		std::vector<std::shared_ptr<LeafPattern>> leaves() {
-			std::vector<std::shared_ptr<LeafPattern>> ret;
-			collect_leaves(ret);
-			return ret;
-		}
-
 		// Attempt to find something in 'left' that matches this pattern's spec, and if so, move it to 'collected'
 		virtual bool match(PatternList& left, std::vector<std::shared_ptr<LeafPattern>>& collected) const = 0;
 
@@ -142,8 +90,6 @@ namespace docopt {
 		virtual bool hasValue() const noexcept {
 			return false;
 		}
-
-		virtual size_t hash() const = 0;
 
 		Pattern() = default;
 		Pattern(const Pattern&) = default;
@@ -195,10 +141,6 @@ namespace docopt {
 			return get_spaces() + std::string(typeid(*this).name()) + " (" + name() + ": " + val + ") " + to_hex(this);
 		}
 
-		void collect_leaves(std::vector<std::shared_ptr<LeafPattern>>& lst) final {
-			lst.push_back(std::dynamic_pointer_cast<LeafPattern>(this->shared_from_this()));
-		}
-
 		bool match(PatternList& left, std::vector<std::shared_ptr<LeafPattern>>& collected) const override;
 
 		bool hasValue() const noexcept override {
@@ -215,13 +157,6 @@ namespace docopt {
 
 		std::string const& name() const noexcept override {
 			return fName;
-		}
-
-		size_t hash() const override {
-			size_t seed = typeid(*this).hash_code();
-			hash_combine(seed, fName);
-			hash_combine(seed, fValue);
-			return seed;
 		}
 
 	protected:
@@ -313,12 +248,6 @@ namespace docopt {
 			return ret;
 		}
 
-		void collect_leaves(std::vector<std::shared_ptr<LeafPattern>>& lst) final {
-			for(auto& child : fChildren) {
-				child->collect_leaves(lst);
-			}
-		}
-
 		void setChildren(PatternList children) {
 			fChildren = std::move(children);
 		}
@@ -339,14 +268,6 @@ namespace docopt {
 			}
 		}
 
-		size_t hash() const override {
-			size_t seed = typeid(*this).hash_code();
-			hash_combine(seed, fChildren.size());
-			for(auto const& child : fChildren) {
-				hash_combine(seed, child->hash());
-			}
-			return seed;
-		}
 	private:
 		void fix_repeating_arguments();
 
@@ -408,14 +329,6 @@ namespace docopt {
 
 		int argCount() const noexcept {
 			return fArgcount;
-		}
-
-		size_t hash() const override {
-			size_t seed = LeafPattern::hash();
-			hash_combine(seed, fShortOption);
-			hash_combine(seed, fLongOption);
-			hash_combine(seed, fArgcount);
-			return seed;
 		}
 
 	protected:
@@ -526,7 +439,7 @@ namespace docopt {
 		std::vector<PatternList> either = transform(children());
 		for(auto const& group : either) {
 			// use multiset to help identify duplicate entries
-			std::unordered_multiset<std::shared_ptr<Pattern>, PatternHasher> group_set(group.begin(), group.end());
+			std::multiset<std::shared_ptr<Pattern>, docopt::sort_by_name> group_set(group.begin(), group.end());
 			for(auto const& e : group_set) {
 				if(group_set.count(e) == 1) {
 					continue;

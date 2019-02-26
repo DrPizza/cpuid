@@ -110,13 +110,4 @@ namespace {
 	}
 }
 
-namespace docopt {
-	template <class T>
-	inline void hash_combine(std::size_t& seed, T const& v) noexcept {
-		// stolen from boost::hash_combine
-		const std::hash<T> hasher = {};
-		seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-	}
-}
-
 #endif
