@@ -341,10 +341,10 @@ struct cpu_t
 };
 
 inline bool operator==(const cpu_t& lhs, const cpu_t& rhs) noexcept {
-	return lhs.apic_id                 == rhs.apic_id
-	    && lhs.vendor                  == rhs.vendor
-	    && lhs.model                   == rhs.model
-	    && lhs.leaves                  == rhs.leaves;
+	return lhs.apic_id == rhs.apic_id
+	    && lhs.vendor  == rhs.vendor
+	    && lhs.model   == rhs.model
+	    && lhs.leaves  == rhs.leaves;
 }
 
 register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept;
@@ -417,13 +417,32 @@ inline bool operator<(const cache_t& lhs, const cache_t& rhs) noexcept {
 	     :                          lhs.total_size < rhs.total_size;
 }
 
+enum class level_type : std::uint32_t
+{
+	invalid =           0_u32,
+	smt     =           1_u32,
+	core    =           2_u32,
+	module  =           3_u32,
+	tile    =           4_u32,
+	die     =           5_u32,
+	node    = 0xffff'fffe_u32,
+	package = 0xffff'ffff_u32
+};
+
+struct level_description_t
+{
+	level_type level;
+	std::uint32_t shift_distance;
+	std::uint32_t select_mask;
+};
+
 struct logical_core_t
 {
 	std::uint32_t full_apic_id;
 
+	std::uint32_t smt_id;
+	std::uint32_t core_id;
 	std::uint32_t package_id;
-	std::uint32_t physical_core_id;
-	std::uint32_t logical_core_id;
 
 	std::vector<std::uint32_t> non_shared_cache_ids;
 	std::vector<std::uint32_t> shared_cache_ids;
@@ -434,13 +453,38 @@ struct physical_core_t
 	std::map<std::uint32_t, logical_core_t> logical_cores;
 };
 
-struct package_t
+struct module_t
 {
 	std::map<std::uint32_t, physical_core_t> physical_cores;
 };
 
+struct tile_t
+{
+	std::map<std::uint32_t, module_t> modules;
+};
+
+struct die_t
+{
+	std::map<std::uint32_t, tile_t> tiles;
+};
+
+struct node_t
+{
+	std::map<std::uint32_t, physical_core_t> physical_cores;
+};
+
+struct package_t
+{
+	std::map<std::uint32_t, physical_core_t> physical_cores;
+
+	//std::map<std::uint32_t, die_t> dies;
+	//std::map<std::uint32_t, node_t> nodes;
+};
+
 struct system_t
 {
+	vendor_type vendor;
+
 	std::uint32_t smt_mask_width;
 	std::uint32_t core_mask_width;
 	std::uint32_t module_mask_width;
@@ -452,6 +496,8 @@ struct system_t
 	std::vector<logical_core_t> all_cores;
 
 	std::map<std::uint32_t, package_t> packages;
+
+	std::set<level_type> valid_levels;
 };
 
 system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus);

@@ -1095,7 +1095,7 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 				const auto get_core_id = [&] () {
 					for(const auto& core : system.all_cores) {
 						if(core.full_apic_id == cpu.apic_id) {
-							return core.physical_core_id;
+							return core.core_id;
 						}
 					}
 					return 0_u32;

@@ -29,7 +29,10 @@
     <ClCompile Include="src\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\tests.cpp">
+    <ClCompile Include="src\libcpuid-tests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\docopt-tests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

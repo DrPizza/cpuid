@@ -16,6 +16,7 @@
 #include <string>
 #include <variant>
 #include <iosfwd>
+#include <stdexcept>
 
 #ifdef DOCOPT_HEADER_ONLY
     #define DOCOPT_INLINE inline
@@ -72,9 +73,9 @@ namespace docopt {
 	
 	/// A generic type to hold the various types that can be produced by docopt.
 	///
-	/// This type can be one of: {bool, unsigned int, string, vector<string>}, or empty.
+	/// This type can be one of: {bool, unsigned long long, string, vector<string>}, or empty.
 
-	using value = std::variant<std::monostate, bool, std::string, unsigned int, std::vector<std::string> >;
+	using value = std::variant<std::monostate, bool, std::string, unsigned long long, std::vector<std::string> >;
 
 	/// Parse user options from the given option string.
 	///
@@ -114,8 +115,8 @@ namespace std {
 		if(std::holds_alternative<bool>(val)) {
 			const bool b = std::get<bool>(val);
 			os << (b ? "true" : "false");
-		} else if(std::holds_alternative<unsigned int>(val)) {
-			const unsigned int v = std::get<unsigned int>(val);
+		} else if(std::holds_alternative<unsigned long long>(val)) {
+			const unsigned long long v = std::get<unsigned long long>(val);
 			os << v;
 		} else if(std::holds_alternative<std::string>(val)) {
 			const std::string& str = std::get<std::string>(val);

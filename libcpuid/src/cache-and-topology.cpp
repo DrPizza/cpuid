@@ -1153,13 +1153,52 @@ constexpr full_apic_id_t split_apic_id(std::uint32_t id, std::uint32_t smt_mask_
 	//                                                   |<   >|       core_id
 	// |<                                             >|               package_id
 	// |<                                                           >| x2_apic_id
-	const std::uint32_t logical_select_mask  = ~(0xffff'ffff_u32 << smt_mask_width);
-	const std::uint32_t core_select_mask     = ~(0xffff'ffff_u32 << core_mask_width);
-	const std::uint32_t package_select_mask  =   0xffff'ffff_u32 << core_mask_width;
-	const std::uint32_t smt_id      =  id & logical_select_mask;
-	const std::uint32_t core_id     = (id & core_select_mask   ) >> smt_mask_width;
-	const std::uint32_t package_id  = (id & package_select_mask) >> core_mask_width;
+	const std::uint32_t smt_select_mask     = ~(0xffff'ffff_u32 << smt_mask_width);
+	const std::uint32_t core_select_mask    = ~(0xffff'ffff_u32 << core_mask_width);
+	const std::uint32_t package_select_mask =   0xffff'ffff_u32 << core_mask_width;
+	const std::uint32_t smt_id     =  id & smt_select_mask;
+	const std::uint32_t core_id    = (id & core_select_mask   ) >> smt_mask_width;
+	const std::uint32_t package_id = (id & package_select_mask) >> core_mask_width;
 	return { smt_id, core_id, 0_u32, 0_u32, 0_u32, package_id };
+}
+
+constexpr full_apic_id_t split_apic_id(std::uint32_t id,
+                                       std::uint32_t smt_mask_width,
+                                       std::uint32_t core_mask_width,
+                                       std::uint32_t module_mask_width,
+                                       std::uint32_t tile_mask_width,
+                                       std::uint32_t die_mask_width) noexcept {
+	//
+	//
+	//                                 |<                           >| die_mask_width = 16
+	//                                         |<                   >| tile_mask_width = 12
+	//                                             |<               >| module_mask_width = 10
+	//                                                         |<   >| core_mask_width = 4
+	//                                                               X smt_mask_width = 1
+	//   3                   2                   1                   0
+	// 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+	//                                                               X smt_id
+	//                                                         |< >|   core_id
+	// |<                                          |<       >|         module_id
+	// |<                                      |X|                     tile_id
+	// |<                              |<   >|                         die_id
+	// |<                           >|                                 package_id
+	// |<                                                           >| x2_apic_id
+	const std::uint32_t smt_select_mask     = ~(0xffff'ffff_u32 << smt_mask_width);
+	const std::uint32_t core_select_mask    = ~(0xffff'ffff_u32 << core_mask_width);
+	const std::uint32_t module_select_mask  = ~(0xffff'ffff_u32 << module_mask_width);
+	const std::uint32_t tile_select_mask    = ~(0xffff'ffff_u32 << tile_mask_width);
+	const std::uint32_t die_select_mask     = ~(0xffff'ffff_u32 << die_mask_width);
+	const std::uint32_t package_select_mask =   0xffff'ffff_u32 << die_mask_width;
+
+	const std::uint32_t smt_id     = (id & smt_select_mask    );
+	const std::uint32_t core_id    = (id & core_select_mask   ) >> smt_mask_width;
+	const std::uint32_t module_id  = (id & module_select_mask ) >> core_mask_width;
+	const std::uint32_t tile_id    = (id & tile_select_mask   ) >> module_mask_width;
+	const std::uint32_t die_id     = (id & die_select_mask    ) >> tile_mask_width;
+	const std::uint32_t package_id = (id & package_select_mask) >> die_mask_width;
+
+	return { smt_id, core_id, module_id, tile_id, die_id, package_id };
 }
 
 std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noexcept {
@@ -1175,17 +1214,16 @@ std::pair<std::uint32_t, std::uint32_t> generate_mask(std::uint32_t entries) noe
 }
 
 system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
-	vendor_type vendor = vendor_type::unknown;
 	system_t machine = {};
 	bool enumerated_caches = false;
-	std::for_each(std::begin(logical_cpus), std::end(logical_cpus), [&machine, &enumerated_caches, &vendor](const std::pair<std::uint32_t, cpu_t>& p) {
+	std::for_each(std::begin(logical_cpus), std::end(logical_cpus), [&machine, &enumerated_caches](const std::pair<std::uint32_t, cpu_t>& p) {
 		const cpu_t cpu = p.second;
 		machine.x2_apic_ids.push_back(cpu.apic_id);
 		if(enumerated_caches) {
 			return;
 		}
 		enumerated_caches = true;
-		vendor = cpu.vendor;
+		machine.vendor = cpu.vendor;
 		switch(cpu.vendor & vendor_type::any_silicon) {
 		case vendor_type::intel:
 			if(cpu.leaves.find(leaf_type::extended_topology) != cpu.leaves.end()) {
@@ -1433,21 +1471,20 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 		}
 	});
 
-	switch(vendor & vendor_type::any_silicon) {
+	switch(machine.vendor & vendor_type::any_silicon) {
 	case vendor_type::intel:
 		// per the utterly miserable source code at https://software.intel.com/en-us/articles/intel-64-architecture-processor-topology-enumeration
 		for(const std::uint32_t id : machine.x2_apic_ids) {
 			const full_apic_id_t split = split_apic_id(id, machine.smt_mask_width, machine.core_mask_width);
 		
-			logical_core_t core = { id, split.package_id, split.core_id, split.smt_id };
+			logical_core_t core = { id, split.smt_id, split.core_id, split.package_id };
+			machine.all_cores.push_back(core);
+			machine.packages[split.package_id].physical_cores[split.core_id].logical_cores[split.smt_id] = core;
 
 			for(const cache_t& cache : machine.all_caches) {
 				core.shared_cache_ids.push_back(id & cache.sharing_mask);
 				core.non_shared_cache_ids.push_back(id & ~cache.sharing_mask);
 			}
-			machine.all_cores.push_back(core);
-
-			machine.packages[split.package_id].physical_cores[split.core_id].logical_cores[split.smt_id] = core;
 		}
 		for(std::size_t i = 0; i < machine.all_caches.size(); ++i) {
 			cache_t& cache = machine.all_caches[i];
@@ -1461,7 +1498,7 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 		for(const std::uint32_t id : machine.x2_apic_ids) {
 			const full_apic_id_t split = split_apic_id(id, machine.smt_mask_width, machine.core_mask_width);
 		
-			logical_core_t core = { id, split.package_id, split.core_id, split.smt_id };
+			logical_core_t core = { id, split.smt_id, split.core_id, split.package_id };
 			machine.all_cores.push_back(core);
 			machine.packages[split.package_id].physical_cores[split.core_id].logical_cores[split.smt_id] = core;
 		}
@@ -1475,7 +1512,6 @@ system_t build_topology(const std::map<std::uint32_t, cpu_t>& logical_cpus) {
 	default:
 		break;
 	}
-
 
 	return machine;
 }

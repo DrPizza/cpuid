@@ -17,7 +17,7 @@
 #pragma warning(disable: 26472) // warning C26472: Don't use a static_cast for arithmetic conversions. Use brace initialization, gsl::narrow_cast or gsl::narow (type.1: http://go.microsoft.com/fwlink/p/?LinkID=620417).
 #endif
 
-#include "docopt.h"
+#include "docopt/docopt.hpp"
 #include "docopt_util.h"
 #include "docopt_private.h"
 
@@ -123,33 +123,21 @@ namespace {
 		bool fIsParsingArgv;
 	};
 
-	// Get all instances of 'T' from the pattern
-	template <typename T>
-	std::vector<std::shared_ptr<T>> flat_filter(std::shared_ptr<docopt::Pattern> pattern) {
-		std::vector<std::shared_ptr<docopt::Pattern>> flattened = pattern->flat([](std::shared_ptr<const docopt::Pattern> p) noexcept -> bool {
-			return !!std::dynamic_pointer_cast<const T>(p);
-		});
-
-		// now, we're guaranteed to have T*'s, so just use static_cast
-		std::vector<std::shared_ptr<T>> ret;
-		std::transform(flattened.begin(), flattened.end(), std::back_inserter(ret), [](std::shared_ptr<docopt::Pattern> p) noexcept {
-			return std::static_pointer_cast<T>(p);
-		});
-		return ret;
-	}
-
 	std::vector<std::string> parse_section(std::string const& name, std::string const& source) {
 		// ECMAScript regex only has "?=" for a non-matching lookahead. In order to make sure we always have
 		// a newline to anchor our matching, we have to avoid matching the final newline of each grouping.
 		// Therefore, our regex is adjusted from the docopt Python one to use ?= to match the newlines before
 		// the following lines, rather than after.
 		docopt::regex const re_section_pattern{
-			"(?:^|\\n)"  // anchored at a linebreak (or start of string)
+			//"(?:^|\\n)"  // anchored at a linebreak (or start of string)
 			"("
-			"[^\\n]*" + name + "[^\\n]*(?=\\n?)" // a line that contains the name
-			"(?:\\n[[:space:]].*?(?=\\n|$))*" // followed by any number of lines that are indented
+			"[^\\n]*" + name + "[^\\n]*\n?" // a line that contains the name
+			"(?:[ \\t].*?(?:\\n|$))*" // followed by any number of lines that are indented
 			")",
-			docopt::regex::icase | docopt::regex::optimize // | docopt::regex::multiline
+			docopt::regex::icase | docopt::regex::optimize
+#if defined(DOCOPT_USE_BOOST_REGEX)
+			| docopt::regex::no_mod_m | docopt::regex::no_mod_s
+#endif
 		};
 
 		std::vector<std::string> ret;
@@ -256,6 +244,7 @@ namespace {
 					val = tokens.pop();
 				}
 			}
+
 			if(tokens.isParsingArgv()) {
 				o->setValue(!docopt::is_empty(val) ? std::move(val) : docopt::value{ true });
 			}
@@ -451,7 +440,6 @@ namespace {
 		return std::make_shared<docopt::Required>(std::move(result));
 	}
 
-
 	std::string formal_usage(std::string const& section) {
 		std::string ret = "(";
 
@@ -562,32 +550,22 @@ namespace {
 		std::vector<std::shared_ptr<docopt::Option>> options = parse_defaults(doc);
 		std::shared_ptr<docopt::Required> pattern = parse_pattern(formal_usage(usage_sections[0]), options);
 
-		std::vector<std::shared_ptr<docopt::Option>> pattern_options = flat_filter<docopt::Option>(pattern);
-
-		using UniqueOptions = std::unordered_set<std::shared_ptr<docopt::Option>, docopt::PatternHasher, docopt::PatternPointerEquality>;
-		const UniqueOptions uniq_pattern_options(pattern_options.begin(), pattern_options.end());
+		std::vector<std::shared_ptr<docopt::Option>> pattern_options = pattern->flat<docopt::Option>();
+		std::sort(std::begin(pattern_options), std::end(pattern_options), docopt::sort_by_name{});
+		pattern_options.erase(std::unique(std::begin(pattern_options), std::end(pattern_options), docopt::match_by_name{}), std::end(pattern_options));
 
 		// Fix up any "[options]" shortcuts with the actual option tree
-		for(auto& options_shortcut : flat_filter<docopt::OptionsShortcut>(pattern)) {
+		for(auto& options_shortcut : pattern->flat<docopt::OptionsShortcut>()) {
 			std::vector<std::shared_ptr<docopt::Option>> doc_options = parse_defaults(doc);
+			std::sort(std::begin(doc_options), std::end(doc_options), docopt::sort_by_name{});
+			doc_options.erase(std::unique(std::begin(doc_options), std::end(doc_options), docopt::match_by_name{}), std::end(doc_options));
 
 			// set(doc_options) - set(pattern_options)
-			UniqueOptions uniq_doc_options;
-			for(auto const& opt : doc_options) {
-				if(uniq_pattern_options.count(opt)) {
-					continue;
-				}
-				uniq_doc_options.insert(opt);
-			}
+			docopt::PatternList children;
+			std::set_difference(std::begin(doc_options), std::end(doc_options),
+			                    std::begin(pattern_options), std::end(pattern_options),
+			                    std::back_inserter(children), docopt::sort_by_name{});
 
-			// turn into shared_ptr's and set as children
-			docopt::PatternList children(uniq_doc_options.begin(), uniq_doc_options.end());
-			std::transform(uniq_doc_options.begin(),
-			               uniq_doc_options.end(),
-			               std::back_inserter(children),
-			               [](std::shared_ptr<docopt::Option> opt) noexcept {
-				return std::static_pointer_cast<docopt::Pattern>(opt);
-			});
 			options_shortcut->setChildren(std::move(children));
 		}
 
@@ -595,80 +573,89 @@ namespace {
 	}
 }
 
-DOCOPT_INLINE
-std::map<std::string, docopt::value>
-docopt::docopt_parse(std::string const& doc,
-                     std::vector<std::string> const& argv,
-                     bool help,
-                     bool version,
-                     bool options_first)
-{
-	std::shared_ptr<Required> pattern;
-	std::vector<std::shared_ptr<Option>> options;
-	try {
-		std::tie(pattern, options) = create_pattern_tree(doc);
-	} catch(Tokens::OptionError const& error) {
-		throw language_error(error.what());
-	}
+namespace docopt {
 
-	PatternList argv_patterns;
-	try {
-		argv_patterns = parse_argv(Tokens(argv), options, options_first);
-	} catch(Tokens::OptionError const& error) {
-		throw argument_error(error.what());
-	}
-
-	extras(help, version, argv_patterns);
-
-	std::vector<std::shared_ptr<LeafPattern>> collected;
-	const bool matched = pattern->fix().match(argv_patterns, collected);
-	if(matched && argv_patterns.empty()) {
-		std::map<std::string, value> ret;
-
-		// (a.name, a.value) for a in (pattern.flat() + collected)
-		for(const auto& p : pattern->leaves()) {
-			ret[p->name()] = p->getValue();
+	DOCOPT_INLINE
+	std::map<std::string, docopt::value>
+	docopt_parse(std::string const& doc,
+	             std::vector<std::string> const& argv,
+	             bool help,
+	             bool version,
+	             bool options_first)
+	{
+		std::shared_ptr<Required> pattern;
+		std::vector<std::shared_ptr<Option>> options;
+		try {
+			std::tie(pattern, options) = create_pattern_tree(doc);
+		} catch(Tokens::OptionError const& error) {
+			throw language_error(error.what());
 		}
-
-		for(auto const& p : collected) {
-			ret[p->name()] = p->getValue();
+		//pattern = std::dynamic_pointer_cast<Required>(pattern->fix());
+		
+		PatternList argv_patterns;
+		try {
+			argv_patterns = parse_argv(Tokens(argv), options, options_first);
+		} catch(Tokens::OptionError const& error) {
+			throw argument_error(error.what());
 		}
-
-		return ret;
+	
+		extras(help, version, argv_patterns);
+	
+		std::vector<std::shared_ptr<LeafPattern>> collected;
+		const bool matched = pattern->fix()->match(argv_patterns, collected);
+		if(matched && argv_patterns.empty()) {
+			std::map<std::string, value> ret;
+	
+			// (a.name, a.value) for a in (pattern.flat() + collected)
+			auto flattened = pattern->flat<docopt::LeafPattern>();
+			std::sort(std::begin(flattened), std::end(flattened), sort_by_name{});
+			flattened.erase(std::unique(std::begin(flattened), std::end(flattened), match_by_name{}), std::end(flattened));
+	
+			for(const auto& p : flattened) {
+				ret[p->name()] = p->getValue();
+			}
+	
+			for(auto const& p : collected) {
+				ret[p->name()] = p->getValue();
+			}
+	
+			return ret;
+		}
+	
+		if(matched) {
+			std::string leftover = join(argv.begin(), argv.end(), ", ");
+			throw argument_error("Unexpected argument: " + leftover);
+		}
+	
+		throw argument_error("Arguments did not match expected patterns"); // BLEH. Bad error.
+	}
+	
+	DOCOPT_INLINE
+	std::map<std::string, docopt::value>
+	docopt(std::string const& doc,
+	       std::vector<std::string> const& argv,
+	       bool help,
+	       std::string const& version,
+	       bool options_first) noexcept
+	{
+		try {
+			return docopt_parse(doc, argv, help, !version.empty(), options_first);
+		} catch(exit_help const&) {
+			std::cout << doc << std::endl;
+			std::exit(0);
+		} catch(exit_version const&) {
+			std::cout << version << std::endl;
+			std::exit(0);
+		} catch(language_error const& error) {
+			std::cerr << "Docopt usage string could not be parsed" << std::endl;
+			std::cerr << error.what() << std::endl;
+			std::exit(-1);
+		} catch(argument_error const& error) {
+			std::cerr << error.what();
+			std::cout << std::endl;
+			std::cout << doc << std::endl;
+			std::exit(-1);
+		} /* Any other exception is unexpected: let std::terminate grab it */
 	}
 
-	if(matched) {
-		std::string leftover = join(argv.begin(), argv.end(), ", ");
-		throw argument_error("Unexpected argument: " + leftover);
-	}
-
-	throw argument_error("Arguments did not match expected patterns"); // BLEH. Bad error.
-}
-
-DOCOPT_INLINE
-std::map<std::string, docopt::value>
-docopt::docopt(std::string const& doc,
-               std::vector<std::string> const& argv,
-               bool help,
-               std::string const& version,
-               bool options_first) noexcept
-{
-	try {
-		return docopt_parse(doc, argv, help, !version.empty(), options_first);
-	} catch(exit_help const&) {
-		std::cout << doc << std::endl;
-		std::exit(0);
-	} catch(exit_version const&) {
-		std::cout << version << std::endl;
-		std::exit(0);
-	} catch(language_error const& error) {
-		std::cerr << "Docopt usage string could not be parsed" << std::endl;
-		std::cerr << error.what() << std::endl;
-		std::exit(-1);
-	} catch(argument_error const& error) {
-		std::cerr << error.what();
-		std::cout << std::endl;
-		std::cout << doc << std::endl;
-		std::exit(-1);
-	} /* Any other exception is unexpected: let std::terminate grab it */
 }

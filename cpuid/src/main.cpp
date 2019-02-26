@@ -2,7 +2,7 @@
 
 #include "cpuid/cpuid.hpp"
 
-#include "docopt.h"
+#include "docopt/docopt.hpp"
 
 static const char usage_message[] =
 R"(cpuid.

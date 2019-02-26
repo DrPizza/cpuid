@@ -19,6 +19,7 @@
 #include <functional>
 #include <iosfwd>
 #include <variant>
+#include <charconv>
 
 // Workaround GCC 4.8 not having std::regex
 #if DOCOPT_USE_BOOST_REGEX
@@ -99,8 +100,29 @@ namespace docopt {
 
 	struct Pattern : std::enable_shared_from_this<Pattern>
 	{
+		// Get all instances of 'T' from the pattern
+		template <typename T>
+		std::vector<std::shared_ptr<T>> flat() {
+			std::vector<std::shared_ptr<docopt::Pattern>> flattened = this->do_flat([](std::shared_ptr<const docopt::Pattern> p) noexcept -> bool {
+				return !!std::dynamic_pointer_cast<const T>(p);
+			});
+
+			// now, we're guaranteed to have T*'s, so just use static_cast
+			std::vector<std::shared_ptr<T>> ret;
+			std::transform(flattened.begin(), flattened.end(), std::back_inserter(ret), [](std::shared_ptr<docopt::Pattern> p) noexcept {
+				return std::static_pointer_cast<T>(p);
+			});
+			return ret;
+		}
+
+		virtual std::string to_string() const = 0;
+		inline static std::size_t depth = 0;
+		static std::string get_spaces() {
+			return std::string(depth, ' ');
+		}
+
 		// flatten out children, stopping descent when the given filter returns 'true'
-		virtual std::vector<std::shared_ptr<Pattern>> flat(bool(* filter)(std::shared_ptr<const Pattern>)) = 0;
+		virtual std::vector<std::shared_ptr<Pattern>> do_flat(bool(* filter)(std::shared_ptr<const Pattern>)) = 0;
 
 		// flatten out all children into a list of LeafPattern objects
 		virtual void collect_leaves(std::vector<std::shared_ptr<LeafPattern>>&) = 0;
@@ -131,18 +153,46 @@ namespace docopt {
 		virtual ~Pattern() = default;
 	};
 
+	template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+	template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
 	struct LeafPattern : Pattern
 	{
 		LeafPattern(std::string name, value v = {}) : fName(std::move(name)),
 		                                              fValue(std::move(v)) {
 		}
 
-		std::vector<std::shared_ptr<Pattern>> flat(bool(* filter)(std::shared_ptr<const Pattern>)) override {
+		std::vector<std::shared_ptr<Pattern>> do_flat(bool(* filter)(std::shared_ptr<const Pattern>)) override {
 			auto shared_this = this->shared_from_this();
 			if((*filter)(shared_this)) {
 				return { shared_this };
 			}
 			return {};
+		}
+
+		std::string to_string() const override {
+			const std::string val = std::visit(overloaded{
+				[] (std::monostate)                      -> std::string { return "<empty-variant>"; },
+				[] (bool arg)                            -> std::string { return arg ? "true" : "false"; },
+				[] (const std::string& s)                -> std::string { return "\"" + s + "\""; },
+				[] (unsigned long long v)                -> std::string { return std::to_string(v); },
+				[] (const std::vector<std::string>& vec) -> std::string {
+					std::string rv("[");
+					for(const std::string& s : vec) {
+						rv += "\"" + s + "\"";
+						rv += ", ";
+					}
+					return rv + "]"; 
+				}
+			}, fValue);
+			
+			const auto to_hex = [] (const void* x) {
+				std::array<char, 2 + (2 * sizeof(void*))> bytes = { '0', 'x' };
+				const auto result = std::to_chars(bytes.data() + 2, bytes.data() + bytes.size(), reinterpret_cast<std::size_t>(x), 16);
+				return std::string(bytes.data(), result.ptr);
+			};
+
+			return get_spaces() + std::string(typeid(*this).name()) + " (" + name() + ": " + val + ") " + to_hex(this);
 		}
 
 		void collect_leaves(std::vector<std::shared_ptr<LeafPattern>>& lst) final {
@@ -186,16 +236,59 @@ namespace docopt {
 		std::vector<PatternList> transform(PatternList pattern);
 	}
 
+	struct match_by_name
+	{
+		template<typename T, typename U>
+		bool operator()(const std::shared_ptr<T> lhs, const std::shared_ptr<U> rhs) const noexcept {
+			if(lhs == rhs) {
+				return true;
+			}
+			if(dynamic_cast<const T*>(rhs.get()) != nullptr
+			|| dynamic_cast<const U*>(lhs.get()) != nullptr) {
+				return lhs->name() == rhs->name();
+			}
+			return false;
+		}
+	};
+
+	struct sort_by_name
+	{
+		template<typename T, typename U>
+		bool operator()(const std::shared_ptr<T> lhs, const std::shared_ptr<U> rhs) const noexcept {
+			if(dynamic_cast<const T*>(rhs.get()) != nullptr
+			|| dynamic_cast<const U*>(lhs.get()) != nullptr) {
+				return lhs->name() < rhs->name();
+			}
+			return false;
+		}
+	};
+
 	struct BranchPattern : Pattern
 	{
 		BranchPattern(PatternList children = {}) noexcept : fChildren(std::move(children)) {
 		}
 
-		Pattern& fix() {
-			UniquePatternSet patterns;
-			fix_identities(patterns);
+		std::string to_string() const override {
+			std::string rv = get_spaces() + typeid(*this).name();
+			rv += " {\n";
+			++Pattern::depth;
+			for(const auto& c : children()) {
+				rv += c->to_string();
+				rv += ",\n";
+			}
+			--Pattern::depth;
+			rv += get_spaces() + "}";
+			return rv;
+		}
+
+		std::shared_ptr<Pattern> fix() {
+			auto uniq = flat<docopt::LeafPattern>();
+			std::sort(std::begin(uniq), std::end(uniq), sort_by_name{});
+			uniq.erase(std::unique(std::begin(uniq), std::end(uniq), match_by_name{}), std::end(uniq));
+
+			fix_identities(uniq);
 			fix_repeating_arguments();
-			return *this;
+			return this->shared_from_this();
 		}
 
 		std::string const& name() const override {
@@ -203,10 +296,10 @@ namespace docopt {
 		}
 
 		virtual value const& getValue() const {
-			throw std::logic_error("Logic error: name() shouldn't be called on a BranchPattern");
+			throw std::logic_error("Logic error: getValue() shouldn't be called on a BranchPattern");
 		}
 
-		std::vector<std::shared_ptr<Pattern>> flat(bool(* filter)(std::shared_ptr<const Pattern>)) override {
+		std::vector<std::shared_ptr<Pattern>> do_flat(bool(* filter)(std::shared_ptr<const Pattern>)) override {
 			auto shared_this = this->shared_from_this();
 			if((*filter)(shared_this)) {
 				return { shared_this };
@@ -214,8 +307,8 @@ namespace docopt {
 
 			std::vector<std::shared_ptr<Pattern>> ret;
 			for(auto& child : fChildren) {
-				auto sublist = child->flat(filter);
-				ret.insert(ret.end(), sublist.begin(), sublist.end());
+				auto sublist = child->do_flat(filter);
+				std::move(sublist.begin(), sublist.end(), std::back_inserter(ret));
 			}
 			return ret;
 		}
@@ -234,18 +327,14 @@ namespace docopt {
 			return fChildren;
 		}
 
-		virtual void fix_identities(UniquePatternSet& patterns) {
+		virtual void fix_identities(std::vector<std::shared_ptr<docopt::LeafPattern>>& patterns) {
 			for(auto& child : fChildren) {
-				// this will fix up all its children, if needed
 				if(auto bp = dynamic_cast<BranchPattern*>(child.get())) {
 					bp->fix_identities(patterns);
-				}
-
-				// then we try to add it to the list
-				const auto inserted = patterns.insert(child);
-				if(!inserted.second) {
-					// already there? then reuse the existing shared_ptr for that thing
-					child = *inserted.first;
+				} else {
+					child = *std::find_if(std::begin(patterns), std::end(patterns), [&] (const auto& p) {
+						return match_by_name{}(p, child);
+					});
 				}
 			}
 		}
@@ -472,7 +561,7 @@ namespace docopt {
 						leaf->setValue(value{ newValue });
 					}
 				} else if(ensureInt) {
-					leaf->setValue(value{ 0u });
+					leaf->setValue(value{ 0ull });
 				}
 			}
 		}
@@ -489,13 +578,13 @@ namespace docopt {
 		auto same_name = std::find_if(collected.begin(), collected.end(), [&](std::shared_ptr<LeafPattern> const& p) noexcept {
 			return p->name() == name();
 		});
-		if(std::holds_alternative<unsigned int>(getValue())) {
-			unsigned int val = 1;
+		if(std::holds_alternative<unsigned long long>(getValue())) {
+			unsigned long long val = 1; // std::get<unsigned long long>(getValue());
 			if(same_name == collected.end()) {
 				collected.push_back(match.second);
 				match.second->setValue(value{val});
-			} else if(std::holds_alternative<unsigned int>((**same_name).getValue())) {
-				val += std::get<unsigned int>((**same_name).getValue());
+			} else if(std::holds_alternative<unsigned long long>((**same_name).getValue())) {
+				val += std::get<unsigned long long>((**same_name).getValue());
 				(**same_name).setValue(value{val});
 			} else {
 				(**same_name).setValue(value{val});
@@ -504,7 +593,9 @@ namespace docopt {
 			std::vector<std::string> val;
 			if (std::holds_alternative<std::string>(match.second->getValue())) {
 				val.push_back(std::get<std::string>(match.second->getValue()));
-			} else if (std::holds_alternative<std::vector<std::string> >(match.second->getValue())) {
+			} else if(std::holds_alternative<unsigned long long>(match.second->getValue())) {
+				val.push_back(std::to_string(std::get<unsigned long long>(match.second->getValue())));
+			} else if(std::holds_alternative<std::vector<std::string> >(match.second->getValue())) {
 				val = std::get<std::vector<std::string> >(match.second->getValue());
 			} else {
 				/// cant be!?

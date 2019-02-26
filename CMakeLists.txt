@@ -60,6 +60,7 @@ set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 project(cpuid-toplevel VERSION 1.0.0 LANGUAGES C CXX)
 
+add_subdirectory("docopt")
 add_subdirectory("libcpuid")
 add_subdirectory("cpuid")
 

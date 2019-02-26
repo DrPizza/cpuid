@@ -53,11 +53,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>$(ProjectDir)internal;$(SolutionDir)libcpuid\external;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)internal;$(SolutionDir)libcpuid\external;$(SolutionDir)docopt\external;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>$(ProjectDir)internal;$(SolutionDir)libcpuid\external;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)internal;$(SolutionDir)libcpuid\external;$(SolutionDir)docopt\external;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -93,13 +93,17 @@
     <ClInclude Include="internal\utility.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\docopt-tests.cpp" />
     <ClCompile Include="src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\tests.cpp" />
+    <ClCompile Include="src\libcpuid-tests.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\docopt\docopt.vcxproj">
+      <Project>{8dbc8811-9a0e-4caf-b790-6ed28fffeb3e}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\libcpuid\libcpuid.vcxproj">
       <Project>{21e817b6-c211-40ed-8197-d6760a7b3c2e}</Project>
     </ProjectReference>
