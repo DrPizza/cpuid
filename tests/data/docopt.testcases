@@ -955,3 +955,132 @@ other options:
 """
 $ prog --baz --egg
 {"--bar": false, "--baz": true, "--egg": true, "--foo": false, "--spam": false}
+
+
+#r"""Usage: prog [-0]
+#
+#options:
+# -0  Input is null-delimited."""
+#$ prog
+#{"-0": false}
+#
+#$ prog -0
+#{"-0": true}
+#
+#$ prog -1
+#"user-error"
+#
+#r"""Usage: prog [-0] [<number>]...
+#
+#options:
+# -0  Input is null-delimited."""
+#$ prog
+#{"-0": false, "<number>": []}
+#
+#$ prog -0
+#{"-0": true, "<number>": []}
+#
+#$ prog -1
+#{"-0": false, "<number>": ["-1"]}
+#
+#$ prog -0 -1
+#{"-0": true, "<number>": ["-1"]}
+#
+#$ prog -0 -1 -2 -3
+#{"-0": true, "<number>": ["-1", "-2", "-3"]}
+r"""Usage: prog [-vqrh] [FILE] ...
+           prog (--left | --right) CORRECTION FILE
+
+Process FILE and optionally apply correction to either left-hand side or
+right-hand side.
+
+Arguments:
+  FILE        optional input file
+  CORRECTION  correction angle, needs FILE, --left or --right to be present
+
+Options:
+  -h --help
+  -v       verbose mode
+  -q       quiet mode
+  -r       make report
+  --left   use left-hand side
+  --right  use right-hand side
+
+"""
+$ prog -vqrh my-file
+{"--help": true, "--left": false, "--right": false, "-q": true, "-r": true, "-v": true, "CORRECTION": null, "FILE": ["my-file"]}
+
+$ prog --left updates my-file
+{"--help": false, "--left": true, "--right": false, "-q": false, "-r": false, "-v": false, "CORRECTION": "updates", "FILE": ["my-file"]}
+
+r"""Usage:
+  calculator_example.py <value> ( ( + | - | * | / ) <value> )...
+  calculator_example.py <function> <value> [( , <value> )]...
+  calculator_example.py (-h | --help)
+
+Examples:
+  calculator_example.py 1 + 2 + 3 + 4 + 5
+  calculator_example.py 1 + 2 '*' 3 / 4 - 5    # note quotes around '*' to stop unix shell globbing
+  calculator_example.py sum 10 , 20 , 30 , 40
+
+Options:
+  -h, --help
+
+"""
+$ prog 1 + 2 + 3 + 4 + 5
+{"*": 0, "+": 4, ",": 0, "-": 0, "--help": false, "/": 0, "<function>": null, "<value>": ["1", "2", "3", "4", "5"]}
+
+$ prog 1 + 2 * 3 / 4 - 5
+{"*": 1, "+": 1, ",": 0, "-": 1, "--help": false, "/": 1, "<function>": null, "<value>": ["1", "2", "3", "4", "5"]}
+
+$ prog sum 10 , 20 , 30 , 40
+{"*": 0, "+": 0, ",": 3, "-": 0, "--help": false, "/": 0, "<function>": "sum", "<value>": ["10", "20", "30", "40"]}
+
+r"""usage: git commit [options] [--] [<filepattern>...]
+
+common options:
+    -h, --help
+    -q, --quiet           suppress summary after successful commit
+    -v, --verbose         show diff in commit message template
+
+Commit message options:
+    -F, --file <file>     read message from file
+    --author <author>     override author for commit
+    --date <date>         override date for commit
+    -m, --message <message>
+                          commit message
+    -c, --reedit-message <commit>
+                          reuse and edit message from specified commit
+    -C, --reuse-message <commit>
+                          reuse message from specified commit
+    --fixup <commit>      use autosquash formatted message to fixup specified commit
+    --squash <commit>     use autosquash formatted message to squash specified commit
+    --reset-author        the commit is authored by me now
+                          (used with -C-c/--amend)
+    -s, --signoff         add Signed-off-by:
+    -t, --template <file>
+                          use specified template file
+    -e, --edit            force edit of commit
+    --cleanup <default>   how to strip spaces and #comments from message
+    --status              include status in commit message template
+
+Commit contents options:
+    -a, --all             commit all changed files
+    -i, --include         add specified files to index for commit
+    --interactive         interactively add files
+    -o, --only            commit only specified files
+    -n, --no-verify       bypass pre-commit hook
+    --dry-run             show what would be committed
+    --short               show status concisely
+    --branch              show branch information
+    --porcelain           machine-readable output
+    -z, --null            terminate entries with NUL
+    --amend               amend previous commit
+    --no-post-rewrite     bypass post-rewrite hook
+    -u, --untracked-files=<mode>
+                          show untracked files, optional modes: all, normal, no.
+                          [default: all]
+"""
+
+$ prog commit -m "blah blah" -- foo bar baz -dashed- --double-dashed-- -a -m "quoted spaces" "quoted\" \\ \"escaped"
+{"--": true, "--all": false, "--amend": false, "--author": null, "--branch": false, "--cleanup": null, "--date": null, "--dry-run": false, "--edit": false, "--file": null, "--fixup": null, "--help": false, "--include": false, "--interactive": false, "--message": "blah blah", "--no-post-rewrite": false, "--no-verify": false, "--null": false, "--only": false, "--porcelain": false, "--quiet": false, "--reedit-message": null, "--reset-author": false, "--reuse-message": null, "--short": false, "--signoff": false, "--squash": null, "--template": null, "--untracked-files": "all", "--verbose": false, "<filepattern>": ["foo", "bar", "baz", "-dashed-", "--double-dashed--", "-a", "-m", "quoted spaces", "quoted\" \\ \"escaped"], "commit": true}

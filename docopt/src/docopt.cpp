@@ -568,7 +568,8 @@ namespace {
 
 			options_shortcut->setChildren(std::move(children));
 		}
-
+		// unify leaves, detect repeatable parameters.
+		pattern->fix();
 		return { pattern, std::move(options) };
 	}
 }
@@ -601,7 +602,7 @@ namespace docopt {
 		extras(help, version, argv_patterns);
 	
 		std::vector<std::shared_ptr<LeafPattern>> collected;
-		const bool matched = pattern->fix()->match(argv_patterns, collected);
+		const bool matched = pattern->match(argv_patterns, collected);
 		if(matched && argv_patterns.empty()) {
 			std::map<std::string, value> ret;
 	
@@ -657,4 +658,48 @@ namespace docopt {
 		} // Any other exception is unexpected: let std::terminate grab it
 	}
 
+	DOCOPT_INLINE
+	std::vector<std::string> crack_argv(const std::string& command_line) {
+		std::vector<std::string> argv;
+		std::string current;
+		bool escaped = false;
+		bool quoted = false;
+		for(char ch : command_line) {
+			switch(ch) {
+			case '\\':
+				if(escaped) {
+					current += ch;
+				}
+				escaped = !escaped;
+				break;
+			case '"':
+				if(escaped) {
+					current += ch;
+					escaped = !escaped;
+				} else {
+					quoted = !quoted;
+				}
+				break;
+			case ' ':
+			case '\n':
+			case '\t':
+				if(quoted) {
+					current += ch;
+				} else {
+					if(!current.empty()) {
+						argv.push_back(current);
+						current.clear();
+					}
+				}
+				break;
+			default:
+				current += ch;
+				break;
+			}
+		}
+		if(!current.empty()) {
+			argv.push_back(current);
+		}
+		return argv;
+	}
 }

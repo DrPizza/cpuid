@@ -51,6 +51,33 @@ namespace docopt {
 		return std::holds_alternative<std::monostate>(v);
 	}
 
+	struct match_by_name
+	{
+		template<typename T, typename U>
+		bool operator()(const std::shared_ptr<T> lhs, const std::shared_ptr<U> rhs) const noexcept {
+			if(lhs == rhs) {
+				return true;
+			}
+			if(dynamic_cast<const T*>(rhs.get()) != nullptr
+				|| dynamic_cast<const U*>(lhs.get()) != nullptr) {
+				return lhs->name() == rhs->name();
+			}
+			return false;
+		}
+	};
+
+	struct sort_by_name
+	{
+		template<typename T, typename U>
+		bool operator()(const std::shared_ptr<T> lhs, const std::shared_ptr<U> rhs) const noexcept {
+			if(dynamic_cast<const T*>(rhs.get()) != nullptr
+				|| dynamic_cast<const U*>(lhs.get()) != nullptr) {
+				return lhs->name() < rhs->name();
+			}
+			return false;
+		}
+	};
+
 	struct Pattern;
 	struct LeafPattern;
 
@@ -156,33 +183,6 @@ namespace docopt {
 	namespace {
 		std::vector<PatternList> transform(PatternList pattern);
 	}
-
-	struct match_by_name
-	{
-		template<typename T, typename U>
-		bool operator()(const std::shared_ptr<T> lhs, const std::shared_ptr<U> rhs) const noexcept {
-			if(lhs == rhs) {
-				return true;
-			}
-			if(dynamic_cast<const T*>(rhs.get()) != nullptr
-			|| dynamic_cast<const U*>(lhs.get()) != nullptr) {
-				return lhs->name() == rhs->name();
-			}
-			return false;
-		}
-	};
-
-	struct sort_by_name
-	{
-		template<typename T, typename U>
-		bool operator()(const std::shared_ptr<T> lhs, const std::shared_ptr<U> rhs) const noexcept {
-			if(dynamic_cast<const T*>(rhs.get()) != nullptr
-			|| dynamic_cast<const U*>(lhs.get()) != nullptr) {
-				return lhs->name() < rhs->name();
-			}
-			return false;
-		}
-	};
 
 	struct BranchPattern : Pattern
 	{
@@ -547,9 +547,9 @@ namespace docopt {
 			}
 
 			if(match[3].length() == 0) { // [3] always matches.
-										 // Hit end of string. For some reason 'match_not_null' will let us match empty
-										 // at the end, and then we'll spin in an infinite loop. So, if we hit an empty
-										 // match, we know we must be at the end.
+				                         // Hit end of string. For some reason 'match_not_null' will let us match empty
+				                         // at the end, and then we'll spin in an infinite loop. So, if we hit an empty
+				                         // match, we know we must be at the end.
 				break;
 			}
 		}

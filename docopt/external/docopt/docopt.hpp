@@ -109,16 +109,35 @@ namespace docopt {
 	                                                       std::string const& version = {},
 	                                                       bool options_first = false) noexcept;
 
+	std::vector<std::string> DOCOPT_API crack_argv(const std::string& command_line);
+	
 	namespace
 	{
 		template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 		template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+		inline std::string escape_string(const std::string& input) {
+			std::string output;
+			for(char ch : input) {
+				switch(ch) {
+				case '\\':
+				case '"':
+					output += '\\';
+					output += ch;
+					break;
+				default:
+					output += ch;
+					break;
+				}
+			}
+			return output;
+		}
 	}
 
 	inline static const auto value_printer = overloaded{
 		[] (std::monostate)                      -> std::string { return "null"; },
 		[] (bool arg)                            -> std::string { return arg ? "true" : "false"; },
-		[] (const std::string& s)                -> std::string { return "\"" + s + "\""; },
+		[] (const std::string& s)                -> std::string { return "\"" + escape_string(s) + "\""; },
 		[] (unsigned long long v)                -> std::string { return std::to_string(v); },
 		[] (const std::vector<std::string>& vec) -> std::string {
 			std::string rv("[");
@@ -129,7 +148,7 @@ namespace docopt {
 				} else {
 					rv += ", ";
 				}
-				rv += "\"" + s + "\"";
+				rv += "\"" + escape_string(s) + "\"";
 			}
 			return rv + "]"; 
 		}

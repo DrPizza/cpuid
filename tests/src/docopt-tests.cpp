@@ -65,11 +65,8 @@ public:
 				const std::string args     = inv.substr(0, inv.find("\n"));
 				const std::string expected = std::regex_replace(inv.substr(inv.find("\n") + 1), newline, "");
 				docopt_test_invocation invocation = {
-					{}, expected
+					docopt::crack_argv(args), expected
 				};
-				boost::algorithm::split(invocation.argv, args, boost::is_any_of(" "));
-
-				invocation.argv.erase(std::remove(std::begin(invocation.argv), std::end(invocation.argv), ""), std::end(invocation.argv));
 				data.tests.push_back(invocation);
 			}
 			command_lines.push_back(data);
