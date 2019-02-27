@@ -6,9 +6,6 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
 TEST_CLASS(docopt_tests) {
 public:
 	TEST_METHOD(test_docopt_parsing) {
@@ -77,28 +74,6 @@ public:
 			}
 			command_lines.push_back(data);
 		}
-
-		const auto value_to_string = [] (const docopt::value& value) {
-			return std::visit(overloaded {
-				[] (std::monostate)                      -> std::string { return "null"; },
-				[] (bool arg)                            -> std::string { return arg ? "true" : "false"; },
-				[] (const std::string& s)                -> std::string { return "\"" + s + "\""; },
-				[] (unsigned long long v)                -> std::string { return std::to_string(v); },
-				[] (const std::vector<std::string>& vec) -> std::string {
-					std::string rv("[");
-					bool first = true;
-					for(const std::string& s : vec) {
-						if(first) {
-							first = false;
-						} else {
-							rv += ", ";
-						}
-						rv += "\"" + s + "\"";
-					}
-					return rv + "]";
-				}
-			}, value);
-		};
 		
 		const auto results_to_json = [&] (const std::map<std::string, docopt::value>& results) {
 			bool first = true;
@@ -113,7 +88,7 @@ public:
 				json += '"';
 				json += arg.first;
 				json += "\": ";
-				json += value_to_string(arg.second);
+				json += std::visit(docopt::value_printer, arg.second);
 			}
 			json += "}";
 			return json;

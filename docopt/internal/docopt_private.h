@@ -74,7 +74,9 @@ namespace docopt {
 		}
 
 		virtual std::string to_string() const = 0;
+
 		inline static std::size_t depth = 0;
+
 		static std::string get_spaces() {
 			return std::string(depth, ' ');
 		}
@@ -99,9 +101,6 @@ namespace docopt {
 		virtual ~Pattern() = default;
 	};
 
-	template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-	template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
 	struct LeafPattern : Pattern
 	{
 		LeafPattern(std::string name, value v = {}) : fName(std::move(name)),
@@ -117,20 +116,7 @@ namespace docopt {
 		}
 
 		std::string to_string() const override {
-			const std::string val = std::visit(overloaded{
-				[] (std::monostate)                      -> std::string { return "<empty-variant>"; },
-				[] (bool arg)                            -> std::string { return arg ? "true" : "false"; },
-				[] (const std::string& s)                -> std::string { return "\"" + s + "\""; },
-				[] (unsigned long long v)                -> std::string { return std::to_string(v); },
-				[] (const std::vector<std::string>& vec) -> std::string {
-					std::string rv("[");
-					for(const std::string& s : vec) {
-						rv += "\"" + s + "\"";
-						rv += ", ";
-					}
-					return rv + "]"; 
-				}
-			}, fValue);
+			const std::string val = std::visit(docopt::value_printer, fValue);
 			
 			const auto to_hex = [] (const void* x) {
 				std::array<char, 2 + (2 * sizeof(void*))> bytes = { '0', 'x' };
@@ -222,7 +208,7 @@ namespace docopt {
 			uniq.erase(std::unique(std::begin(uniq), std::end(uniq), match_by_name{}), std::end(uniq));
 
 			fix_identities(uniq);
-			fix_repeating_arguments();
+			fix_repeating_arguments(this);
 			return this->shared_from_this();
 		}
 
@@ -269,7 +255,7 @@ namespace docopt {
 		}
 
 	private:
-		void fix_repeating_arguments();
+		void fix_repeating_arguments(Pattern* current);
 
 	protected:
 		PatternList fChildren;
@@ -378,104 +364,75 @@ namespace docopt {
 		bool match(PatternList& left, std::vector<std::shared_ptr<LeafPattern>>& collected) const override;
 	};
 
-	namespace {
-		inline std::vector<PatternList> transform(PatternList pattern) {
-			std::vector<PatternList> result;
+	inline void make_leaf_repeatable(LeafPattern* leaf) {
+		if(std::holds_alternative<unsigned long long>(leaf->getValue())
+		|| std::holds_alternative<std::vector<std::string>>(leaf->getValue())) {
+			return;
+		}
 
-			std::vector<PatternList> groups;
-			groups.emplace_back(std::move(pattern));
+		bool ensureList = false;
+		bool ensureInt = false;
 
-			while(!groups.empty()) {
-				// pop off the first element
-				auto children = std::move(groups[0]);
-				groups.erase(groups.begin());
-
-				// find the first branch node in the list
-				auto child_iter = std::find_if(children.begin(), children.end(), [](std::shared_ptr<Pattern> const& p) noexcept {
-					return dynamic_cast<BranchPattern const*>(p.get());
-				});
-
-				// no branch nodes left : expansion is complete for this grouping
-				if(child_iter == children.end()) {
-					result.emplace_back(std::move(children));
-					continue;
-				}
-
-				// pop the child from the list
-				auto child = std::move(*child_iter);
-				children.erase(child_iter);
-
-				// expand the branch in the appropriate way
-				if(const Either* const either = dynamic_cast<Either*>(child.get())) {
-					// "[e] + children" for each child 'e' in Either
-					for(const auto& eitherChild : either->children()) {
-						PatternList group = { eitherChild };
-						group.insert(group.end(), children.begin(), children.end());
-
-						groups.emplace_back(std::move(group));
-					}
-				} else if(const OneOrMore* const oneOrMore = dynamic_cast<OneOrMore*>(child.get())) {
-					// child.children * 2 + children
-					const auto& subchildren = oneOrMore->children();
-					PatternList group = subchildren;
-					group.insert(group.end(), subchildren.begin(), subchildren.end());
-					group.insert(group.end(), children.begin(), children.end());
-
-					groups.emplace_back(std::move(group));
-				} else if(const BranchPattern* const branch = dynamic_cast<BranchPattern*>(child.get())) { // Required, Optional, OptionsShortcut
-					// child.children + children
-					PatternList group = branch->children();
-					group.insert(group.end(), children.begin(), children.end());
-
-					groups.emplace_back(std::move(group));
-				}
+		if(dynamic_cast<Command*>(leaf)) {
+			ensureInt = true;
+		} else if(dynamic_cast<Argument*>(leaf)) {
+			ensureList = true;
+		} else if(const Option* const o = dynamic_cast<Option*>(leaf)) {
+			if(o->argCount()) {
+				ensureList = true;
+			} else {
+				ensureInt = true;
 			}
+		}
 
-			return result;
+		if(ensureList) {
+			std::vector<std::string> newValue;
+			if(std::holds_alternative<std::string>(leaf->getValue())) {
+				newValue = split(std::get<std::string>(leaf->getValue()));
+			}
+			leaf->setValue(value{ newValue });
+		} else if(ensureInt) {
+			leaf->setValue(value{ 0ull });
 		}
 	}
 
-	inline void BranchPattern::fix_repeating_arguments() {
-		std::vector<PatternList> either = transform(children());
-		for(auto const& group : either) {
-			// use multiset to help identify duplicate entries
-			std::multiset<std::shared_ptr<Pattern>, docopt::sort_by_name> group_set(group.begin(), group.end());
-			for(auto const& e : group_set) {
-				if(group_set.count(e) == 1) {
-					continue;
-				}
-
-				LeafPattern* leaf = dynamic_cast<LeafPattern*>(e.get());
-				if(!leaf) {
-					continue;
-				}
-
-				bool ensureList = false;
-				bool ensureInt = false;
-
-				if(dynamic_cast<Command*>(leaf)) {
-					ensureInt = true;
-				} else if(dynamic_cast<Argument*>(leaf)) {
-					ensureList = true;
-				} else if(const Option* const o = dynamic_cast<Option*>(leaf)) {
-					if(o->argCount()) {
-						ensureList = true;
-					} else {
-						ensureInt = true;
+	inline void BranchPattern::fix_repeating_arguments(Pattern* current) {
+		if(BranchPattern* bp = dynamic_cast<BranchPattern*>(current)) {
+			const bool all_children_repeat = dynamic_cast<OneOrMore*>(bp) != nullptr;
+			const bool no_children_repeat  = dynamic_cast<Either*>(bp) != nullptr;
+			const std::size_t child_count = bp->fChildren.size();
+			for(std::size_t i = 0; i < child_count; ++i) {
+				auto& child = bp->fChildren[i];
+				if(all_children_repeat) {
+					// all children of a OneOrMore can be repeated
+					auto child_leaves = child->flat<LeafPattern>();
+					for(auto& child_leaf : child_leaves) {
+						make_leaf_repeatable(child_leaf.get());
 					}
-				}
+				} else if(!no_children_repeat) {
+					// children of one branch of a Required or Optional can match children of any other branch
+					for(std::size_t j = 0; j < child_count; ++j) {
+						if(i == j) {
+							continue;
+						}
+						auto& sibling = bp->fChildren[j];
 
-				if(ensureList) {
-					std::vector<std::string> newValue;
-					if(std::holds_alternative<std::string>(leaf->getValue())) {
-						newValue = split(std::get<std::string>(leaf->getValue()));
+						auto child_leaves = child->flat<LeafPattern>();
+						auto sibling_leaves = sibling->flat<LeafPattern>();
+
+						for(auto& child_leaf : child_leaves) {
+							for(auto& sibling_leaf : sibling_leaves) {
+								if(child_leaf == sibling_leaf) {
+									make_leaf_repeatable(child_leaf.get());
+								}
+							}
+						}
 					}
-					if(!std::holds_alternative<std::vector<std::string> >(leaf->getValue())) {
-						leaf->setValue(value{ newValue });
-					}
-				} else if(ensureInt) {
-					leaf->setValue(value{ 0ull });
+				} else {
+					// children of one branch of an Either cannot match children of any other branch
 				}
+				// and recurse
+				fix_repeating_arguments(child.get());
 			}
 		}
 	}
@@ -492,7 +449,7 @@ namespace docopt {
 			return p->name() == name();
 		});
 		if(std::holds_alternative<unsigned long long>(getValue())) {
-			unsigned long long val = 1; // std::get<unsigned long long>(getValue());
+			unsigned long long val = 1;
 			if(same_name == collected.end()) {
 				collected.push_back(match.second);
 				match.second->setValue(value{val});
@@ -506,8 +463,6 @@ namespace docopt {
 			std::vector<std::string> val;
 			if (std::holds_alternative<std::string>(match.second->getValue())) {
 				val.push_back(std::get<std::string>(match.second->getValue()));
-			} else if(std::holds_alternative<unsigned long long>(match.second->getValue())) {
-				val.push_back(std::to_string(std::get<unsigned long long>(match.second->getValue())));
 			} else if(std::holds_alternative<std::vector<std::string> >(match.second->getValue())) {
 				val = std::get<std::vector<std::string> >(match.second->getValue());
 			} else {

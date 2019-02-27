@@ -654,7 +654,7 @@ namespace docopt {
 			std::cout << std::endl;
 			std::cout << doc << std::endl;
 			std::exit(-1);
-		} /* Any other exception is unexpected: let std::terminate grab it */
+		} // Any other exception is unexpected: let std::terminate grab it
 	}
 
 }

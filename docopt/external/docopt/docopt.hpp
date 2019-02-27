@@ -108,36 +108,37 @@ namespace docopt {
 	                                                       bool help = true,
 	                                                       std::string const& version = {},
 	                                                       bool options_first = false) noexcept;
+
+	namespace
+	{
+		template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+		template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+	}
+
+	inline static const auto value_printer = overloaded{
+		[] (std::monostate)                      -> std::string { return "null"; },
+		[] (bool arg)                            -> std::string { return arg ? "true" : "false"; },
+		[] (const std::string& s)                -> std::string { return "\"" + s + "\""; },
+		[] (unsigned long long v)                -> std::string { return std::to_string(v); },
+		[] (const std::vector<std::string>& vec) -> std::string {
+			std::string rv("[");
+			bool first = true;
+			for(const std::string& s : vec) {
+				if(first) {
+					first = false;
+				} else {
+					rv += ", ";
+				}
+				rv += "\"" + s + "\"";
+			}
+			return rv + "]"; 
+		}
+	};
 }
 
 namespace std {
 	inline std::ostream& operator<<(std::ostream& os, const docopt::value& val) {
-		if(std::holds_alternative<bool>(val)) {
-			const bool b = std::get<bool>(val);
-			os << (b ? "true" : "false");
-		} else if(std::holds_alternative<unsigned long long>(val)) {
-			const unsigned long long v = std::get<unsigned long long>(val);
-			os << v;
-		} else if(std::holds_alternative<std::string>(val)) {
-			const std::string& str = std::get<std::string>(val);
-			os << '"' << str << '"';
-		} else if(std::holds_alternative<std::vector<std::string> >(val)) {
-			const auto & list = std::get<std::vector<std::string> >(val);
-			os << "[";
-			bool first = true;
-			for(auto const& el : list) {
-				if(first) {
-					first = false;
-				} else {
-					os << ", ";
-				}
-				os << '"' << el << '"';
-			}
-			os << "]";
-		} else {
-			os << "null";
-		}
-		return os;
+		return os << std::visit(docopt::value_printer, val);
 	}
 }
 #ifdef DOCOPT_HEADER_ONLY
