@@ -23,12 +23,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cpuid", "cpuid\cpuid.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcpuid", "libcpuid\libcpuid.vcxproj", "{21E817B6-C211-40ED-8197-D6760A7B3C2E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcxproj", "{EC740520-D7D3-4523-98CB-9D08AC41E6E5}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests-msvc", "tests-msvc\tests-msvc.vcxproj", "{EC740520-D7D3-4523-98CB-9D08AC41E6E5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{8DBC8811-9A0E-4CAF-B790-6ED28FFFEB3E} = {8DBC8811-9A0E-4CAF-B790-6ED28FFFEB3E}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "docopt", "docopt\docopt.vcxproj", "{8DBC8811-9A0E-4CAF-B790-6ED28FFFEB3E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "docopt-tests", "docopt\tests\docopt-tests.vcxproj", "{11D6E36F-6A05-4C75-852E-C49C422A89DC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -62,6 +64,12 @@ Global
 		{8DBC8811-9A0E-4CAF-B790-6ED28FFFEB3E}.Release|x64.ActiveCfg = Release|x64
 		{8DBC8811-9A0E-4CAF-B790-6ED28FFFEB3E}.Release|x64.Build.0 = Release|x64
 		{8DBC8811-9A0E-4CAF-B790-6ED28FFFEB3E}.Release|x86.ActiveCfg = Release|x64
+		{11D6E36F-6A05-4C75-852E-C49C422A89DC}.Debug|x64.ActiveCfg = Debug|x64
+		{11D6E36F-6A05-4C75-852E-C49C422A89DC}.Debug|x64.Build.0 = Debug|x64
+		{11D6E36F-6A05-4C75-852E-C49C422A89DC}.Debug|x86.ActiveCfg = Debug|x64
+		{11D6E36F-6A05-4C75-852E-C49C422A89DC}.Release|x64.ActiveCfg = Release|x64
+		{11D6E36F-6A05-4C75-852E-C49C422A89DC}.Release|x64.Build.0 = Release|x64
+		{11D6E36F-6A05-4C75-852E-C49C422A89DC}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

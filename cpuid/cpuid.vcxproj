@@ -48,29 +48,22 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
     <IncludePath>$(ProjectDir)internal;$(SolutionDir)libcpuid\external;$(SolutionDir)docopt\external;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <CodeAnalysisRuleSet>..\no-lifetime-rules.ruleset</CodeAnalysisRuleSet>
     <IncludePath>$(ProjectDir)internal;$(SolutionDir)libcpuid\external;$(SolutionDir)docopt\external;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalOptions>/experimental:external /external:anglebrackets /external:templates- /external:W0 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalOptions>/experimental:external /external:anglebrackets /external:templates- /external:W0 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
