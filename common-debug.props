@@ -8,6 +8,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
     </ClCompile>
+    <Link />
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>
