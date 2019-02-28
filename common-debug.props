@@ -5,6 +5,9 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile />
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

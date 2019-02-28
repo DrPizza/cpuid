@@ -25,7 +25,7 @@
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalOptions>/volatile:iso /Zc:strictStrings /Zc:throwingNew /Zc:externConstexpr /Zc:__cplusplus /utf-8 /validate-charset /experimental:external /external:anglebrackets /external:templates- /external:W0%(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/volatile:iso /Zc:strictStrings /Zc:throwingNew /Zc:externConstexpr /Zc:__cplusplus /utf-8 /validate-charset /experimental:external /external:anglebrackets /external:templates- /external:W0 %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>true</SDLCheck>
       <EnablePREfast>true</EnablePREfast>
       <StringPooling>true</StringPooling>
