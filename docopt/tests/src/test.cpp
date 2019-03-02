@@ -2,9 +2,6 @@
 
 #include "docopt/docopt.hpp"
 
-using ::testing::TestWithParam;
-using ::testing::ValuesIn;
-
 namespace
 {
 	struct docopt_test_data
@@ -104,7 +101,7 @@ namespace
 
 const std::vector<docopt_test_data> command_lines = load_data();
 
-struct DocoptTest : TestWithParam<docopt_test_data>
+struct DocoptTest : ::testing::TestWithParam<docopt_test_data>
 {
 };
 
@@ -137,4 +134,4 @@ std::string param_printer(testing::TestParamInfo<docopt_test_data> data) {
 	     + "Params" + subtest_padding + std::to_string(data.param.subtest_number);
 }
 
-INSTANTIATE_TEST_CASE_P(DocoptFullTests, DocoptTest, ValuesIn(command_lines), param_printer);
+INSTANTIATE_TEST_CASE_P(DocoptFullTests, DocoptTest, ::testing::ValuesIn(command_lines), param_printer);

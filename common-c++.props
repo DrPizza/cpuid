@@ -39,7 +39,6 @@
     </ClCompile>
     <Link />
     <Link>
-      <LargeAddressAware>true</LargeAddressAware>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>

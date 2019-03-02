@@ -1,5 +1,5 @@
-#ifndef STDAFX__H
-#define STDAFX__H
+#if !defined(PCH__H)
+#define PCH__H
 
 #if defined(_WIN32)
 
@@ -124,6 +124,8 @@
 
 // disable additionally for third-party libraries
 #pragma warning(push)
+#pragma warning(disable: 4571) // warning: C4571: Informational: catch(...) semantics changed since Visual C++ 7.1; structured exceptions (SEH) are no longer caught
+
 #pragma warning(disable: 26429) // warning C26429: Symbol '%s' is never tested for nullness, it can be marked as not_null (f.23: http://go.microsoft.com/fwlink/?linkid=853921).
 #pragma warning(disable: 26432) // warning C26432: If you define or delete any default operation in the type '%s', define or delete them all (c.21: http://go.microsoft.com/fwlink/?linkid=853922).
 #pragma warning(disable: 26433) // warning C26433: Function '%s' should be marked with 'override' (c.128: http://go.microsoft.com/fwlink/?linkid=853923).
@@ -151,6 +153,8 @@
 
 #include <fmt/format.h>
 
+#include <gtest/gtest.h>
+
 #if defined(_MSC_VER)
 
 #pragma warning(pop)
@@ -158,6 +162,8 @@
 
 #endif
 
-#define DOCTOPT_USE_BOOST_REGEX 1
+#define DOCOPT_USE_BOOST_REGEX 1
 
 #endif
+
+
