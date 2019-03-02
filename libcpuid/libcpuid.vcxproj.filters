@@ -15,54 +15,54 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="external\cpuid\cpuid.hpp">
+    <ClInclude Include="include\cpuid\cpuid.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="external\cpuid\suffixes.hpp">
+    <ClInclude Include="include\cpuid\suffixes.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="internal\cache-and-topology.hpp">
+    <ClInclude Include="src\cpuid\cache-and-topology.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="internal\features.hpp">
+    <ClInclude Include="src\cpuid\features.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="internal\hypervisors.hpp">
+    <ClInclude Include="src\cpuid\hypervisors.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="internal\standard.hpp">
+    <ClInclude Include="src\cpuid\standard.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="internal\stdafx.h">
+    <ClInclude Include="src\cpuid\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="internal\targetver.h">
+    <ClInclude Include="src\cpuid\targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="internal\utility.hpp">
+    <ClInclude Include="src\cpuid\utility.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\stdafx.cpp">
+    <ClCompile Include="src\cpuid\cache-and-topology.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\cache-and-topology.cpp">
+    <ClCompile Include="src\cpuid\cpuid.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\cpuid.cpp">
+    <ClCompile Include="src\cpuid\features.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\features.cpp">
+    <ClCompile Include="src\cpuid\hypervisors.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\hypervisors.cpp">
+    <ClCompile Include="src\cpuid\standard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\standard.cpp">
+    <ClCompile Include="src\cpuid\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\utility.cpp">
+    <ClCompile Include="src\cpuid\utility.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

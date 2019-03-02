@@ -2,8 +2,7 @@ cmake_minimum_required (VERSION 3.13)
 
 project(cpuid VERSION 1.0.0 LANGUAGES C CXX)
 
-add_executable(cpuid src/main.cpp)
-target_include_directories(cpuid PRIVATE internal)
+add_executable(cpuid src/cpuid/main.cpp)
 target_include_directories(cpuid PRIVATE ${Boost_INCLUDE_DIRS})
 
 target_link_libraries(cpuid PRIVATE docopt)

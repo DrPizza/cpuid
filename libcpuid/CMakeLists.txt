@@ -2,9 +2,9 @@ cmake_minimum_required (VERSION 3.13)
 
 project(libcpuid VERSION 1.0.0 LANGUAGES C CXX)
 
-add_library(libcpuid STATIC src/cache-and-topology.cpp src/cpuid.cpp src/features.cpp src/hypervisors.cpp src/standard.cpp src/utility.cpp)
-target_include_directories(libcpuid PUBLIC  external)
-target_include_directories(libcpuid PRIVATE internal)
+add_library(libcpuid STATIC src/cpuid/cache-and-topology.cpp src/cpuid/cpuid.cpp src/cpuid/features.cpp src/cpuid/hypervisors.cpp src/cpuid/standard.cpp src/cpuid/utility.cpp)
+target_include_directories(libcpuid PUBLIC  include)
+target_include_directories(libcpuid PRIVATE src)
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)

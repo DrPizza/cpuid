@@ -32,11 +32,11 @@ namespace
 	};
 }
 
-struct CpuidTest : ::testing::TestWithParam<std::pair<std::string, flag_spec_t>>
+struct CpuidFlagCrackingTest : ::testing::TestWithParam<std::pair<std::string, flag_spec_t>>
 {
 };
 
-TEST_P(CpuidTest, ParserTest) {
+TEST_P(CpuidFlagCrackingTest, ParserTest) {
 	std::pair<std::string, flag_spec_t> data = GetParam();
 	const flag_spec_t spec = parse_flag_spec(data.first);
 	EXPECT_EQ(data.second, spec);
@@ -49,4 +49,4 @@ std::string param_printer(testing::TestParamInfo<std::pair<std::string, flag_spe
 	return index_padding + std::to_string(data.index);
 }
 
-INSTANTIATE_TEST_CASE_P(CpuidFullTests, CpuidTest, ::testing::ValuesIn(flags), param_printer);
+INSTANTIATE_TEST_SUITE_P(CpuidFullTests, CpuidFlagCrackingTest, ::testing::ValuesIn(flags), param_printer);

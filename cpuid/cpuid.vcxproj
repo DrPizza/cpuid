@@ -45,17 +45,17 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)internal;$(SolutionDir)libcpuid\external;$(SolutionDir)docopt\external;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)libcpuid\include;$(SolutionDir)docopt\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir)internal;$(SolutionDir)libcpuid\external;$(SolutionDir)docopt\external;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)libcpuid\include;$(SolutionDir)docopt\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemGroup>
-    <ClInclude Include="internal\stdafx.h" />
+    <ClInclude Include="src\cpuid\stdafx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\stdafx.cpp">
+    <ClCompile Include="src\cpuid\main.cpp" />
+    <ClCompile Include="src\cpuid\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>

@@ -2,9 +2,9 @@ cmake_minimum_required (VERSION 3.13)
 
 project(docopt VERSION 1.0.0 LANGUAGES C CXX)
 
-add_library(docopt STATIC src/docopt.cpp)
-target_include_directories(docopt PUBLIC  external)
-target_include_directories(docopt PRIVATE internal)
+add_library(docopt STATIC src/docopt/docopt.cpp)
+target_include_directories(docopt PUBLIC  include)
+target_include_directories(docopt PRIVATE src)
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)

@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "cpuid/cpuid.hpp"
-
 #include "docopt/docopt.hpp"
 
 static const char usage_message[] =

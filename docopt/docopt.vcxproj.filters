@@ -15,27 +15,27 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="internal\targetver.h">
+    <ClInclude Include="include\docopt\docopt.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="internal\stdafx.h">
+    <ClInclude Include="src\docopt\docopt_private.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="internal\docopt_private.h">
+    <ClInclude Include="src\docopt\docopt_util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="internal\docopt_util.h">
+    <ClInclude Include="src\docopt\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="external\docopt\docopt.hpp">
+    <ClInclude Include="src\docopt\targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\stdafx.cpp">
+    <ClCompile Include="src\docopt\docopt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\docopt.cpp">
+    <ClCompile Include="src\docopt\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

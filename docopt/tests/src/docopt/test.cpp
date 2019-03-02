@@ -134,4 +134,4 @@ std::string param_printer(testing::TestParamInfo<docopt_test_data> data) {
 	     + "Params" + subtest_padding + std::to_string(data.param.subtest_number);
 }
 
-INSTANTIATE_TEST_CASE_P(DocoptFullTests, DocoptTest, ::testing::ValuesIn(command_lines), param_printer);
+INSTANTIATE_TEST_SUITE_P(DocoptFullTests, DocoptTest, ::testing::ValuesIn(command_lines), param_printer);
