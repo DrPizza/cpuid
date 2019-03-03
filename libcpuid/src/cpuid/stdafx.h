@@ -32,6 +32,7 @@
 #define STRICT
 #define NOMINMAX
 
+#pragma warning(disable: 4571) // warning C4571: Informational: catch(...) semantics changed since Visual C++ 7.1; structured exceptions (SEH) are no longer caught
 #pragma warning(disable: 4668) // warning C4668: '%s' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 #pragma warning(disable: 4710) // warning C4710: '%s': function not inlined
 #pragma warning(disable: 4711) // warning C4711: function '%s' selected for automatic inline expansion
@@ -115,7 +116,6 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
-#include <regex>
 #include <iomanip>
 #include <type_traits>
 #include <utility>
@@ -129,6 +129,10 @@
 
 // disable additionally for third-party libraries
 #pragma warning(push)
+#pragma warning(disable: 4456) // warning C4456: declaration of '%s' hides previous local declaration
+#pragma warning(disable: 4458) // warning C4458: declaration of '%s' hides class member
+#pragma warning(disable: 4459) // warning C4459: declaration of '%s' hides global declaration
+
 #pragma warning(disable: 26429) // warning C26429: Symbol '%s' is never tested for nullness, it can be marked as not_null (f.23: http://go.microsoft.com/fwlink/?linkid=853921).
 #pragma warning(disable: 26432) // warning C26432: If you define or delete any default operation in the type '%s', define or delete them all (c.21: http://go.microsoft.com/fwlink/?linkid=853922).
 #pragma warning(disable: 26433) // warning C26433: Function '%s' should be marked with 'override' (c.128: http://go.microsoft.com/fwlink/?linkid=853923).
@@ -150,6 +154,7 @@
 #endif
 
 #include <boost/algorithm/string.hpp>
+#include <boost/xpressive/xpressive.hpp>
 
 #include <gsl/gsl>
 
@@ -167,3 +172,4 @@
 #endif
 
 #endif
+

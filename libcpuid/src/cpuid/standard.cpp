@@ -10,6 +10,8 @@
 
 #include "utility.hpp"
 
+namespace cpuid {
+
 void print_basic_info(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_type::basic_info).at(subleaf_type::main);
 	format_to(out, "Basic Information\n");
@@ -1132,4 +1134,6 @@ void print_encrypted_memory(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "\tNumber of simultaneous encrypted guests: {:d}\n", regs[ecx]);
 	format_to(out, "\tMinimum ASID for an SEV-enabled, SEV-ES-disabled guest: {:#010x}\n", regs[edx]);
 	format_to(out, "\n");
+}
+
 }

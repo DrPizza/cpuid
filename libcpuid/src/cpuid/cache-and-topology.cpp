@@ -8,6 +8,8 @@
 
 #include <fmt/format.h>
 
+namespace cpuid {
+
 std::string print_size(std::size_t cache_bytes) {
 	using namespace fmt::literals;
 
@@ -1592,4 +1594,6 @@ void print_topology(fmt::memory_buffer& out, const system_t& machine) {
 		}
 		format_to(out, " package  {:d}\n", package.first);
 	}
+}
+
 }

@@ -13,13 +13,16 @@
 #include <fstream>
 #include <iomanip>
 #include <tuple>
-#include <regex>
 
 #include <boost/algorithm/string.hpp>
 
 #include <gsl/gsl>
 
 #include <fmt/format.h>
+
+namespace xp = boost::xpressive;
+
+namespace cpuid {
 
 #if defined(_MSC_VER)
 
@@ -48,7 +51,6 @@ register_set_t cpuid(leaf_type leaf, subleaf_type subleaf) noexcept {
 }
 
 #endif
-
 
 template<std::size_t N, std::size_t... Is>
 constexpr std::array<char, N - 1> to_array(const char(&str)[N], std::index_sequence<Is...>) {
@@ -369,17 +371,17 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 	switch(format) {
 	case file_format::native:
 		{
-			const std::regex comment_line("#.*");
+			static const xp::sregex comment_line(xp::sregex::compile("#.*"));
 			const std::string single_element = "(0[xX][[:xdigit:]]{1,8})";
 			const std::string multiple_elements = fmt::format("{} {} {}: {} {} {} {}", single_element, single_element, single_element, single_element, single_element, single_element, single_element);
-			const std::regex data_line(multiple_elements);
+			static const xp::sregex data_line(xp::sregex::compile(multiple_elements));
 
 			std::string line;
 			while(std::getline(fin, line)) {
-				std::smatch m;
-				if(std::regex_search(line, m, comment_line) || line == "") {
+				xp::smatch m;
+				if(xp::regex_search(line, m, comment_line) || line == "") {
 					continue;
-				} else if(std::regex_search(line, m, data_line)) {
+				} else if(xp::regex_search(line, m, data_line)) {
 					const std::uint32_t apic_id =                           std::stoul(m[1].str(), nullptr, 16) ;
 					const leaf_type     leaf    = static_cast<leaf_type   >(std::stoul(m[2].str(), nullptr, 16));
 					const subleaf_type  subleaf = static_cast<subleaf_type>(std::stoul(m[3].str(), nullptr, 16));
@@ -398,23 +400,23 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 		break;
 	case file_format::etallen:
 		{
-			const std::regex comment_line("#.*");
-			const std::regex solo_cpu_line("CPU:");
-			const std::regex cpu_line("CPU ([[:digit:]]+):");
+			static const xp::sregex comment_line(xp::sregex::compile("#.*"));
+			static const xp::sregex solo_cpu_line(xp::sregex::compile("CPU:"));
+			static const xp::sregex cpu_line(xp::sregex::compile("CPU ([[:digit:]]+):"));
 			const std::string single_element = "(0[xX][[:xdigit:]]{1,8})";
 			const std::string multiple_elements = fmt::format("   {} {}: eax={} ebx={} ecx={} edx={}", single_element, single_element, single_element, single_element, single_element, single_element, single_element);
-			const std::regex data_line(multiple_elements);
+			static const xp::sregex data_line(xp::sregex::compile(multiple_elements));
 			std::string line;
 			std::uint32_t current_cpu = 0xffff'ffff_u32;
 			while(std::getline(fin, line)) {
-				std::smatch m;
-				if(std::regex_search(line, m, comment_line) || line == "") {
+				xp::smatch m;
+				if(xp::regex_search(line, m, comment_line) || line == "") {
 					continue;
-				} else if(std::regex_search(line, m, solo_cpu_line)) {
+				} else if(xp::regex_search(line, m, solo_cpu_line)) {
 					++current_cpu;
-				} else if(std::regex_search(line, m, cpu_line)) {
+				} else if(xp::regex_search(line, m, cpu_line)) {
 					current_cpu = std::stoul(m[1].str());
-				} else if(std::regex_search(line, m, data_line)) {
+				} else if(xp::regex_search(line, m, data_line)) {
 					const leaf_type      leaf    = static_cast<leaf_type   >(std::stoul(m[1].str(), nullptr, 16));
 					const subleaf_type   subleaf = static_cast<subleaf_type>(std::stoul(m[2].str(), nullptr, 16));
 					const register_set_t regs    = {
@@ -433,20 +435,20 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 	case file_format::libcpuid:
 		{
 			// this is a crappy file format
-			const std::regex version_line("version=.*");
-			const std::regex build_line("build_date=.*");
-			const std::regex delimiter_line("-{80}");
+			static const xp::sregex version_line(xp::sregex::compile("version=.*"));
+			static const xp::sregex build_line(xp::sregex::compile("build_date=.*"));
+			static const xp::sregex delimiter_line(xp::sregex::compile("-{80}"));
 			const std::string single_element = "([[:xdigit:]]{8})";
 			const std::string multiple_elements = fmt::format("([[:alnum:]_]+)\\[([[:digit:]]+)\\]={} {} {} {}", single_element, single_element, single_element, single_element);
-			const std::regex data_line(multiple_elements);
+			static const xp::sregex data_line(xp::sregex::compile(multiple_elements));
 			const std::uint32_t current_cpu = 0xffff'ffff_u32;
 			std::string line;
 			while(std::getline(fin, line)) {
-				std::smatch m;
-				if(std::regex_search(line, m, version_line)
-				|| std::regex_search(line, m, build_line)) {
+				xp::smatch m;
+				if(xp::regex_search(line, m, version_line)
+				|| xp::regex_search(line, m, build_line)) {
 					continue;
-				} else if(std::regex_search(line, m, data_line)) {
+				} else if(xp::regex_search(line, m, data_line)) {
 					std::string section       = m[1].str();
 					std::uint32_t idx         = std::stoul(m[2].str());
 					const register_set_t regs = {
@@ -481,7 +483,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 						leaf = leaf_type::processor_trace;
 					}
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
-				} else if(std::regex_search(line, m, delimiter_line)) {
+				} else if(xp::regex_search(line, m, delimiter_line)) {
 					break;
 				} else {
 					//std::cerr << "Unrecognized line: " << line << std::endl;
@@ -513,22 +515,22 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 		{
 			const std::string single_element = "([[:xdigit:]]{8})";
 			const std::string simple = fmt::format("CPUID {}: {}-{}-{}-{}", single_element, single_element, single_element, single_element, single_element);
-			const std::regex simple_line(simple);
-			const std::regex subleaf_line(fmt::format("{} \\[SL ([[:digit:]]{{2}})\\]", simple));
-			const std::regex description_line(fmt::format("{} \\[.*\\]", simple));
-			const std::regex allcpu_line("allcpu:.*");
-			const std::regex affinity_mask_line("CPU#.*");
-			const std::regex registers_line("CPUID Registers.*");
+			static const xp::sregex simple_line(xp::sregex::compile(simple));
+			static const xp::sregex subleaf_line(xp::sregex::compile(fmt::format("{} \\[SL ([[:digit:]]{{2}})\\]", simple)));
+			static const xp::sregex description_line(xp::sregex::compile(fmt::format("{} \\[.*\\]", simple)));
+			static const xp::sregex allcpu_line(xp::sregex::compile("allcpu:.*"));
+			static const xp::sregex affinity_mask_line(xp::sregex::compile("CPU#.*"));
+			static const xp::sregex registers_line(xp::sregex::compile("CPUID Registers.*"));
 
 			std::string line;
 			std::uint32_t current_cpu = 0xffff'ffff_u32;
 			while(std::getline(fin, line)) {
-				std::smatch m;
-				if(std::regex_search(line, m, allcpu_line)
-				|| std::regex_search(line, m, affinity_mask_line)
-				|| std::regex_search(line, m, registers_line)) {
+				xp::smatch m;
+				if(xp::regex_search(line, m, allcpu_line)
+				|| xp::regex_search(line, m, affinity_mask_line)
+				|| xp::regex_search(line, m, registers_line)) {
 					++current_cpu;
-				} else if(std::regex_search(line, m, subleaf_line)) {
+				} else if(xp::regex_search(line, m, subleaf_line)) {
 					const leaf_type      leaf    = static_cast<leaf_type   >(std::stoul(m[1].str(), nullptr, 16));
 					const subleaf_type   subleaf = static_cast<subleaf_type>(std::stoul(m[6].str(), nullptr, 10));
 					const register_set_t regs    = {
@@ -538,8 +540,8 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 						gsl::narrow_cast<std::uint32_t>(std::stoul(m[5].str(), nullptr, 16))
 					};
 					logical_cpus[current_cpu].leaves[leaf][subleaf] = regs;
-				} else if(std::regex_search(line, m, description_line)
-				       || std::regex_search(line, m, simple_line)) {
+				} else if(xp::regex_search(line, m, description_line)
+				       || xp::regex_search(line, m, simple_line)) {
 					const auto get_subleaf = [&logical_cpus](const std::uint32_t current_cpu, const leaf_type leaf) -> subleaf_type {
 						if(logical_cpus.find(current_cpu) != logical_cpus.end()
 						&& logical_cpus[current_cpu].leaves.find(leaf) != logical_cpus[current_cpu].leaves.end()
@@ -705,9 +707,9 @@ flag_spec_t parse_flag_spec(const std::string& flag_description) {
 
 	const std::string full_pattern     = fmt::format(pattern, fmt::arg("selector", full_selector), fmt::arg("reg", reg), fmt::arg("field", full_field));
 
-	std::regex re_pattern(full_pattern, std::regex::optimize | std::regex::icase);
-	std::smatch m;
-	if(!std::regex_search(flag_description, m, re_pattern)) {
+	static xp::sregex re_pattern(xp::sregex::compile(full_pattern, xp::sregex::optimize | xp::sregex::icase));
+	xp::smatch m;
+	if(!xp::regex_search(flag_description, m, re_pattern)) {
 		throw std::runtime_error(fmt::format("Bad pattern: {:s}", flag_description));
 	}
 
@@ -1233,4 +1235,6 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 		}
 		break;
 	}
+}
+
 }

@@ -21,31 +21,6 @@
 #include <variant>
 #include <charconv>
 
-#if DOCOPT_USE_BOOST_REGEX
-#include <boost/regex.hpp>
-namespace docopt {
-	using boost::regex;
-	using boost::sregex_iterator;
-	using boost::smatch;
-	using boost::regex_search;
-	namespace regex_constants {
-		using boost::regex_constants::match_not_null;
-	}
-}
-#else
-#include <regex>
-namespace docopt {
-	using std::regex;
-	using std::sregex_iterator;
-	using std::smatch;
-	using std::regex_search;
-	namespace regex_constants {
-		using std::regex_constants::match_not_null;
-	}
-}
-
-#endif
-
 namespace docopt {
 	inline bool is_empty(const value& v) noexcept {
 		return std::holds_alternative<std::monostate>(v);
@@ -528,11 +503,11 @@ namespace docopt {
 			options_end = option_description.begin() + static_cast<std::ptrdiff_t>(double_space);
 		}
 
-		static const docopt::regex pattern{ "(-{1,2})?(.*?)([,= ]|$)" };
-		for(docopt::sregex_iterator i(option_description.begin(), options_end, pattern, docopt::regex_constants::match_not_null), e{};
+		static const xp::sregex pattern(xp::sregex::compile("(-{1,2})?(.*?)([,= ]|$)"));
+		for(xp::sregex_iterator i(option_description.begin(), options_end, pattern, xp::regex_constants::match_not_null), e{};
 		    i != e;
 		    ++i) {
-			docopt::smatch const& match = *i;
+			xp::smatch const& match = *i;
 			if(match[1].matched) { // [1] is optional.
 				if(match[1].length() == 1) {
 					shortOption = "-" + match[2].str();
@@ -555,8 +530,8 @@ namespace docopt {
 		}
 
 		if(argcount) {
-			docopt::smatch match;
-			if(docopt::regex_search(options_end, option_description.end(), match, docopt::regex{ "\\[default: (.*)\\]", docopt::regex::icase })) {
+			xp::smatch match;
+			if(xp::regex_search(options_end, option_description.end(), match, xp::sregex(xp::sregex::compile("\\[default: (.*)\\]", xp::sregex::icase)))) {
 				val = match[1].str();
 			}
 		}

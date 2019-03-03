@@ -42,21 +42,21 @@ namespace {
 		}
 
 		static Tokens from_pattern(std::string const& source) {
-			static const docopt::regex re_separators(
+			static const xp::sregex re_separators(xp::sregex::compile(
 				"(?:\\s*)" // any spaces (non-matching subgroup)
 				"("
 				"[\\[\\]\\(\\)\\|]" // one character of brackets or parens or pipe character
 				"|"
 				"\\.\\.\\."  // elipsis
-				")", docopt::regex::optimize );
+				")", xp::sregex::optimize));
 
-			static const docopt::regex re_strings(
+			static const xp::sregex re_strings(xp::sregex::compile(
 				"(?:\\s*)" // any spaces (non-matching subgroup)
 				"("
 				"\\S*<.*?>"  // strings, but make sure to keep "< >" strings together
 				"|"
 				"[^<>\\s]+"     // string without <>
-				")", docopt::regex::optimize );
+				")", xp::sregex::optimize));
 
 			// We do two stages of regex matching. The '[]()' and '...' are strong delimeters
 			// and need to be split out anywhere they occur (even at the end of a token). We
@@ -65,14 +65,14 @@ namespace {
 			// and we dont have anything like that.
 
 			std::vector<std::string> tokens;
-			std::for_each(docopt::sregex_iterator{ source.begin(), source.end(), re_separators },
-			              docopt::sregex_iterator{},
-			              [&](docopt::smatch const& match) {
+			std::for_each(xp::sregex_iterator(source.begin(), source.end(), re_separators),
+			              xp::sregex_iterator(),
+			              [&](xp::smatch const& match) {
 				// handle anything before the separator (this is the "stuff" between the delimiters)
 				if(match.prefix().matched) {
-					std::for_each(docopt::sregex_iterator{ match.prefix().first, match.prefix().second, re_strings },
-					              docopt::sregex_iterator{},
-					              [&](docopt::smatch const& m) {
+					std::for_each(xp::sregex_iterator(match.prefix().first, match.prefix().second, re_strings),
+					              xp::sregex_iterator(),
+					              [&](xp::smatch const& m) {
 						tokens.push_back(m[1].str());
 					});
 				}
@@ -128,22 +128,19 @@ namespace {
 		// a newline to anchor our matching, we have to avoid matching the final newline of each grouping.
 		// Therefore, our regex is adjusted from the docopt Python one to use ?= to match the newlines before
 		// the following lines, rather than after.
-		docopt::regex const re_section_pattern{
+		xp::sregex const re_section_pattern(xp::sregex::compile(
 			//"(?:^|\\n)"  // anchored at a linebreak (or start of string)
 			"("
 			"[^\\n]*" + name + "[^\\n]*\n?" // a line that contains the name
 			"(?:[ \\t].*?(?:\\n|$))*" // followed by any number of lines that are indented
 			")",
-			docopt::regex::icase | docopt::regex::optimize
-#if defined(DOCOPT_USE_BOOST_REGEX)
-			| docopt::regex::no_mod_m | docopt::regex::no_mod_s
-#endif
-		};
+			xp::sregex::icase | xp::sregex::optimize
+		));
 
 		std::vector<std::string> ret;
-		std::for_each(docopt::sregex_iterator(source.begin(), source.end(), re_section_pattern),
-		              docopt::sregex_iterator(),
-		              [&](docopt::smatch const& match) {
+		std::for_each(xp::sregex_iterator(source.begin(), source.end(), re_section_pattern),
+		              xp::sregex_iterator(),
+		              [&](xp::smatch const& match) {
 			ret.push_back(trim(match[1].str()));
 		});
 
@@ -497,10 +494,10 @@ namespace {
 	std::vector<std::shared_ptr<docopt::Option>> parse_defaults(std::string const& doc) {
 		// This pattern is a delimiter by which we split the options.
 		// The delimiter is a new line followed by a whitespace(s) followed by one or two hyphens.
-		static docopt::regex const re_delimiter{
+		static xp::sregex const re_delimiter(xp::sregex::compile(
 			"(?:^|\\n)[ \\t]*"  // a new line with leading whitespace
 			"(?=-{1,2})"        // [split happens here] (positive lookahead) ... and followed by one or two hyphes
-		};
+		));
 
 		std::vector<std::shared_ptr<docopt::Option>> defaults;
 		for(auto s : parse_section("options:", doc)) {

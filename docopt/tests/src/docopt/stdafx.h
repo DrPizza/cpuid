@@ -1,5 +1,5 @@
-#if !defined(PCH__H)
-#define PCH__H
+#ifndef STDAFX__H
+#define STDAFX__H
 
 #if defined(_WIN32)
 
@@ -32,6 +32,7 @@
 #define STRICT
 #define NOMINMAX
 
+#pragma warning(disable: 4571) // warning C4571: Informational: catch(...) semantics changed since Visual C++ 7.1; structured exceptions (SEH) are no longer caught
 #pragma warning(disable: 4668) // warning C4668: '%s' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 #pragma warning(disable: 4710) // warning C4710: '%s': function not inlined
 #pragma warning(disable: 4711) // warning C4711: function '%s' selected for automatic inline expansion
@@ -48,7 +49,7 @@
 
 #else // defined(_WIN32)
 
-// linux system headers go here
+#include <cpuid.h>
 
 #endif
 
@@ -101,6 +102,10 @@
 #pragma warning(disable: 26496) // warning C26496: Variable '%s' is assigned only once, mark it as const. (con.4: https://go.microsoft.com/fwlink/p/?LinkID=784969)
 #pragma warning(disable: 26497) // warning C26497: This function %s could be marked constexpr if compile-time evaluation is desired. (f.4: https://go.microsoft.com/fwlink/p/?LinkID=784970)
 
+#else
+
+// linux warnings go here
+
 #endif
 
 #include <cstddef>
@@ -111,7 +116,6 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
-#include <regex>
 #include <iomanip>
 #include <type_traits>
 #include <utility>
@@ -119,12 +123,15 @@
 #include <tuple>
 #include <thread>
 #include <cstdlib>
+#include <codecvt>
 
 #if defined(_MSC_VER)
 
 // disable additionally for third-party libraries
 #pragma warning(push)
-#pragma warning(disable: 4571) // warning: C4571: Informational: catch(...) semantics changed since Visual C++ 7.1; structured exceptions (SEH) are no longer caught
+#pragma warning(disable: 4456) // warning C4456: declaration of '%s' hides previous local declaration
+#pragma warning(disable: 4458) // warning C4458: declaration of '%s' hides class member
+#pragma warning(disable: 4459) // warning C4459: declaration of '%s' hides global declaration
 
 #pragma warning(disable: 26429) // warning C26429: Symbol '%s' is never tested for nullness, it can be marked as not_null (f.23: http://go.microsoft.com/fwlink/?linkid=853921).
 #pragma warning(disable: 26432) // warning C26432: If you define or delete any default operation in the type '%s', define or delete them all (c.21: http://go.microsoft.com/fwlink/?linkid=853922).
@@ -147,7 +154,7 @@
 #endif
 
 #include <boost/algorithm/string.hpp>
-#include <boost/regex.hpp>
+#include <boost/xpressive/xpressive.hpp>
 
 #include <gsl/gsl>
 
@@ -160,10 +167,11 @@
 #pragma warning(pop)
 #pragma warning(pop)
 
+#else
+
+// linux warning restoration goes here
+
 #endif
 
-#define DOCOPT_USE_BOOST_REGEX 1
-
 #endif
-
 

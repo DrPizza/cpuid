@@ -13,6 +13,8 @@
 #define __popcnt __builtin_popcount
 #endif
 
+namespace cpuid {
+
 const feature_map_t all_features = {
 	{ leaf_type::version_info, {
 		{ subleaf_type::main, {
@@ -1160,4 +1162,6 @@ std::vector<std::string> get_linux_power_management(const cpu_t& cpu) {
 	add_power_management_bulk();
 
 	return pm;
+}
+
 }

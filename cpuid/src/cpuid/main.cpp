@@ -67,20 +67,20 @@ int main(int argc, char* argv[]) try {
 	const bool no_topology        = std::get<bool>(args.at("--no-topology"));
 	const bool only_topology      = std::get<bool>(args.at("--only-topology"));
 
-	std::map<std::uint32_t, cpu_t> logical_cpus;
+	std::map<std::uint32_t, cpuid::cpu_t> logical_cpus;
 	if(std::holds_alternative<std::string>(args.at("--read-dump"))) {
-		file_format format = file_format::native;
+		cpuid::file_format format = cpuid::file_format::native;
 		const std::string format_name = boost::to_lower_copy(std::get<std::string>(args.at("--read-format")));
 		if("native" == format_name) {
-			format = file_format::native;
+			format = cpuid::file_format::native;
 		} else if("etallen" == format_name) {
-			format = file_format::etallen;
+			format = cpuid::file_format::etallen;
 		} else if("libcpuid" == format_name) {
-			format = file_format::libcpuid;
+			format = cpuid::file_format::libcpuid;
 		} else if("aida64" == format_name) {
-			format = file_format::aida64;
+			format = cpuid::file_format::aida64;
 		} else if("cpuinfo" == format_name) {
-			format = file_format::cpuinfo;
+			format = cpuid::file_format::cpuinfo;
 		} else {
 			throw std::runtime_error(fmt::format("unknown input format {:s}", format_name));
 		}
@@ -92,9 +92,9 @@ int main(int argc, char* argv[]) try {
 				throw std::runtime_error(fmt::format("Could not open {:s} for input", filename));
 			}
 		}
-		logical_cpus = enumerate_file(filename != "-" ? fin : std::cin, format);
+		logical_cpus = cpuid::enumerate_file(filename != "-" ? fin : std::cin, format);
 	} else {
-		logical_cpus = enumerate_processors(brute_force, skip_vendor_check, skip_feature_check);
+		logical_cpus = cpuid::enumerate_processors(brute_force, skip_vendor_check, skip_feature_check);
 	}
 
 	if(logical_cpus.size() == 0) {
@@ -111,18 +111,18 @@ int main(int argc, char* argv[]) try {
 	}
 
 	if(raw_dump || std::holds_alternative<std::string>(args.at("--write-dump"))) {
-		file_format format = file_format::native;
+		cpuid::file_format format = cpuid::file_format::native;
 		const std::string format_name = boost::to_lower_copy(std::get<std::string>(args.at("--write-format")));
 		if("native" == format_name) {
-			format = file_format::native;
+			format = cpuid::file_format::native;
 		} else if("etallen" == format_name) {
-			format = file_format::etallen;
+			format = cpuid::file_format::etallen;
 		} else if("libcpuid" == format_name) {
-			format = file_format::libcpuid;
+			format = cpuid::file_format::libcpuid;
 		} else if("aida64" == format_name) {
-			format = file_format::aida64;
+			format = cpuid::file_format::aida64;
 		} else if("cpuinfo" == format_name) {
-			format = file_format::cpuinfo;
+			format = cpuid::file_format::cpuinfo;
 		} else {
 			throw std::runtime_error(fmt::format("unknown output format {:s}", format_name));
 		}
@@ -160,23 +160,23 @@ int main(int argc, char* argv[]) try {
 
 	if(std::holds_alternative<std::string>(args.at("--single-value"))) {
 		const std::string flag_spec_raw = std::get<std::string>(args.at("--single-value"));
-		const flag_spec_t flag_spec = parse_flag_spec(flag_spec_raw);
+		const cpuid::flag_spec_t flag_spec = cpuid::parse_flag_spec(flag_spec_raw);
 		for(const std::uint32_t chosen_id : chosen_ids) {
-			const cpu_t& cpu = logical_cpus.at(chosen_id);
+			const cpuid::cpu_t& cpu = logical_cpus.at(chosen_id);
 			fmt::memory_buffer out;
-			print_single_flag(out, cpu, flag_spec);
+			cpuid::print_single_flag(out, cpu, flag_spec);
 			std::cout << to_string(out) << std::flush;
 		}
 		return EXIT_SUCCESS;
 	}
 
 	if(std::holds_alternative<std::string>(args.at("--single-leaf"))) {
-		const leaf_type leaf = gsl::narrow_cast<leaf_type>(std::stoull(std::get<std::string>(args.at("--single-leaf")), nullptr, 16));
+		const cpuid::leaf_type leaf = gsl::narrow_cast<cpuid::leaf_type>(std::stoull(std::get<std::string>(args.at("--single-leaf")), nullptr, 16));
 		for(const std::uint32_t chosen_id : chosen_ids) {
-			const cpu_t& cpu = logical_cpus.at(chosen_id);
+			const cpuid::cpu_t& cpu = logical_cpus.at(chosen_id);
 			if(cpu.leaves.find(leaf) != cpu.leaves.end()) {
 				fmt::memory_buffer out;
-				print_leaf(out, cpu, leaf, skip_vendor_check, skip_feature_check);
+				cpuid::print_leaf(out, cpu, leaf, skip_vendor_check, skip_feature_check);
 				std::cout << to_string(out) << std::flush;
 			}
 		}
@@ -185,17 +185,17 @@ int main(int argc, char* argv[]) try {
 
 	if(!only_topology) {
 		for(const std::uint32_t chosen_id : chosen_ids) {
-			const cpu_t& cpu = logical_cpus.at(chosen_id);
+			const cpuid::cpu_t& cpu = logical_cpus.at(chosen_id);
 			fmt::memory_buffer out;
-			print_leaves(out, cpu, skip_vendor_check, skip_feature_check);
+			cpuid::print_leaves(out, cpu, skip_vendor_check, skip_feature_check);
 			std::cout << to_string(out) << std::flush;
 		}
 	}
 
 	if(!no_topology) {
 		fmt::memory_buffer out;
-		system_t machine = build_topology(logical_cpus);
-		print_topology(out, machine);
+		cpuid::system_t machine = build_topology(logical_cpus);
+		cpuid::print_topology(out, machine);
 		std::cout << to_string(out) << std::flush;
 	}
 

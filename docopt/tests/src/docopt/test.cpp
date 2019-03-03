@@ -2,6 +2,8 @@
 
 #include "docopt/docopt.hpp"
 
+namespace xp = boost::xpressive;
+
 namespace
 {
 	struct docopt_test_data
@@ -46,8 +48,8 @@ namespace
 		buffer << fin.rdbuf();
 		const std::string whole_file = buffer.str();
 
-		const std::regex comment_pattern(" *#.*?\n");
-		const std::string no_comments = std::regex_replace(whole_file, comment_pattern, "");
+		static const xp::sregex comment_pattern(xp::sregex::compile(" *#.*?\n"));
+		const std::string no_comments = xp::regex_replace(whole_file, comment_pattern, "");
 
 		const std::string section_start = "r\"\"\"";
 		auto start = no_comments.find(section_start);
@@ -62,7 +64,7 @@ namespace
 		std::vector<docopt_test_data> command_lines;
 		const std::string section_end = "\"\"\"";
 		const std::string invocation_start = "$ prog";
-		const std::regex  newline("\n");
+		static const xp::sregex  newline(xp::sregex::compile("\n"));
 		std::size_t test_number = 0;
 		for(std::string const& section : raw_sections) {
 			const std::string usage_section = section.substr(0, section.find(section_end));
@@ -78,7 +80,7 @@ namespace
 			std::size_t subtest_number = 0;
 			for(std::string const& inv : raw_invocations) {
 				const std::string args = inv.substr(0, inv.find("\n"));
-				std::string expected = std::regex_replace(inv.substr(inv.find("\n") + 1), newline, "");
+				std::string expected = xp::regex_replace(inv.substr(inv.find("\n") + 1), newline, "");
 
 				if(expected[0] == '"') {
 					expected = expected.substr(1);
@@ -130,8 +132,8 @@ std::string param_printer(testing::TestParamInfo<docopt_test_data> data) {
 	                            :                                   "";
 
 	return index_padding + std::to_string(data.index)
-	     + "Section" + test_padding + std::to_string(data.param.test_number)
-	     + "Params" + subtest_padding + std::to_string(data.param.subtest_number);
+	     + "_section_" + test_padding + std::to_string(data.param.test_number)
+	     + "_params_" + subtest_padding + std::to_string(data.param.subtest_number);
 }
 
 INSTANTIATE_TEST_SUITE_P(DocoptFullTests, DocoptTest, ::testing::ValuesIn(command_lines), param_printer);

@@ -9,6 +9,8 @@
 
 #include "utility.hpp"
 
+namespace cpuid {
+
 void print_hypervisor_limit(fmt::memory_buffer& out, const cpu_t& cpu) {
 	const register_set_t& regs = cpu.leaves.at(leaf_type::hypervisor_limit).at(subleaf_type::main);
 	format_to(out, "Hypervisor present\n");
@@ -296,4 +298,6 @@ void print_kvm_features(fmt::memory_buffer& out, const cpu_t& cpu) {
 	format_to(out, "KVM features\n");
 	print_features(out, cpu, leaf_type::kvm_features, subleaf_type::main, eax);
 	format_to(out, "\n");
+}
+
 }
