@@ -160,8 +160,6 @@
 
 #include <fmt/format.h>
 
-#include <gtest/gtest.h>
-
 #if defined(_MSC_VER)
 
 #pragma warning(pop)

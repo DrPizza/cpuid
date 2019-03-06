@@ -4,6 +4,8 @@
 
 #include <filesystem>
 
+#include <gtest/gtest.h>
+
 namespace xp = boost::xpressive;
 
 namespace

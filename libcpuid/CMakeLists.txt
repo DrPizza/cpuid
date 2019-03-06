@@ -9,7 +9,7 @@ target_include_directories(libcpuid PRIVATE src)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME ON)
-find_package(Boost REQUIRED COMPONENTS regex)
+find_package(Boost REQUIRED COMPONENTS xpressive)
 target_include_directories(docopt PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(libcpuid PRIVATE ${Boost_LIBRARIES})
 

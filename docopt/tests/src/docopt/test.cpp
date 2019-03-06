@@ -2,6 +2,8 @@
 
 #include "docopt/docopt.hpp"
 
+#include <gtest/gtest.h>
+
 namespace xp = boost::xpressive;
 
 namespace
