@@ -14,7 +14,7 @@ target_link_libraries(cpuid PRIVATE fmt::fmt)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME ON)
-find_package(Boost REQUIRED COMPONENTS regex)
+find_package(Boost REQUIRED)
 target_link_libraries(cpuid PRIVATE ${Boost_LIBRARIES})
 
 find_path(gsl_dir "gsl/gsl")
