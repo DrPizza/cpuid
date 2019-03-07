@@ -142,11 +142,11 @@ namespace fmt {
 	};
 }
 
-template <class To, class From>
-typename std::enable_if_t<sizeof(To) == sizeof(From)
-	&& std::is_trivially_copyable<From>::value
-	&& std::is_trivial<To>::value,
-	To>
+template<typename To, typename From>
+typename std::enable_if_t<
+	sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From> && std::is_trivial_v<To>,
+	To
+>
 	// constexpr support needs compiler magic
 	bit_cast(const From& src) noexcept
 {

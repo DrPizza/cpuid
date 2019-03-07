@@ -557,7 +557,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 					&& logical_cpus[current_cpu].leaves.find(leaf) != logical_cpus[current_cpu].leaves.end()) {
 						++current_cpu;
 					}
-					const subleaf_type      subleaf = get_subleaf(current_cpu, leaf);
+					const subleaf_type   subleaf = get_subleaf(current_cpu, leaf);
 					const register_set_t regs    = {
 						gsl::narrow_cast<std::uint32_t>(std::stoul(m[2].str(), nullptr, 16)),
 						gsl::narrow_cast<std::uint32_t>(std::stoul(m[3].str(), nullptr, 16)),
@@ -872,8 +872,8 @@ void print_leaf(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf, bool 
 			if(skip_vendor_check || ((it->second.vendor & cpu.vendor) != vendor_type::unknown)) {
 				const filter_t filter = it->second.filter;
 				if(skip_feature_check
-					|| filter == no_filter
-					|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
+				|| filter == no_filter
+				|| filter.mask == (filter.mask & cpu.leaves.at(filter.leaf).at(filter.subleaf).at(filter.reg))) {
 					if(it->second.printer) {
 						it->second.printer(out, cpu);
 					} else {

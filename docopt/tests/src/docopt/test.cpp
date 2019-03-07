@@ -37,6 +37,7 @@ namespace
 	};
 
 	std::vector<docopt_test_data> load_data() {
+#if defined(_WIN32)
 		wchar_t dir[260];
 		::GetModuleFileNameW(nullptr, dir, 260);
 		wchar_t* i = dir + std::wcslen(dir);
@@ -44,6 +45,8 @@ namespace
 			*i = '\0';
 		}
 		::SetCurrentDirectoryW(dir);
+#else
+#endif
 
 		std::ifstream fin("../../../docopt/tests/data/docopt.testcases");
 		std::stringstream buffer;
@@ -66,7 +69,7 @@ namespace
 		std::vector<docopt_test_data> command_lines;
 		const std::string section_end = "\"\"\"";
 		const std::string invocation_start = "$ prog";
-		static const xp::sregex  newline(xp::sregex::compile("\n"));
+		static const xp::sregex newline(xp::sregex::compile("\n"));
 		std::size_t test_number = 0;
 		for(std::string const& section : raw_sections) {
 			const std::string usage_section = section.substr(0, section.find(section_end));

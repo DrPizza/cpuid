@@ -67,8 +67,7 @@ struct file_parse_data
 };
 
 std::vector<file_parse_data> enumerate_test_files() {
-	namespace fs = std::filesystem;
-
+#if defined(_WIN32)
 	wchar_t dir[260];
 	::GetModuleFileNameW(nullptr, dir, 260);
 	wchar_t* i = dir + std::wcslen(dir);
@@ -76,6 +75,10 @@ std::vector<file_parse_data> enumerate_test_files() {
 		*i = '\0';
 	}
 	::SetCurrentDirectoryW(dir);
+#else
+#endif
+
+	namespace fs = std::filesystem;
 
 	const auto string_to_format = [] (const std::string& str) {
 		if(str == "etallen") {
@@ -146,4 +149,3 @@ std::string file_spec_param_printer(testing::TestParamInfo<file_parse_data> data
 
 INSTANTIATE_TEST_SUITE_P(CpuidFullTests, CpuidFlagCrackingTest, ::testing::ValuesIn(flag_specs), flag_spec_param_printer);
 INSTANTIATE_TEST_SUITE_P(CpuidFullTests, CpuidFileParserTest, ::testing::ValuesIn(file_specs), file_spec_param_printer);
-
