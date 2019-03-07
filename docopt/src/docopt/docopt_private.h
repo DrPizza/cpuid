@@ -34,7 +34,7 @@ namespace docopt {
 				return true;
 			}
 			if(dynamic_cast<const T*>(rhs.get()) != nullptr
-				|| dynamic_cast<const U*>(lhs.get()) != nullptr) {
+			|| dynamic_cast<const U*>(lhs.get()) != nullptr) {
 				return lhs->name() == rhs->name();
 			}
 			return false;
@@ -155,10 +155,6 @@ namespace docopt {
 		value fValue;
 	};
 
-	namespace {
-		std::vector<PatternList> transform(PatternList pattern);
-	}
-
 	struct BranchPattern : Pattern
 	{
 		BranchPattern(PatternList children = {}) noexcept : fChildren(std::move(children)) {
@@ -271,7 +267,6 @@ namespace docopt {
 			}
 		}
 
-		Option() = default;
 		Option(const Option&) = default;
 		Option(Option&&) = default;
 		Option& operator=(const Option&) = default;
