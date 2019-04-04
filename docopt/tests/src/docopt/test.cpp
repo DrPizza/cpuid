@@ -2,7 +2,16 @@
 
 #include "docopt/docopt.hpp"
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: ALL_CPPCORECHECK_WARNINGS)
+#endif
+
 #include <gtest/gtest.h>
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 namespace xp = boost::xpressive;
 
@@ -87,10 +96,10 @@ namespace
 				const std::string args = inv.substr(0, inv.find("\n"));
 				std::string expected = xp::regex_replace(inv.substr(inv.find("\n") + 1), newline, "");
 
-				if(expected[0] == '"') {
+				if(expected.at(0) == '"') {
 					expected = expected.substr(1);
 				}
-				if(expected[expected.size() - 1] == '"') {
+				if(expected.at(expected.size() - 1) == '"') {
 					expected = expected.substr(0, expected.size() - 1);
 				}
 
@@ -112,17 +121,6 @@ struct DocoptTest : ::testing::TestWithParam<docopt_test_data>
 {
 };
 
-TEST_P(DocoptTest, ParserTest) {
-	docopt_test_data data = GetParam();
-	try {
-		auto result = docopt::docopt_parse(data.usage, data.argv, false, false);
-		const std::string json = results_to_json(result);
-		EXPECT_EQ(data.expected_result, json);
-	} catch(std::exception& e) {
-		EXPECT_EQ(data.expected_result, e.what());
-	}
-}
-
 std::string param_printer(testing::TestParamInfo<docopt_test_data> data) {
 	std::string index_padding = data.index < 10  ? "00"
 	                          : data.index < 100 ? "0"
@@ -141,4 +139,25 @@ std::string param_printer(testing::TestParamInfo<docopt_test_data> data) {
 	     + "_params_" + subtest_padding + std::to_string(data.param.subtest_number);
 }
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: ALL_CPPCORECHECK_WARNINGS)
+#endif
+
+TEST_P(DocoptTest, ParserTest) {
+	docopt_test_data data = GetParam();
+	try {
+		auto result = docopt::docopt_parse(data.usage, data.argv, false, false);
+		const std::string json = results_to_json(result);
+		EXPECT_EQ(data.expected_result, json);
+	}
+	catch (const std::exception & e) {
+		EXPECT_EQ(data.expected_result, e.what());
+	}
+}
+
 INSTANTIATE_TEST_SUITE_P(DocoptFullTests, DocoptTest, ::testing::ValuesIn(command_lines), param_printer);
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif

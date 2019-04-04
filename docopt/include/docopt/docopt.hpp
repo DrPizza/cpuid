@@ -43,6 +43,11 @@
     #endif
 #endif
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 26447) // warning C26447: The function is declared 'noexecpt' but calls function '%s' which may throw exceptions (f.6).
+#endif
+
 namespace docopt {
 	
 	// Usage string could not be parsed (ie, the developer did something wrong)
@@ -107,7 +112,7 @@ namespace docopt {
 	                                                       std::vector<std::string> const& argv,
 	                                                       bool help = true,
 	                                                       std::string const& version = {},
-	                                                       bool options_first = false) noexcept;
+	                                                       bool options_first = false);
 
 	std::vector<std::string> DOCOPT_API crack_argv(const std::string& command_line);
 	
@@ -118,7 +123,7 @@ namespace docopt {
 
 		inline std::string escape_string(const std::string& input) {
 			std::string output;
-			for(char ch : input) {
+			for(const char ch : input) {
 				switch(ch) {
 				case '\\':
 				case '"':
@@ -162,6 +167,10 @@ namespace std {
 }
 #ifdef DOCOPT_HEADER_ONLY
     #include "docopt.cpp"
+#endif
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
 #endif
 
 #endif /* defined(docopt__docopt_h_) */

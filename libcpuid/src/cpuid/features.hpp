@@ -23,7 +23,7 @@ namespace cpuid
 	void print_features(fmt::memory_buffer& out, const cpu_t& cpu, leaf_type leaf, subleaf_type sub, register_type reg);
 
 	std::vector<std::string> get_linux_features(const cpu_t& cpu);
-	std::vector<std::string> get_linux_bugs(const cpu_t& cpu);
+	std::vector<std::string> get_linux_bugs(const cpu_t& cpu) noexcept;
 	std::vector<std::string> get_linux_power_management(const cpu_t& cpu);
 }
 

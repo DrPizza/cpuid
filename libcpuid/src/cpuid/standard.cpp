@@ -10,6 +10,10 @@
 
 #include "utility.hpp"
 
+#if defined(_MSC_VER)
+#pragma warning(disable: 26446) // warning c26446: Prefer to use gsl::at() instead of unchecked subscript operator (bounds.4).
+#endif
+
 namespace cpuid {
 
 void print_basic_info(fmt::memory_buffer& out, const cpu_t& cpu) {
@@ -350,7 +354,7 @@ void enumerate_extended_state(cpu_t& cpu) {
 	cpu.leaves[leaf_type::extended_state][subleaf_type::extended_state_sub] = cpuid(leaf_type::extended_state, subleaf_type::extended_state_sub);
 
 	std::uint64_t mask = 0x1_u64 << 2_u32;
-	for(subleaf_type i = subleaf_type{ 2_u32 }; i < subleaf_type{ 63_u32 }; ++i, mask <<= 1_u64) {
+	for(subleaf_type i = static_cast<subleaf_type>(2_u32); i < static_cast<subleaf_type>(63_u32); ++i, mask <<= 1_u64) {
 		if(valid_bits & mask) {
 			regs = cpuid(leaf_type::extended_state, i);
 			if(regs[eax] != 0_u32
@@ -831,7 +835,7 @@ void print_system_on_chip_vendor(fmt::memory_buffer& out, const cpu_t& cpu) {
 void enumerate_pconfig(cpu_t& cpu) {
 	cpu.leaves[leaf_type::pconfig][subleaf_type::main] = cpuid(leaf_type::pconfig, subleaf_type::main);
 
-	for(subleaf_type sub = subleaf_type{ 0x1_u32 }; ; ++sub) {
+	for(subleaf_type sub = static_cast<subleaf_type>(0x1_u32); ; ++sub) {
 		register_set_t regs = cpuid(leaf_type::pconfig, sub);
 		if(0 == (regs[eax] & 0x0000'0001_u32)) {
 			break;

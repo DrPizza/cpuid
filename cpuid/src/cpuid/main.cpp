@@ -214,7 +214,7 @@ int main(int argc, char* argv[]) try {
 	std::cerr << e.what() << std::endl;
 	std::cerr << usage_message << std::endl;
 	return EXIT_FAILURE;
-} catch(std::exception& e) {
+} catch(const std::exception& e) {
 	std::cerr << e.what() << std::endl;
 	return EXIT_FAILURE;
 }

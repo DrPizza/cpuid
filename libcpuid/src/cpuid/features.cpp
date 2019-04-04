@@ -8,6 +8,10 @@
 #include <map>
 #include <vector>
 
+#if defined(_MSC_VER)
+#pragma warning(disable: 26446) // warning c26446: Prefer to use gsl::at() instead of unchecked subscript operator (bounds.4).
+#endif
+
 #if !defined(_MSC_VER)
 #include <x86intrin.h>
 #define __popcnt __builtin_popcount
@@ -1002,7 +1006,7 @@ std::vector<std::string> get_linux_features(const cpu_t& cpu) {
 	return features;
 }
 
-std::vector<std::string> get_linux_bugs(const cpu_t& cpu) {
+std::vector<std::string> get_linux_bugs(const cpu_t& cpu) noexcept {
 	std::vector<std::string> bugs;
 
 	const auto add_bug_condition = [&] (bool condition, const char* linux_name) {

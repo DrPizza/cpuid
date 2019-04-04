@@ -88,7 +88,7 @@ namespace {
 
 		std::string const& current() const {
 			if(*this) {
-				return fTokens[fIndex];
+				return fTokens.at(fIndex);
 			}
 
 			static const std::string empty;
@@ -152,7 +152,7 @@ namespace {
 			return false;
 		}
 
-		if(token[0] == '<' && token[token.size() - 1] == '>') {
+		if(token.at(0) == '<' && token.at(token.size() - 1) == '>') {
 			return true;
 		}
 
@@ -392,14 +392,14 @@ namespace {
 
 	std::shared_ptr<docopt::Pattern> maybe_collapse_to_required(docopt::PatternList&& seq) {
 		if(seq.size() == 1) {
-			return std::move(seq[0]);
+			return std::move(seq.at(0));
 		}
 		return std::make_shared<docopt::Required>(std::move(seq));
 	}
 
 	std::shared_ptr<docopt::Pattern> maybe_collapse_to_either(docopt::PatternList&& seq) {
 		if(seq.size() == 1) {
-			return std::move(seq[0]);
+			return std::move(seq.at(0));
 		}
 		return std::make_shared<docopt::Either>(std::move(seq));
 	}
@@ -443,11 +443,11 @@ namespace {
 		const auto i = section.find(':') + 1;  // skip past "usage:"
 		auto parts = split(section, i);
 		for(size_t ii = 1; ii < parts.size(); ++ii) {
-			if(parts[ii] == parts[0]) {
+			if(parts.at(ii) == parts.at(0)) {
 				ret += " ) | (";
 			} else {
 				ret.push_back(' ');
-				ret += parts[ii];
+				ret += parts.at(ii);
 			}
 		}
 
@@ -475,7 +475,7 @@ namespace {
 			} else if(starts_with(token, "--")) {
 				auto&& parsed = parse_long(tokens, options);
 				std::move(parsed.begin(), parsed.end(), std::back_inserter(ret));
-			} else if(token[0] == '-' && token != "-") {
+			} else if(token.at(0) == '-' && token != "-") {
 				auto&& parsed = parse_short(tokens, options);
 				std::move(parsed.begin(), parsed.end(), std::back_inserter(ret));
 			} else if(options_first) {
@@ -514,8 +514,8 @@ namespace {
 	}
 
 	bool isOptionSet(docopt::PatternList const& options, std::string const& opt1, std::string const& opt2 = "") {
-		return std::any_of(options.begin(), options.end(), [&](std::shared_ptr<docopt::Pattern const> const& opt) -> bool {
-			auto const& name = opt->name();
+		return std::any_of(options.begin(), options.end(), [&](std::shared_ptr<docopt::Pattern const> const& opt) noexcept -> bool {
+			auto const& name = std::dynamic_pointer_cast<docopt::LeafPattern const>(opt)->name();
 			if(name == opt1 || (!opt2.empty() && name == opt2)) {
 				return opt->hasValue();
 			}
@@ -545,7 +545,7 @@ namespace {
 		}
 
 		std::vector<std::shared_ptr<docopt::Option>> options = parse_defaults(doc);
-		std::shared_ptr<docopt::Required> pattern = parse_pattern(formal_usage(usage_sections[0]), options);
+		std::shared_ptr<docopt::Required> pattern = parse_pattern(formal_usage(usage_sections.at(0)), options);
 
 		std::vector<std::shared_ptr<docopt::Option>> pattern_options = pattern->flat<docopt::Option>();
 		std::sort(std::begin(pattern_options), std::end(pattern_options), docopt::sort_by_name{});
@@ -633,7 +633,7 @@ namespace docopt {
 	       std::vector<std::string> const& argv,
 	       bool help,
 	       std::string const& version,
-	       bool options_first) noexcept
+	       bool options_first)
 	{
 		try {
 			return docopt_parse(doc, argv, help, !version.empty(), options_first);
@@ -652,7 +652,7 @@ namespace docopt {
 			std::cout << std::endl;
 			std::cout << doc << std::endl;
 			std::exit(-1);
-		} // Any other exception is unexpected: let std::terminate grab it
+		}
 	}
 
 	DOCOPT_INLINE
@@ -661,7 +661,7 @@ namespace docopt {
 		std::string current;
 		bool escaped = false;
 		bool quoted = false;
-		for(char ch : command_line) {
+		for(const char ch : command_line) {
 			switch(ch) {
 			case '\\':
 				if(escaped) {

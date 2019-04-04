@@ -6,7 +6,7 @@
 #include <SDKDDKVer.h>
 
 #if !defined(_STL_EXTRA_DISABLED_WARNINGS)
-#define _STL_EXTRA_DISABLED_WARNINGS 4061 4324 4365 4514 4571 4582 4583 4623 4625 4626 4710 4774 4820 4987 5026 5027 5039
+#define _STL_EXTRA_DISABLED_WARNINGS 4061 4324 4365 4514 4571 4582 4583 4623 4625 4626 4710 4774 4800 4820 4987 5026 5027 5039
 #endif
 
 #if !defined(_SCL_SECURE_NO_WARNINGS)
@@ -132,20 +132,10 @@
 #pragma warning(disable: 4456) // warning C4456: declaration of '%s' hides previous local declaration
 #pragma warning(disable: 4458) // warning C4458: declaration of '%s' hides class member
 #pragma warning(disable: 4459) // warning C4459: declaration of '%s' hides global declaration
+#pragma warning(disable: 4702) // warning C4702: unreacha3eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeble code
 
-#pragma warning(disable: 26429) // warning C26429: Symbol '%s' is never tested for nullness, it can be marked as not_null (f.23: http://go.microsoft.com/fwlink/?linkid=853921).
-#pragma warning(disable: 26432) // warning C26432: If you define or delete any default operation in the type '%s', define or delete them all (c.21: http://go.microsoft.com/fwlink/?linkid=853922).
-#pragma warning(disable: 26433) // warning C26433: Function '%s' should be marked with 'override' (c.128: http://go.microsoft.com/fwlink/?linkid=853923).
-#pragma warning(disable: 26434) // warning C26434: Function '%s' hides a non-virtual function '%s' (c.128: http://go.microsoft.com/fwlink/?linkid=853923).
-#pragma warning(disable: 26436) // warning C26436: The type '%s' with a virtual function needs either public, virtual or protected non-virtual destructor (c.35: http://go.microsoft.com/fwlink/?linkid=853924).
-#pragma warning(disable: 26439) // warning C26439: This kind of function may not throw. Declare it 'noexcept' (f.6: http://go.microsoft.com/fwlink/?linkid=853927).
-#pragma warning(disable: 26440) // warning C26440: Function '%s' can be declared 'noexcept' (f.6: http://go.microsoft.com/fwlink/?linkid=853927).
-#pragma warning(disable: 26443) // warning C26443: Overriding destructor should not use explicit 'override' or 'virtual' specifiers (c.128: http://go.microsoft.com/fwlink/?linkid=853923).
-#pragma warning(disable: 26462) // warning C26462: The value pointed to by '%s' is assigned only once, mark it as a pointer to const (con.4: https://go.microsoft.com/fwlink/p/?LinkID=784969).
-#pragma warning(disable: 26472) // warning C26472: Don't use a static_cast for arithmetic conversions. Use brace initialization, gsl::narrow_cast or gsl::narow (type.1: http://go.microsoft.com/fwlink/p/?LinkID=620417).
-#pragma warning(disable: 26474) // warning C26474: Don't cast between pointer types when the conversion could be implicit (type.1: http://go.microsoft.com/fwlink/p/?LinkID=620417).
-#pragma warning(disable: 26491) // warning C26491: Don't use static_cast downcasts (type.2: http://go.microsoft.com/fwlink/p/?LinkID=620418).
-#pragma warning(disable: 26498) // warning C26498: The function '%s' is constexpr, mark variable '%s' constexpr if compile-time evaluation is desired (con.5: https://go.microsoft.com/fwlink/p/?LinkID=784974).
+#include <CppCoreCheck\Warnings.h>
+#pragma warning(disable: ALL_CPPCORECHECK_WARNINGS)
 
 #endif
 

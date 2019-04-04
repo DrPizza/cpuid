@@ -4,7 +4,16 @@
 
 #include <filesystem>
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: ALL_CPPCORECHECK_WARNINGS)
+#endif
+
 #include <gtest/gtest.h>
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 namespace xp = boost::xpressive;
 
@@ -45,12 +54,6 @@ namespace
 struct CpuidFlagCrackingTest : ::testing::TestWithParam<std::pair<std::string, cpuid::flag_spec_t>>
 {
 };
-
-TEST_P(CpuidFlagCrackingTest, ParserTest) {
-	std::pair<std::string, cpuid::flag_spec_t> data = GetParam();
-	const cpuid::flag_spec_t spec = cpuid::parse_flag_spec(data.first);
-	EXPECT_EQ(data.second, spec);
-}
 
 std::string flag_spec_param_printer(testing::TestParamInfo<std::pair<std::string, cpuid::flag_spec_t>> data) {
 	std::string index_padding = data.index < 10  ? "00"
@@ -114,12 +117,6 @@ struct CpuidFileParserTest : ::testing::TestWithParam<file_parse_data>
 {
 };
 
-TEST_P(CpuidFileParserTest, FileParserTest) {
-	file_parse_data data = GetParam();
-	std::ifstream fin(data.file_name.string());
-	EXPECT_NO_THROW(cpuid::enumerate_file(fin, data.format));
-}
-
 std::string file_spec_param_printer(testing::TestParamInfo<file_parse_data> data) {
 	namespace fs = std::filesystem;
 	const std::string index_padding = data.index < 10  ? "00"
@@ -147,5 +144,26 @@ std::string file_spec_param_printer(testing::TestParamInfo<file_parse_data> data
 	return index_padding + std::to_string(data.index) + "_" + format_to_string(data.param.format) + "_" + safe_filename;
 }
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: ALL_CPPCORECHECK_WARNINGS)
+#endif
+
+TEST_P(CpuidFileParserTest, FileParserTest) {
+	file_parse_data data = GetParam();
+	std::ifstream fin(data.file_name.string());
+	EXPECT_NO_THROW(cpuid::enumerate_file(fin, data.format));
+}
+
+TEST_P(CpuidFlagCrackingTest, ParserTest) {
+	std::pair<std::string, cpuid::flag_spec_t> data = GetParam();
+	const cpuid::flag_spec_t spec = cpuid::parse_flag_spec(data.first);
+	EXPECT_EQ(data.second, spec);
+}
+
 INSTANTIATE_TEST_SUITE_P(CpuidFullTests, CpuidFlagCrackingTest, ::testing::ValuesIn(flag_specs), flag_spec_param_printer);
 INSTANTIATE_TEST_SUITE_P(CpuidFullTests, CpuidFileParserTest, ::testing::ValuesIn(file_specs), file_spec_param_printer);
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif

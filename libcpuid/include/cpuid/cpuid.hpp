@@ -323,9 +323,9 @@ namespace cpuid {
 
 	struct model_t
 	{
-		std::uint32_t stepping;
-		std::uint32_t model;
-		std::uint32_t family;
+		std::uint32_t stepping = 0_u32;
+		std::uint32_t model    = 0_u32;
+		std::uint32_t family   = 0_u32;
 	};
 
 	inline bool operator==(const model_t& lhs, const model_t& rhs) noexcept {
@@ -336,13 +336,13 @@ namespace cpuid {
 
 	struct cpu_t
 	{
-		std::uint32_t apic_id;
-		vendor_type vendor;
+		std::uint32_t apic_id = 0_u32;
+		vendor_type vendor    = vendor_type::unknown;
 		model_t model;
 		leaves_t leaves;
 	};
 
-	inline bool operator==(const cpu_t& lhs, const cpu_t& rhs) noexcept {
+	inline bool operator==(const cpu_t& lhs, const cpu_t& rhs) {
 		return lhs.apic_id == rhs.apic_id
 		    && lhs.vendor  == rhs.vendor
 		    && lhs.model   == rhs.model
@@ -440,11 +440,11 @@ namespace cpuid {
 
 	struct logical_core_t
 	{
-		std::uint32_t full_apic_id;
+		std::uint32_t full_apic_id = 0_u32;
 
-		std::uint32_t smt_id;
-		std::uint32_t core_id;
-		std::uint32_t package_id;
+		std::uint32_t smt_id       = 0_u32;
+		std::uint32_t core_id      = 0_u32;
+		std::uint32_t package_id   = 0_u32;
 
 		std::vector<std::uint32_t> non_shared_cache_ids;
 		std::vector<std::uint32_t> shared_cache_ids;

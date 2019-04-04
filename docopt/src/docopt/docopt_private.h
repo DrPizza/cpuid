@@ -26,33 +26,6 @@ namespace docopt {
 		return std::holds_alternative<std::monostate>(v);
 	}
 
-	struct match_by_name
-	{
-		template<typename T, typename U>
-		bool operator()(const std::shared_ptr<T> lhs, const std::shared_ptr<U> rhs) const noexcept {
-			if(lhs == rhs) {
-				return true;
-			}
-			if(dynamic_cast<const T*>(rhs.get()) != nullptr
-			|| dynamic_cast<const U*>(lhs.get()) != nullptr) {
-				return lhs->name() == rhs->name();
-			}
-			return false;
-		}
-	};
-
-	struct sort_by_name
-	{
-		template<typename T, typename U>
-		bool operator()(const std::shared_ptr<T> lhs, const std::shared_ptr<U> rhs) const noexcept {
-			if(dynamic_cast<const T*>(rhs.get()) != nullptr
-				|| dynamic_cast<const U*>(lhs.get()) != nullptr) {
-				return lhs->name() < rhs->name();
-			}
-			return false;
-		}
-	};
-
 	struct Pattern;
 	struct LeafPattern;
 
@@ -89,8 +62,6 @@ namespace docopt {
 		// Attempt to find something in 'left' that matches this pattern's spec, and if so, move it to 'collected'
 		virtual bool match(PatternList& left, std::vector<std::shared_ptr<LeafPattern>>& collected) const = 0;
 
-		virtual std::string const& name() const = 0;
-
 		virtual bool hasValue() const noexcept {
 			return false;
 		}
@@ -109,6 +80,11 @@ namespace docopt {
 		                                              fValue(std::move(v)) {
 		}
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 26429)
+#endif
+
 		std::vector<std::shared_ptr<Pattern>> do_flat(bool(* filter)(std::shared_ptr<const Pattern>)) override {
 			auto shared_this = this->shared_from_this();
 			if((*filter)(shared_this)) {
@@ -116,6 +92,10 @@ namespace docopt {
 			}
 			return {};
 		}
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 		std::string to_string() const override {
 			const std::string val = std::visit(docopt::value_printer, fValue);
@@ -143,7 +123,7 @@ namespace docopt {
 			fValue = std::move(v);
 		}
 
-		std::string const& name() const noexcept override {
+		std::string const& name() const noexcept {
 			return fName;
 		}
 
@@ -153,6 +133,25 @@ namespace docopt {
 	private:
 		std::string fName;
 		value fValue;
+	};
+
+	struct match_by_name
+	{
+		bool operator()(const std::shared_ptr<docopt::LeafPattern const> lhs,
+			const std::shared_ptr<docopt::LeafPattern const> rhs) const noexcept {
+			if (lhs == rhs) {
+				return true;
+			}
+			return lhs->name() == rhs->name();
+		}
+	};
+
+	struct sort_by_name
+	{
+		bool operator()(const std::shared_ptr<docopt::LeafPattern const> lhs,
+			const std::shared_ptr<docopt::LeafPattern const> rhs) const noexcept {
+			return lhs->name() < rhs->name();
+		}
 	};
 
 	struct BranchPattern : Pattern
@@ -183,13 +182,10 @@ namespace docopt {
 			return this->shared_from_this();
 		}
 
-		std::string const& name() const override {
-			throw std::logic_error("Logic error: name() shouldn't be called on a BranchPattern");
-		}
-
-		virtual value const& getValue() const {
-			throw std::logic_error("Logic error: getValue() shouldn't be called on a BranchPattern");
-		}
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 26429)
+#endif
 
 		std::vector<std::shared_ptr<Pattern>> do_flat(bool(* filter)(std::shared_ptr<const Pattern>)) override {
 			auto shared_this = this->shared_from_this();
@@ -205,6 +201,10 @@ namespace docopt {
 			return ret;
 		}
 
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
 		void setChildren(PatternList children) {
 			fChildren = std::move(children);
 		}
@@ -219,7 +219,7 @@ namespace docopt {
 					bp->fix_identities(patterns);
 				} else {
 					child = *std::find_if(std::begin(patterns), std::end(patterns), [&] (const auto& p) {
-						return match_by_name{}(p, child);
+						return match_by_name{}(p, std::dynamic_pointer_cast<LeafPattern const>(child));
 					});
 				}
 			}
@@ -334,7 +334,7 @@ namespace docopt {
 		bool match(PatternList& left, std::vector<std::shared_ptr<LeafPattern>>& collected) const override;
 	};
 
-	inline void make_leaf_repeatable(LeafPattern* leaf) {
+	inline void make_leaf_repeatable(std::shared_ptr<LeafPattern> leaf) {
 		if(std::holds_alternative<unsigned long long>(leaf->getValue())
 		|| std::holds_alternative<std::vector<std::string>>(leaf->getValue())) {
 			return;
@@ -343,11 +343,11 @@ namespace docopt {
 		bool ensureList = false;
 		bool ensureInt = false;
 
-		if(dynamic_cast<Command*>(leaf)) {
+		if(std::dynamic_pointer_cast<Command>(leaf)) {
 			ensureInt = true;
-		} else if(dynamic_cast<Argument*>(leaf)) {
+		} else if(std::dynamic_pointer_cast<Argument>(leaf)) {
 			ensureList = true;
-		} else if(const Option* const o = dynamic_cast<Option*>(leaf)) {
+		} else if(std::shared_ptr<Option const> const o = std::dynamic_pointer_cast<Option const>(leaf)) {
 			if(o->argCount()) {
 				ensureList = true;
 			} else {
@@ -372,12 +372,12 @@ namespace docopt {
 			const bool no_children_repeat  = dynamic_cast<Either*>(bp) != nullptr;
 			const std::size_t child_count = bp->fChildren.size();
 			for(std::size_t i = 0; i < child_count; ++i) {
-				auto& child = bp->fChildren[i];
+				auto& child = bp->fChildren.at(i);
 				if(all_children_repeat) {
 					// all children of a OneOrMore can be repeated
 					auto child_leaves = child->flat<LeafPattern>();
 					for(auto& child_leaf : child_leaves) {
-						make_leaf_repeatable(child_leaf.get());
+						make_leaf_repeatable(child_leaf);
 					}
 				} else if(!no_children_repeat) {
 					// children of one branch of a Required or Optional can match children of any other branch
@@ -385,7 +385,7 @@ namespace docopt {
 						if(i == j) {
 							continue;
 						}
-						auto& sibling = bp->fChildren[j];
+						auto& sibling = bp->fChildren.at(j);
 
 						auto child_leaves = child->flat<LeafPattern>();
 						auto sibling_leaves = sibling->flat<LeafPattern>();
@@ -393,7 +393,7 @@ namespace docopt {
 						for(auto& child_leaf : child_leaves) {
 							for(auto& sibling_leaf : sibling_leaves) {
 								if(child_leaf == sibling_leaf) {
-									make_leaf_repeatable(child_leaf.get());
+									make_leaf_repeatable(child_leaf);
 								}
 							}
 						}
@@ -459,7 +459,7 @@ namespace docopt {
 		std::pair<size_t, std::shared_ptr<LeafPattern>> ret{};
 		const size_t size = left.size();
 		for(size_t i = 0; i < size; ++i) {
-			auto arg = dynamic_cast<Argument const*>(left[i].get());
+			auto arg = dynamic_cast<Argument const*>(left.at(i).get());
 			if(arg) {
 				ret.first = i;
 				ret.second = std::make_shared<Argument>(name(), arg->getValue());
@@ -474,7 +474,7 @@ namespace docopt {
 		std::pair<size_t, std::shared_ptr<LeafPattern>> ret{};
 		const size_t size = left.size();
 		for(size_t i = 0; i < size; ++i) {
-			auto arg = dynamic_cast<Argument const*>(left[i].get());
+			auto arg = dynamic_cast<Argument const*>(left.at(i).get());
 			if(arg) {
 				if (name() == std::get<std::string>(arg->getValue())) {
 					ret.first = i;
@@ -575,7 +575,7 @@ namespace docopt {
 
 		while(matched) {
 			// could it be that something didn't match but changed l or c?
-			matched = fChildren[0]->match(l, c);
+			matched = fChildren.at(0)->match(l, c);
 
 			if(matched) {
 				++times;

@@ -8,6 +8,10 @@
 
 #include <fmt/format.h>
 
+#if defined(_MSC_VER)
+#pragma warning(disable: 26446) // warning c26446: Prefer to use gsl::at() instead of unchecked subscript operator (bounds.4).
+#endif
+
 namespace cpuid {
 
 std::string print_size(std::size_t cache_bytes) {
@@ -403,7 +407,7 @@ decomposed_cache_t decompose_cache_descriptors(const cpu_t& cpu, const register_
 		}
 	}
 
-	auto cmp = [](const cache_descriptor_t* lhs, const cache_descriptor_t* rhs) {
+	const auto cmp = [](const cache_descriptor_t* lhs, const cache_descriptor_t* rhs) {
 		return lhs->type  != rhs->type  ? lhs->type    < rhs->type
 		     : lhs->level != rhs->level ? lhs->level   < rhs->level
 		     : lhs->size  != rhs->size  ? lhs->size    > rhs->size     // sic; I want bigger caches at a given level listed first
@@ -709,12 +713,12 @@ void print_deterministic_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 
 				const std::uint32_t entries = b.ways_of_associativity * regs[ecx];
 
-				auto print_associativity = [](std::uint32_t fully_associative, std::uint32_t ways) {
+				const auto print_associativity = [](std::uint32_t fully_associative, std::uint32_t ways) {
 					using namespace fmt::literals;
 					return fully_associative ? std::string("fully") : "{:d}-way"_format(ways);
 				};
 
-				auto print_type = [](std::uint32_t type) {
+				const auto print_type = [](std::uint32_t type) {
 					switch(type) {
 					case 0b0001:
 						return "data";
@@ -726,7 +730,7 @@ void print_deterministic_tlb(fmt::memory_buffer& out, const cpu_t& cpu) {
 					return "";
 				};
 
-				auto print_pages = [](std::uint32_t page_4k, std::uint32_t page_2m, std::uint32_t page_4m, std::uint32_t page_1g) {
+				const auto print_pages = [](std::uint32_t page_4k, std::uint32_t page_2m, std::uint32_t page_4m, std::uint32_t page_1g) {
 					fmt::memory_buffer out;
 					if(page_4k) {
 						format_to(out, "4K");

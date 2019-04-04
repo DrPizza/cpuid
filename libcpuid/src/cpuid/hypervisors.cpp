@@ -9,6 +9,10 @@
 
 #include "utility.hpp"
 
+#if defined(_MSC_VER)
+#pragma warning(disable: 26446) // warning c26446: Prefer to use gsl::at() instead of unchecked subscript operator (bounds.4).
+#endif
+
 namespace cpuid {
 
 void print_hypervisor_limit(fmt::memory_buffer& out, const cpu_t& cpu) {

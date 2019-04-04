@@ -20,6 +20,10 @@
 
 #include <fmt/format.h>
 
+#if defined(_MSC_VER)
+#pragma warning(disable: 26446) // warning c26446: Prefer to use gsl::at() instead of unchecked subscript operator (bounds.4).
+#endif
+
 namespace xp = boost::xpressive;
 
 namespace cpuid {
@@ -144,7 +148,7 @@ model_t get_model(vendor_type vendor, const register_set_t& regs) noexcept {
 	return model;
 }
 
-uint8_t get_initial_apic_id(const cpu_t& cpu) noexcept {
+uint8_t get_initial_apic_id(const cpu_t& cpu) {
 	const id_info_t b = bit_cast<decltype(b)>(cpu.leaves.at(leaf_type::version_info).at(subleaf_type::main)[ebx]);
 	return b.initial_apic_id;
 }
@@ -441,7 +445,7 @@ std::map<std::uint32_t, cpu_t> enumerate_file(std::istream& fin, file_format for
 			const std::string single_element = "([[:xdigit:]]{8})";
 			const std::string multiple_elements = fmt::format("([[:alnum:]_]+)\\[([[:digit:]]+)\\]={} {} {} {}", single_element, single_element, single_element, single_element);
 			static const xp::sregex data_line(xp::sregex::compile(multiple_elements));
-			const std::uint32_t current_cpu = 0xffff'ffff_u32;
+			constexpr std::uint32_t current_cpu = 0xffff'ffff_u32;
 			std::string line;
 			while(std::getline(fin, line)) {
 				xp::smatch m;
@@ -1094,7 +1098,7 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 					return max_sizes.empty() ? 0_u32 : std::prev(max_sizes.end())->second;
 				};
 
-				const auto get_core_id = [&] () {
+				const auto get_core_id = [&] () noexcept {
 					for(const auto& core : system.all_cores) {
 						if(core.full_apic_id == cpu.apic_id) {
 							return core.core_id;
@@ -1103,7 +1107,7 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 					return 0_u32;
 				};
 
-				const auto get_package_id = [&] () {
+				const auto get_package_id = [&] () noexcept {
 					for(const auto& core : system.all_cores) {
 						if(core.full_apic_id == cpu.apic_id) {
 							return core.package_id;
@@ -1112,7 +1116,7 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 					return 0_u32;
 				};
 
-				const auto get_logical_core_count = [&] () {
+				const auto get_logical_core_count = [&] () noexcept {
 					const std::uint32_t package_id = get_package_id();
 					std::uint32_t logicals = 0_u32;
 					for(const auto& core : system.all_cores) {
@@ -1158,7 +1162,7 @@ void print_dump(fmt::memory_buffer& out, std::map<std::uint32_t, cpu_t> logical_
 						};
 
 						const tlb_info b = bit_cast<decltype(b)>(regs[ebx]); // 4K page
-						return std::uint32_t{ b.i.entries } + std::uint32_t{ b.d.entries };
+						return static_cast<std::uint32_t>(b.i.entries) + static_cast<std::uint32_t>(b.d.entries);
 					}
 					return 0_u32;
 				};

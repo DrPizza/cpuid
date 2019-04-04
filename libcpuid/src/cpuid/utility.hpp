@@ -80,15 +80,15 @@ void run_on_every_core(Fn&& f) {
 }
 
 #if defined(_MSC_VER)
-inline unsigned char bit_scan_reverse(unsigned long* index, unsigned int mask) {
+inline unsigned char bit_scan_reverse(unsigned long* index, unsigned int mask) noexcept {
 	return _BitScanReverse(index, mask);
 }
 
-inline unsigned char bit_scan_forward(unsigned long* index, unsigned int mask) {
+inline unsigned char bit_scan_forward(unsigned long* index, unsigned int mask) noexcept {
 	return _BitScanForward(index, mask);
 }
 #else
-inline unsigned char bit_scan_reverse(unsigned long* index, unsigned int mask) {
+inline unsigned char bit_scan_reverse(unsigned long* index, unsigned int mask) noexcept {
 	if(mask) {
 		*index = 31 - __builtin_clz(mask);
 		return 1;
@@ -97,7 +97,7 @@ inline unsigned char bit_scan_reverse(unsigned long* index, unsigned int mask) {
 	}
 }
 
-inline unsigned char bit_scan_forward(unsigned long* index, unsigned int mask) {
+inline unsigned char bit_scan_forward(unsigned long* index, unsigned int mask) noexcept {
 	if(mask) {
 		*index = __builtin_ctz(mask);
 		return 1;
